@@ -32,7 +32,10 @@ Caveman Ninja Issues:
   End of level 2 is corrupt.
 
   Emulation by Bryan McPhail, mish@tendril.co.uk
-
+  
+Todo:
+  cninja, edrandy : color output issue? analog 'white' level is set 0xe6.
+  
 Note about version levels using Mutant Fighter as the example:
   Version 1  HD-00
   Version 2  HD-00-1
