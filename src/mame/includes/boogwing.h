@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Bryan McPhail, David Haywood
+// copyright-holders:Bryan McPhail, David Haywood, cam900
 /*************************************************************************
 
     Boogie Wings
@@ -8,9 +8,8 @@
 
 #include "sound/okim6295.h"
 #include "video/deco16ic.h"
-#include "video/decocomn.h"
+#include "video/deco_ace.h"
 #include "video/bufsprite.h"
-#include "video/decocomn.h"
 #include "video/decospr.h"
 #include "machine/deco104.h"
 
