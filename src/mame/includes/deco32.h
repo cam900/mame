@@ -171,7 +171,7 @@ class nslasher_state : public deco32_state
 public:
 	nslasher_state(const machine_config &mconfig, device_type type, const char *tag)
 		: deco32_state(mconfig, type, tag),
-		m_ace_ram(*this, "ace_ram")
+		m_deco_ace(*this, "deco_ace")
 	{ }
 
 	DECLARE_WRITE32_MEMBER(tattass_control_w);
@@ -180,8 +180,6 @@ public:
 	DECLARE_READ32_MEMBER(spriteram2_r);
 	DECLARE_WRITE32_MEMBER(spriteram2_w);
 	DECLARE_WRITE32_MEMBER(buffer_spriteram2_w);
-	DECLARE_WRITE32_MEMBER(ace_ram_w);
-	DECLARE_WRITE32_MEMBER(palette_dma_w);
 
 	DECLARE_DRIVER_INIT(tattass);
 	DECLARE_DRIVER_INIT(nslasher);
@@ -196,10 +194,9 @@ public:
 	void tattass(machine_config &config);
 	void nslasher(machine_config &config);
 private:
-	void updateAceRam();
 	void mixDualAlphaSprites(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect, gfx_element *gfx0, gfx_element *gfx1, int mixAlphaTilemap);
 
-	required_shared_ptr<uint32_t> m_ace_ram;
+	required_device<deco_ace_device> m_deco_ace;
 
 	std::unique_ptr<bitmap_ind16> m_tilemap_alpha_bitmap;
 
@@ -213,7 +210,6 @@ private:
 	int m_pendingCommand;
 	int m_readBitCount;
 	int m_byteAddr;
-	int m_ace_ram_dirty;
 };
 
 class dragngun_state : public deco32_state
