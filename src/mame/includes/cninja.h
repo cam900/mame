@@ -76,6 +76,7 @@ public:
 	
 	uint16_t m_priority;
 
+	DECLARE_WRITE16_MEMBER(robocop2_priority_w);
 	DECLARE_WRITE16_MEMBER(cninja_sound_w);
 	DECLARE_WRITE16_MEMBER(stoneage_sound_w);
 	DECLARE_WRITE16_MEMBER(cninja_pf12_control_w);
