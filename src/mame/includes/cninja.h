@@ -71,7 +71,7 @@ public:
 	optional_shared_ptr<uint16_t> m_ram;
 	optional_memory_bank m_okibank;
 	
-	void machine_reset() override;
+	virtual void machine_reset() override;
 	
 	uint16_t m_priority;
 
@@ -94,6 +94,7 @@ public:
 	uint32_t screen_update_robocop2(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_mutantf(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void cninjabl_draw_sprites( screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect );
+	virtual void video_start() override;
 
 	DECO16IC_BANK_CB_MEMBER(cninja_bank_callback);
 	DECO16IC_BANK_CB_MEMBER(robocop2_bank_callback);
