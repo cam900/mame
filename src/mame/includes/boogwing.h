@@ -8,9 +8,8 @@
 
 #include "sound/okim6295.h"
 #include "video/deco16ic.h"
-#include "video/decocomn.h"
+#include "video/deco_ace.h"
 #include "video/bufsprite.h"
-#include "video/decocomn.h"
 #include "video/decospr.h"
 #include "machine/deco104.h"
 

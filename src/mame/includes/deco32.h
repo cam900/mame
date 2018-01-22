@@ -173,6 +173,7 @@ public:
 		: deco32_state(mconfig, type, tag),
 		m_deco_ace(*this, "deco_ace")
 	{ }
+	required_device<deco_ace_device> m_deco_ace;
 
 	DECLARE_WRITE32_MEMBER(tattass_control_w);
 	DECLARE_WRITE_LINE_MEMBER(tattass_sound_irq_w);
@@ -195,8 +196,6 @@ public:
 	void nslasher(machine_config &config);
 private:
 	void mixDualAlphaSprites(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect, gfx_element *gfx0, gfx_element *gfx1, int mixAlphaTilemap);
-
-	required_device<deco_ace_device> m_deco_ace;
 
 	std::unique_ptr<bitmap_ind16> m_tilemap_alpha_bitmap;
 
