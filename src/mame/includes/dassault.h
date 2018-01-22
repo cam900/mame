@@ -9,7 +9,6 @@
 #include "machine/gen_latch.h"
 #include "sound/okim6295.h"
 #include "video/deco16ic.h"
-#include "video/decocomn.h"
 #include "video/bufsprite.h"
 #include "video/decospr.h"
 
@@ -21,7 +20,6 @@ public:
 		m_maincpu(*this, "maincpu"),
 		m_audiocpu(*this, "audiocpu"),
 		m_subcpu(*this, "sub"),
-		m_decocomn(*this, "deco_common"),
 		m_deco_tilegen1(*this, "tilegen1"),
 		m_deco_tilegen2(*this, "tilegen2"),
 		m_oki2(*this, "oki2"),
@@ -42,7 +40,6 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_audiocpu;
 	required_device<cpu_device> m_subcpu;
-	required_device<decocomn_device> m_decocomn;
 	required_device<deco16ic_device> m_deco_tilegen1;
 	required_device<deco16ic_device> m_deco_tilegen2;
 	required_device<okim6295_device> m_oki2;
@@ -58,7 +55,12 @@ public:
 	required_shared_ptr<uint16_t> m_pf4_rowscroll;
 	required_shared_ptr<uint16_t> m_ram;
 	required_shared_ptr<uint16_t> m_ram2;
+	
+	void machine_reset() override;
+	
+	uint16_t m_priority;
 
+	DECLARE_WRITE16_MEMBER(priority_w);
 	DECLARE_WRITE16_MEMBER(main_irq_ack_w);
 	DECLARE_WRITE16_MEMBER(sub_irq_ack_w);
 	DECLARE_READ16_MEMBER(dassault_control_r);
