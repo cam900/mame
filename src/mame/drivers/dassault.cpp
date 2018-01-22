@@ -255,6 +255,11 @@ READ16_MEMBER(dassault_state::dassault_control_r)
 	return 0xffff;
 }
 
+WRITE16_MEMBER(dassault_state::priority_w)
+{
+	COMBINE_DATA(&m_priority);
+}
+
 WRITE16_MEMBER(dassault_state::dassault_control_w)
 {
 	machine().bookkeeping().coin_counter_w(0, data & 1);
