@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Bryan McPhail, David Haywood
+// copyright-holders:Bryan McPhail, David Haywood, cam900
 /*
     Boogie Wings (aka The Great Ragtime Show)
     Data East, 1992
@@ -53,12 +53,15 @@
 
     Driver by Bryan McPhail and David Haywood.
 
+	DECO 99 "ACE" Chip emulation by cam900.
+
     Todo:
         * Sprite priorities aren't verified to be 100% accurate.
           (Addendum - all known issues seem to be correct - see Sprite Priority Notes below).
         * There may be some kind of fullscreen palette effect (controlled by bit 3 in priority
           word - used at end of each level, and on final boss).
         * A shadow effect (used in level 1) is not implemented.
+        * ACE Chip aren't fully emulated.
 
     Sprite Priority Notes:
         * On the Imperial Science Museum level at the beginning, you fly behind a wall, but your
@@ -659,8 +662,8 @@ DRIVER_INIT_MEMBER(boogwing_state,boogwing)
 	memcpy(dst, src, 0x100000);
 }
 
-GAME( 1992, boogwing, 0,        boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Euro v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, boogwingu,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (USA v1.7, 92.12.14)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, boogwinga,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Asia v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, ragtime,  boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.5, 92.12.07)", MACHINE_SUPPORTS_SAVE )
-GAME( 1992, ragtimea, boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.3, 92.11.26)", MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwing, 0,        boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Euro v1.5, 92.12.07)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwingu,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (USA v1.7, 92.12.14)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, boogwinga,boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "Boogie Wings (Asia v1.5, 92.12.07)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, ragtime,  boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.5, 92.12.07)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1992, ragtimea, boogwing, boogwing, boogwing, boogwing_state,  boogwing,  ROT0, "Data East Corporation", "The Great Ragtime Show (Japan v1.3, 92.11.26)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )

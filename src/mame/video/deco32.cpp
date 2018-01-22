@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Bryan McPhail
+// copyright-holders:Bryan McPhail, cam900
 #include "emu.h"
 #include "includes/deco32.h"
 
@@ -306,7 +306,7 @@ void nslasher_state::mixDualAlphaSprites(screen_device &screen, bitmap_rgb32 &bi
 					*/
 
 					/* Alpha values are tied to ACE ram... */
-					//int alpha=m_deco_ace->get_alpha((priColAlphaPal1&0xf0)>>4);
+					//int alpha=m_deco_ace->get_alpha(((priColAlphaPal1&0xf0)>>4)/2);
 					//if (alpha<0)
 					//  alpha=0;
 

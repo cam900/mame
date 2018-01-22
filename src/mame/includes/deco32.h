@@ -1,9 +1,10 @@
 // license:BSD-3-Clause
-// copyright-holders:Bryan McPhail
+// copyright-holders:Bryan McPhail, cam900
 #include "audio/decobsmt.h"
 #include "video/bufsprite.h"
 #include "video/decospr.h"
 #include "video/deco16ic.h"
+#include "video/deco_ace.h"
 #include "machine/deco_irq.h"
 #include "machine/eepromser.h"
 #include "machine/gen_latch.h"
