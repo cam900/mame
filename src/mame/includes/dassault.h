@@ -56,7 +56,7 @@ public:
 	required_shared_ptr<uint16_t> m_ram;
 	required_shared_ptr<uint16_t> m_ram2;
 	
-	void machine_reset() override;
+	virtual void machine_reset() override;
 	
 	uint16_t m_priority;
 
