@@ -11,11 +11,18 @@
 
 /******************************************************************************/
 
+void cninja_state::video_start()
+{
+	m_priority = 0;
+	save_item(NAME(m_priority));
+}
+
 VIDEO_START_MEMBER(cninja_state,stoneage)
 {
 	/* The bootleg has broken scroll registers */
 	m_deco_tilegen1->set_scrolldx(3, 0, -10, -10); /* pf4 16x16 tilemap */
 	m_deco_tilegen1->set_scrolldx(0, 1, 2, 2); /* pf1 8x8 tilemap */
+	video_start();
 }
 
 /******************************************************************************/
@@ -251,6 +258,7 @@ VIDEO_START_MEMBER(cninja_state,mutantf)
 {
 	m_sprgen1->alloc_sprite_bitmap();
 	m_sprgen2->alloc_sprite_bitmap();
+	video_start();
 }
 
 uint32_t cninja_state::screen_update_mutantf(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
