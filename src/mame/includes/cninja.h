@@ -73,6 +73,8 @@ public:
 	required_shared_ptr<uint16_t> m_pf4_rowscroll;
 	optional_shared_ptr<uint16_t> m_ram;
 	optional_memory_bank m_okibank;
+	
+	uint16_t m_priority;
 
 	DECLARE_WRITE16_MEMBER(cninja_sound_w);
 	DECLARE_WRITE16_MEMBER(stoneage_sound_w);
