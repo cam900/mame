@@ -1542,6 +1542,8 @@ files {
 	MAME_DIR .. "src/mame/machine/decocpu7.h",
 	MAME_DIR .. "src/mame/machine/decocpu6.cpp",
 	MAME_DIR .. "src/mame/machine/decocpu6.h",
+	MAME_DIR .. "src/mame/machine/deco_ace.cpp",
+	MAME_DIR .. "src/mame/machine/deco_ace.h",
 	MAME_DIR .. "src/mame/drivers/deco_ld.cpp",
 	MAME_DIR .. "src/mame/drivers/deco_mlc.cpp",
 	MAME_DIR .. "src/mame/includes/deco_mlc.h",
