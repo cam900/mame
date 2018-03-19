@@ -24,6 +24,7 @@
 #include "cpu/m68000/m68000.h"
 #include "cpu/z80/z80.h"
 #include "machine/gen_latch.h"
+#include "machine/neo_zmc.h"
 #include "machine/nvram.h"
 #include "machine/upd1990a.h"
 #include "sound/2610intf.h"
@@ -35,18 +36,20 @@ class neoprint_state : public driver_device
 {
 public:
 	neoprint_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_npvidram(*this, "npvidram"),
-		m_npvidregs(*this, "npvidregs"),
-		m_maincpu(*this, "maincpu"),
-		m_audiocpu(*this, "audiocpu"),
-		m_upd4990a(*this, "upd4990a"),
-		m_gfxdecode(*this, "gfxdecode"),
-		m_screen(*this, "screen"),
-		m_palette(*this, "palette"),
-		m_soundlatch(*this, "soundlatch"),
-		m_generic_paletteram_16(*this, "paletteram")
-	{ }
+		: driver_device(mconfig, type, tag)
+		, m_npvidram(*this, "npvidram")
+		, m_npvidregs(*this, "npvidregs")
+		, m_maincpu(*this, "maincpu")
+		, m_audiocpu(*this, "audiocpu")
+		, m_upd4990a(*this, "upd4990a")
+		, m_gfxdecode(*this, "gfxdecode")
+		, m_screen(*this, "screen")
+		, m_palette(*this, "palette")
+		, m_soundlatch(*this, "soundlatch")
+		, m_generic_paletteram_16(*this, "paletteram")
+		, m_neo_zmc(*this, "neo_zmc")
+	{
+	}
 
 	static constexpr feature_type unemulated_features() { return feature::CAMERA | feature::PRINTER; }
 
@@ -90,6 +93,7 @@ private:
 	required_device<palette_device> m_palette;
 	required_device<generic_latch_8_device> m_soundlatch;
 	optional_shared_ptr<uint16_t> m_generic_paletteram_16;
+	required_device<neo_zmc_device> m_neo_zmc;
 
 	uint8_t m_audio_result;
 	uint8_t m_bank_val;
@@ -347,11 +351,8 @@ void neoprint_state::nprsp_map(address_map &map)
 
 void neoprint_state::neoprint_audio_map(address_map &map)
 {
-	map(0x0000, 0x7fff).rom();//AM_ROMBANK(NEOGEO_BANK_AUDIO_CPU_MAIN_BANK)
-//  AM_RANGE(0x8000, 0xbfff) AM_ROMBANK(NEOGEO_BANK_AUDIO_CPU_CART_BANK + 3)
-//  AM_RANGE(0xc000, 0xdfff) AM_ROMBANK(NEOGEO_BANK_AUDIO_CPU_CART_BANK + 2)
-//  AM_RANGE(0xe000, 0xefff) AM_ROMBANK(NEOGEO_BANK_AUDIO_CPU_CART_BANK + 1)
-//  AM_RANGE(0xf000, 0xf7ff) AM_ROMBANK(NEOGEO_BANK_AUDIO_CPU_CART_BANK + 0)
+	map(0x0000, 0x7fff).rom();//.bankr(NEOGEO_BANK_AUDIO_CPU_MAIN_BANK);
+	map(0x8000, 0xf7ff).r(m_neo_zmc, FUNC(neo_zmc_device::banked_rom_r));
 	map(0xf800, 0xffff).ram();
 }
 
@@ -365,16 +366,13 @@ void neoprint_state::neoprint_audio_map(address_map &map)
 
 void neoprint_state::neoprint_audio_io_map(address_map &map)
 {
-	/*AM_RANGE(0x00, 0x00) AM_MIRROR(0xff00) AM_READWRITE(audio_command_r, audio_cpu_clear_nmi_w);*/  /* may not and NMI clear */
+	/*map(0x00, 0x00).mirror(0xff00).rw(this, FUNC(neoprint_state::audio_command_r), FUNC(neoprint_state::audio_cpu_clear_nmi_w));*/  /* may not and NMI clear */
 	map(0x00, 0x00).mirror(0xff00).r(this, FUNC(neoprint_state::audio_command_r)).nopw();
 	map(0x04, 0x07).mirror(0xff00).rw("ymsnd", FUNC(ym2610_device::read), FUNC(ym2610_device::write));
-//  AM_RANGE(0x08, 0x08) AM_MIRROR(0xff00) /* write - NMI enable / acknowledge? (the data written doesn't matter) */
-//  AM_RANGE(0x08, 0x08) AM_SELECT(0xfff0) AM_READ(audio_cpu_bank_select_f000_f7ff_r)
-//  AM_RANGE(0x09, 0x09) AM_SELECT(0xfff0) AM_READ(audio_cpu_bank_select_e000_efff_r)
-//  AM_RANGE(0x0a, 0x0a) AM_SELECT(0xfff0) AM_READ(audio_cpu_bank_select_c000_dfff_r)
-//  AM_RANGE(0x0b, 0x0b) AM_SELECT(0xfff0) AM_READ(audio_cpu_bank_select_8000_bfff_r)
+//  map(0x08, 0x08).mirror(0xff00) /* write - NMI enable / acknowledge? (the data written doesn't matter) */
+	map(0x08, 0x0b).mirror(0x00f0).select(0xff00).r(m_neo_zmc, FUNC(neo_zmc_device::bank_r));
 	map(0x0c, 0x0c).mirror(0xff00).w(this, FUNC(neoprint_state::audio_result_w));
-//  AM_RANGE(0x18, 0x18) AM_MIRROR(0xff00) /* write - NMI disable? (the data written doesn't matter) */
+//  map(0x18, 0x18).mirror(0xff00) /* write - NMI disable? (the data written doesn't matter) */
 }
 
 static INPUT_PORTS_START( neoprint )
@@ -505,6 +503,9 @@ MACHINE_CONFIG_START(neoprint_state::neoprint)
 	MCFG_CPU_PROGRAM_MAP(neoprint_audio_map)
 	MCFG_CPU_IO_MAP(neoprint_audio_io_map)
 
+	MCFG_NEO_ZMC_ADD("neo_zmc", 0)
+	MCFG_NEO_ZMC_ROM("audiocpu")
+
 	MCFG_UPD4990A_ADD("upd4990a", XTAL(32'768), NOOP, NOOP)
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
@@ -547,6 +548,9 @@ MACHINE_CONFIG_START(neoprint_state::nprsp)
 	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
 	MCFG_CPU_PROGRAM_MAP(neoprint_audio_map)
 	MCFG_CPU_IO_MAP(neoprint_audio_io_map)
+	
+	MCFG_NEO_ZMC_ADD("neo_zmc", 0)
+	MCFG_NEO_ZMC_ROM("audiocpu")
 
 	MCFG_UPD4990A_ADD("upd4990a", XTAL(32'768), NOOP, NOOP)
 	MCFG_NVRAM_ADD_0FILL("nvram")

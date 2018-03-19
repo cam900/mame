@@ -11,8 +11,9 @@
 #include "cpu/z80/z80.h"
 #include "sound/2610intf.h"
 #include "machine/gen_latch.h"
-#include "machine/upd1990a.h"
+#include "machine/neo_zmc.h"
 #include "machine/ng_memcard.h"
+#include "machine/upd1990a.h"
 #include "video/neogeo_spr.h"
 
 #include "bus/neogeo/slot.h"
@@ -31,47 +32,48 @@ class neogeo_state : public driver_device
 {
 public:
 	neogeo_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_maincpu(*this, "maincpu"),
-		m_audiocpu(*this, "audiocpu"),
-		m_upd4990a(*this, "upd4990a"),
-		m_ym(*this, "ymsnd"),
-		m_sprgen(*this, "spritegen"),
-		m_save_ram(*this, "saveram"),
-		m_screen(*this, "screen"),
-		m_palette(*this, "palette"),
-		m_memcard(*this, "memcard"),
-		m_soundlatch(*this, "soundlatch"),
-		m_soundlatch2(*this, "soundlatch2"),
-		m_region_maincpu(*this, "maincpu"),
-		m_region_sprites(*this, "sprites"),
-		m_region_fixed(*this, "fixed"),
-		m_region_fixedbios(*this, "fixedbios"),
-		m_region_mainbios(*this, "mainbios"),
-		m_region_audiobios(*this, "audiobios"),
-		m_region_audiocpu(*this, "audiocpu"),
-		m_bank_audio_main(*this, "audio_main"),
-		m_dsw(*this, "DSW"),
-		m_trackx(*this, "TRACK_X"),
-		m_tracky(*this, "TRACK_Y"),
-		m_edge(*this, "edge"),
-		m_ctrl1(*this, "ctrl1"),
-		m_ctrl2(*this, "ctrl2"),
-		m_use_cart_vectors(0),
-		m_use_cart_audio(0),
-		m_slot1(*this, "cslot1"),
-		m_slot2(*this, "cslot2"),
-		m_slot3(*this, "cslot3"),
-		m_slot4(*this, "cslot4"),
-		m_slot5(*this, "cslot5"),
-		m_slot6(*this, "cslot6")
-	{ }
+		: driver_device(mconfig, type, tag)
+		, m_maincpu(*this, "maincpu")
+		, m_audiocpu(*this, "audiocpu")
+		, m_upd4990a(*this, "upd4990a")
+		, m_ym(*this, "ymsnd")
+		, m_sprgen(*this, "spritegen")
+		, m_save_ram(*this, "saveram")
+		, m_screen(*this, "screen")
+		, m_palette(*this, "palette")
+		, m_memcard(*this, "memcard")
+		, m_soundlatch(*this, "soundlatch")
+		, m_soundlatch2(*this, "soundlatch2")
+		, m_neo_zmc(*this, "neo_zmc")
+		, m_region_maincpu(*this, "maincpu")
+		, m_region_sprites(*this, "sprites")
+		, m_region_fixed(*this, "fixed")
+		, m_region_fixedbios(*this, "fixedbios")
+		, m_region_mainbios(*this, "mainbios")
+		, m_region_audiobios(*this, "audiobios")
+		, m_region_audiocpu(*this, "audiocpu")
+		, m_bank_audio_main(*this, "audio_main")
+		, m_dsw(*this, "DSW")
+		, m_trackx(*this, "TRACK_X")
+		, m_tracky(*this, "TRACK_Y")
+		, m_edge(*this, "edge")
+		, m_ctrl1(*this, "ctrl1")
+		, m_ctrl2(*this, "ctrl2")
+		, m_use_cart_vectors(0)
+		, m_use_cart_audio(0)
+		, m_slot1(*this, "cslot1")
+		, m_slot2(*this, "cslot2")
+		, m_slot3(*this, "cslot3")
+		, m_slot4(*this, "cslot4")
+		, m_slot5(*this, "cslot5")
+		, m_slot6(*this, "cslot6")
+	{
+	}
 
 	DECLARE_READ16_MEMBER(memcard_r);
 	DECLARE_WRITE16_MEMBER(memcard_w);
 	DECLARE_WRITE8_MEMBER(audio_command_w);
 	DECLARE_READ8_MEMBER(audio_command_r);
-	DECLARE_READ8_MEMBER(audio_cpu_bank_select_r);
 	DECLARE_WRITE8_MEMBER(audio_cpu_enable_nmi_w);
 	DECLARE_READ16_MEMBER(unmapped_r);
 	DECLARE_READ16_MEMBER(paletteram_r);
@@ -209,6 +211,7 @@ protected:
 	optional_device<ng_memcard_device> m_memcard;
 	required_device<generic_latch_8_device> m_soundlatch;
 	required_device<generic_latch_8_device> m_soundlatch2;
+	optional_device<neo_zmc_device> m_neo_zmc; // optional because of neocd
 
 	// memory
 	optional_memory_region m_region_maincpu;
@@ -219,7 +222,6 @@ protected:
 	optional_memory_region m_region_audiobios;
 	optional_memory_region m_region_audiocpu;
 	optional_memory_bank   m_bank_audio_main; // optional because of neocd
-	memory_bank           *m_bank_audio_cart[4];
 	memory_bank           *m_bank_cartridge;
 
 	// configuration
@@ -321,7 +323,8 @@ class aes_state : public neogeo_state
 		aes_state(const machine_config &mconfig, device_type type, const char *tag)
 			: neogeo_state(mconfig, type, tag)
 			, m_io_in2(*this, "IN2")
-	{}
+	{
+	}
 
 	DECLARE_READ16_MEMBER(aes_in2_r);
 	DECLARE_INPUT_CHANGED_MEMBER(aes_jp1);
@@ -343,10 +346,12 @@ class neopcb_state : public neogeo_state
 	public:
 		neopcb_state(const machine_config &mconfig, device_type type, const char *tag)
 			: neogeo_state(mconfig, type, tag)
-		, m_cmc_prot(*this, "cmc50")
-		, m_pcm2_prot(*this, "pcm2")
-		, m_pvc_prot(*this, "pvc")
-	{}
+			, m_cmc_prot(*this, "cmc50")
+			, m_pcm2_prot(*this, "pcm2")
+			, m_pvc_prot(*this, "pvc")
+			, m_cpu_bank(*this, "cpu_bank")
+		{
+		}
 
 	// device overrides
 	virtual void machine_start() override;
@@ -358,7 +363,6 @@ class neopcb_state : public neogeo_state
 	DECLARE_DRIVER_INIT(ms5pcb);
 	DECLARE_DRIVER_INIT(svcpcb);
 	DECLARE_DRIVER_INIT(kf2k3pcb);
-	DECLARE_DRIVER_INIT(vliner);
 
 	void install_common();
 	void install_banked_bios();
@@ -373,6 +377,7 @@ class neopcb_state : public neogeo_state
 	required_device<cmc_prot_device> m_cmc_prot;
 	required_device<pcm2_prot_device> m_pcm2_prot;
 	required_device<pvc_prot_device> m_pvc_prot;
+	optional_memory_bank   m_cpu_bank;
 	void neopcb(machine_config &config);
 };
 

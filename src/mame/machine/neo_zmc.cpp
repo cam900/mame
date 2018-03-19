@@ -31,7 +31,7 @@ DEFINE_DEVICE_TYPE(NEO_ZMC, neo_zmc_device, "neo_zmc", "SNK NEO_ZMC Bankswitch d
 
 neo_zmc_device::neo_zmc_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, NEO_ZMC, tag, owner, clock)
-	, m_source_size(0x80000)
+	, m_source_size(0x400000) // ZMC2(22bit Address Space)
 {
 	std::fill(std::begin(m_bank), std::end(m_bank), 0);
 }
@@ -75,7 +75,7 @@ void neo_zmc_device::device_start()
 		ZMC, CMC 19bit(M11-M18)
 		ZMC2 22bit(M11-M21)
 	*/
-	m_source.resize(0x80000, 0);
+	m_source.resize(0x400000, 0);
 	save_item(NAME(m_source));
 	save_item(NAME(m_source_size));
 	save_item(NAME(m_bank));
@@ -97,8 +97,7 @@ void neo_zmc_device::device_reset()
 
 READ8_MEMBER( neo_zmc_device::bank_r )
 {
-	if (m_source_size > 0x10000)
-		m_bank[offset & 3] = (offset >> 8) & 0xff; // high 8 address line is bankswitch select
+	m_bank[offset & 3] = (offset >> 8) & 0xff; // high 8 address line is bankswitch select
 
 	return 0;
 }
@@ -107,21 +106,17 @@ READ8_MEMBER( neo_zmc_device::bank_r )
 // 0x0000-0x7fff : fixed area
 READ8_MEMBER( neo_zmc_device::banked_rom_r )
 {
-	if (m_source_size > 0x10000) // bankswitched
+	if (offset & 0x4000)
 	{
-		if (offset & 0x4000)
+		if (offset & 0x2000)
 		{
-			if (offset & 0x2000)
+			if (offset & 0x1000)
 			{
-				if (offset & 0x1000)
-				{
-					return read_rom(0,offset); // 0xf000-0xf7ff
-				}
-				return read_rom(1,offset); // 0xe000-0xefff
+				return read_rom(0,offset); // 0xf000-0xf7ff
 			}
-			return read_rom(2,offset); // 0xc000-0xdfff
+			return read_rom(1,offset); // 0xe000-0xefff
 		}
-		return read_rom(3,offset); // 0x8000-0xbfff
+		return read_rom(2,offset); // 0xc000-0xdfff
 	}
-	return m_source[ (0x8000 | (offset & 0x7fff)) % m_source_size ];
+	return read_rom(3,offset); // 0x8000-0xbfff
 }

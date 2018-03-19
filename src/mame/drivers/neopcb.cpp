@@ -25,7 +25,7 @@ void neopcb_state::machine_start()
 void neopcb_state::neopcb_postload()
 {
 	m_bank_audio_main->set_entry(m_use_cart_audio);
-	membank("cpu_bank")->set_base(m_region_maincpu->base() + m_bank_base);
+	m_cpu_bank->set_base(m_region_maincpu->base() + m_bank_base);
 	set_outputs();
 }
 
@@ -412,7 +412,7 @@ WRITE16_MEMBER(neopcb_state::write_bankpvc)
 	if (offset >= 0xff8)
 	{
 		m_bank_base = m_pvc_prot->get_bank_base();
-		membank("cpu_bank")->set_base(m_region_maincpu->base() + m_bank_base);
+		m_cpu_bank->set_base(m_region_maincpu->base() + m_bank_base);
 	}
 }
 
@@ -421,7 +421,7 @@ void neopcb_state::install_common()
 	// install memory bank
 	m_maincpu->space(AS_PROGRAM).install_rom(0x000080, 0x0fffff, (uint16_t *)m_region_maincpu->base() + 0x80/2);
 	m_maincpu->space(AS_PROGRAM).install_read_bank(0x200000, 0x2fffff, "cpu_bank");
-	membank("cpu_bank")->set_base(m_region_maincpu->base() + 0x100000);
+	m_cpu_bank->set_base(m_region_maincpu->base() + 0x100000);
 
 	// install protection handlers + bankswitch handler
 	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0x2fe000, 0x2fffff, read16_delegate(FUNC(pvc_prot_device::protection_r),(pvc_prot_device*)m_pvc_prot), write16_delegate(FUNC(neopcb_state::write_bankpvc),this));

@@ -2830,6 +2830,8 @@ files {
 	MAME_DIR .. "src/mame/drivers/neopcb.cpp",
 	MAME_DIR .. "src/mame/video/neogeo_spr.cpp",
 	MAME_DIR .. "src/mame/video/neogeo_spr.h",
+	MAME_DIR .. "src/mame/machine/neo_zmc.cpp",
+	MAME_DIR .. "src/mame/machine/neo_zmc.h",
 	MAME_DIR .. "src/mame/machine/ng_memcard.cpp",
 	MAME_DIR .. "src/mame/machine/ng_memcard.h",
 }

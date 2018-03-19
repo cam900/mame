@@ -831,20 +831,6 @@ CUSTOM_INPUT_MEMBER(neogeo_state::get_audio_result)
 
 /*************************************
  *
- *  Audio CPU banking
- *
- *************************************/
-
-READ8_MEMBER(neogeo_state::audio_cpu_bank_select_r)
-{
-	m_bank_audio_cart[offset & 3]->set_entry(offset >> 8);
-
-	return 0;
-}
-
-
-/*************************************
- *
  *  System control register
  *
  *************************************/
@@ -1040,9 +1026,10 @@ void neogeo_state::init_cpu()
 
 void neogeo_state::init_audio()
 {
+	address_space &space = m_audiocpu->space(AS_PROGRAM);
+	address_space &port = m_audiocpu->space(AS_IO);
 	uint8_t *ROM = (!m_slots[m_curr_slot] || m_slots[m_curr_slot]->get_audio_size() == 0) ? m_region_audiocpu->base() : m_slots[m_curr_slot]->get_audio_base();
 	uint32_t len = (!m_slots[m_curr_slot] || m_slots[m_curr_slot]->get_audio_size() == 0) ? m_region_audiocpu->bytes() : m_slots[m_curr_slot]->get_audio_size();
-	uint32_t address_mask;
 
 	/* audio bios/cartridge selection */
 	m_bank_audio_main->configure_entry(0, (m_region_audiobios != nullptr) ? m_region_audiobios->base() : ROM); /* on hardware with no SM1 ROM, the cart ROM is always enabled */
@@ -1050,32 +1037,24 @@ void neogeo_state::init_audio()
 	m_bank_audio_main->set_entry(1);
 
 	/* audio banking */
-	m_bank_audio_cart[0] = membank("audio_f000");
-	m_bank_audio_cart[1] = membank("audio_e000");
-	m_bank_audio_cart[2] = membank("audio_c000");
-	m_bank_audio_cart[3] = membank("audio_8000");
-
-	address_mask = (len - 0x10000 - 1) & 0x3ffff;
-	for (int region = 0; region < 4; region++)
+	space.unmap_read(0x8000, 0xf7ff);
+	for (int i = 0; i < 0xfff; i++)
 	{
-		for (int bank = 0xff; bank >= 0; bank--)
-		{
-			uint32_t bank_address = 0x10000 + ((bank << (11 + region)) & address_mask);
-			m_bank_audio_cart[region]->configure_entry(bank, &ROM[bank_address]);
-		}
+		port.unmap_read((i<<4)|0x08, (i<<4)|0x0b);
 	}
-
-	// set initial audio banks - THIS IS A HACK
-	// Z80 banking is handled by the NEO-ZMC chip in the cartridge
-	// (in later cartridges, by multifunction banking/protection chips that implement the same bank scheme)
-	// On the real chip, initial banks are all 0.
-	// However, early cartridges with less than 64KB of Z80 code and data don't have ROM banking at all.
-	// These initial bank settings are required so non-banked games will work until we identify them
-	// and use a different Z80 address map for them.
-	m_bank_audio_cart[0]->set_entry(0x1e);
-	m_bank_audio_cart[1]->set_entry(0x0e);
-	m_bank_audio_cart[2]->set_entry(0x06);
-	m_bank_audio_cart[3]->set_entry(0x02);
+	int type = (!m_slots[m_curr_slot]) ? 0 : m_slots[m_curr_slot]->get_type();
+	switch (type)
+	{
+		case NEOGEO_SBP:
+			// PCB doesn't have neo-zmc, and not bankswitched?
+			space.install_rom(0x8000, 0xf7ff, ROM + 0x8000);
+			break;
+		default:
+			m_neo_zmc->set_source(&ROM[0x10000], len - 0x10000);
+			space.install_read_handler(0x8000, 0xf7ff, read8_delegate(FUNC(neo_zmc_device::banked_rom_r),(neo_zmc_device*)m_neo_zmc));
+			port.install_read_handler(0x08, 0x0b, 0, 0x00f0, 0xff00, read8_delegate(FUNC(neo_zmc_device::bank_r),(neo_zmc_device*)m_neo_zmc));
+			break;
+	}
 }
 
 void neogeo_state::init_ym()
@@ -1484,10 +1463,7 @@ void aes_state::aes_main_map(address_map &map)
 void neogeo_state::audio_map(address_map &map)
 {
 	map(0x0000, 0x7fff).bankr("audio_main");
-	map(0x8000, 0xbfff).bankr("audio_8000");
-	map(0xc000, 0xdfff).bankr("audio_c000");
-	map(0xe000, 0xefff).bankr("audio_e000");
-	map(0xf000, 0xf7ff).bankr("audio_f000");
+	map(0x8000, 0xf7ff).r(m_neo_zmc, FUNC(neo_zmc_device::banked_rom_r));
 	map(0xf800, 0xffff).ram();
 }
 
@@ -1504,7 +1480,7 @@ void neogeo_state::audio_io_map(address_map &map)
 	map(0x00, 0x00).mirror(0xff00).r(this, FUNC(neogeo_state::audio_command_r)).w(m_soundlatch, FUNC(generic_latch_8_device::clear_w));
 	map(0x04, 0x07).mirror(0xff00).rw(m_ym, FUNC(ym2610_device::read), FUNC(ym2610_device::write));
 	map(0x08, 0x08).mirror(0xff00).select(0x0010).w(this, FUNC(neogeo_state::audio_cpu_enable_nmi_w));
-	map(0x08, 0x0b).mirror(0x00f0).select(0xff00).r(this, FUNC(neogeo_state::audio_cpu_bank_select_r));
+	map(0x08, 0x0b).mirror(0x00f0).select(0xff00).r(m_neo_zmc, FUNC(neo_zmc_device::bank_r));
 	map(0x0c, 0x0c).mirror(0xff00).w(m_soundlatch2, FUNC(generic_latch_8_device::write));
 }
 
@@ -1622,6 +1598,8 @@ MACHINE_CONFIG_START(neogeo_state::neogeo_base)
 	MCFG_CPU_ADD("audiocpu", Z80, NEOGEO_AUDIO_CPU_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(audio_map)
 	MCFG_CPU_IO_MAP(audio_io_map)
+
+	MCFG_NEO_ZMC_ADD("neo_zmc", 0)
 
 	MCFG_DEVICE_ADD("systemlatch", HC259, 0)
 	MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(WRITELINE(neogeo_state, set_screen_shadow))
