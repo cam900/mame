@@ -18,14 +18,23 @@ class lethal_state : public driver_device
 {
 public:
 	lethal_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_maincpu(*this, "maincpu"),
-		m_soundcpu(*this, "soundcpu"),
-		m_bank4000(*this, "bank4000"),
-		m_k056832(*this, "k056832"),
-		m_k053244(*this, "k053244"),
-		m_k054321(*this, "k054321"),
-		m_palette(*this, "palette") { }
+		: driver_device(mconfig, type, tag)
+		, m_eepromout(*this, "EEPROMOUT")
+		, m_lightgun_io(*this, {"LIGHT0_X", "LIGHT0_Y", "LIGHT1_X", "LIGHT1_Y"})
+		, m_mainbank(*this, "mainbank")
+		, m_maincpu(*this, "maincpu")
+		, m_soundcpu(*this, "soundcpu")
+		, m_bank4000(*this, "bank4000")
+		, m_k056832(*this, "k056832")
+		, m_k053244(*this, "k053244")
+		, m_k054321(*this, "k054321")
+		, m_palette(*this, "palette")
+	{
+	}
+
+	required_ioport m_eepromout;
+	required_ioport_array<4> m_lightgun_io;
+	required_memory_bank m_mainbank;
 
 	/* video-related */
 	int        m_layer_colorbase[4];

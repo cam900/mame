@@ -262,11 +262,9 @@ maybe some sprite placement issues
 #define SOUND_CLOCK     XTAL(18'432'000)
 
 
-static const char *const gunnames[] = { "LIGHT0_X", "LIGHT0_Y", "LIGHT1_X", "LIGHT1_Y" };
-
 /* a = 1, 2 = player # */
-#define GUNX( a ) (( ( ioport(gunnames[2 * (a - 1)])->read() * 287 ) / 0xff ) + 16)
-#define GUNY( a ) (( ( ioport(gunnames[2 * (a - 1) + 1])->read() * 223 ) / 0xff ) + 10)
+#define GUNX( a ) (( ( m_lightgun_io[2 * a]->read() * 287 ) / 0xff ) + 16)
+#define GUNY( a ) (( ( m_lightgun_io[2 * a + 1]->read() * 223 ) / 0xff ) + 10)
 
 WRITE8_MEMBER(lethal_state::control2_w)
 {
@@ -282,7 +280,7 @@ WRITE8_MEMBER(lethal_state::control2_w)
 
 	m_bank4000->set_bank(BIT(m_cur_control2, 4));
 
-	ioport("EEPROMOUT")->write(m_cur_control2, 0xff);
+	m_eepromout->write(m_cur_control2, 0xff);
 }
 
 INTERRUPT_GEN_MEMBER(lethal_state::lethalen_interrupt)
@@ -304,7 +302,7 @@ WRITE8_MEMBER(lethal_state::sound_irq_w)
 
 WRITE8_MEMBER(lethal_state::le_bankswitch_w)
 {
-	membank("bank1")->set_entry(data);
+	m_mainbank->set_entry(data);
 }
 
 READ8_MEMBER(lethal_state::guns_r)
@@ -312,19 +310,19 @@ READ8_MEMBER(lethal_state::guns_r)
 	switch (offset)
 	{
 		case 0:
-			return GUNX(1) >> 1;
+			return GUNX(0) >> 1;
 		case 1:
+			if ((GUNY(0)<=0x0b) || (GUNY(0)>=0xe8))
+				return 0;
+			else
+				return (232 - GUNY(0));
+		case 2:
+			return GUNX(1) >> 1;
+		case 3:
 			if ((GUNY(1)<=0x0b) || (GUNY(1)>=0xe8))
 				return 0;
 			else
 				return (232 - GUNY(1));
-		case 2:
-			return GUNX(2) >> 1;
-		case 3:
-			if ((GUNY(2)<=0x0b) || (GUNY(2)>=0xe8))
-				return 0;
-			else
-				return (232 - GUNY(2));
 	}
 
 	return 0;
@@ -334,15 +332,15 @@ READ8_MEMBER(lethal_state::gunsaux_r)
 {
 	int res = 0;
 
-	if (GUNX(1) & 1) res |= 0x80;
-	if (GUNX(2) & 1) res |= 0x40;
+	if (GUNX(0) & 1) res |= 0x80;
+	if (GUNX(1) & 1) res |= 0x40;
 
 	return res;
 }
 
 void lethal_state::le_main(address_map &map)
 {
-	map(0x0000, 0x1fff).bankr("bank1");
+	map(0x0000, 0x1fff).bankr("mainbank");
 	map(0x2000, 0x3fff).ram();             // work RAM
 	map(0x4000, 0x7fff).m(m_bank4000, FUNC(address_map_bank_device::amap8));
 	map(0x4000, 0x43ff).unmaprw(); // first 0x400 bytes of palette RAM are inaccessible
@@ -376,7 +374,7 @@ void lethal_state::bank4000_map(address_map &map)
 	map(0x3800, 0x3fff).rw(m_k056832, FUNC(k056832_device::ram_attr_hi_r), FUNC(k056832_device::ram_attr_hi_w));
 
 	// VRD = 1, CBNK = 0 or 1
-	map(0xa000, 0xbfff).mirror(0x4000).unmaprw(); // AM_DEVREAD("k056832", k056832_device, rom_byte_r)
+	map(0xa000, 0xbfff).mirror(0x4000).unmaprw(); // .r("k056832", FUNC(k056832_device::rom_byte_r));
 
 	// CBNK = 1; partially overlaid when VRD = 1
 	map(0x4000, 0x7fff).mirror(0x8000).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
@@ -469,8 +467,8 @@ INPUT_PORTS_END
 
 void lethal_state::machine_start()
 {
-	membank("bank1")->configure_entries(0, 0x20, memregion("maincpu")->base(), 0x2000);
-	membank("bank1")->set_entry(0);
+	m_mainbank->configure_entries(0, 0x20, memregion("maincpu")->base(), 0x2000);
+	m_mainbank->set_entry(0);
 
 	save_item(NAME(m_cur_control2));
 	save_item(NAME(m_layer_colorbase));
@@ -492,7 +490,7 @@ void lethal_state::machine_reset()
 MACHINE_CONFIG_START(lethal_state::lethalen)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", HD6309, MAIN_CLOCK/2)    /* verified on pcb */
+	MCFG_CPU_ADD("maincpu", HD6309E, MAIN_CLOCK/8)    /* HD63C09EP, verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(le_main)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", lethal_state,  lethalen_interrupt)
 
