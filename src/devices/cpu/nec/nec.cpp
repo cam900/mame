@@ -123,26 +123,28 @@ DEFINE_DEVICE_TYPE(V33A, v33a_device, "v33a", "NEC V33A")
 
 
 
-nec_common_device::nec_common_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_16bit, offs_t fetch_xor, uint8_t prefetch_size, uint8_t prefetch_cycles, uint32_t chip_type)
+nec_common_device::nec_common_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_16bit, bool is_24bit_addr, offs_t fetch_xor, uint8_t prefetch_size, uint8_t prefetch_cycles, uint32_t chip_type)
 	: cpu_device(mconfig, type, tag, owner, clock)
-	, m_program_config("program", ENDIANNESS_LITTLE, is_16bit ? 16 : 8, 20, 0)
+	, m_program_config("program", ENDIANNESS_LITTLE, is_16bit ? 16 : 8, is_24bit_addr ? 24 : 20, 0)
 	, m_io_config("io", ENDIANNESS_LITTLE, is_16bit ? 16 : 8, 16, 0)
 	, m_fetch_xor(fetch_xor)
 	, m_prefetch_size(prefetch_size)
 	, m_prefetch_cycles(prefetch_cycles)
 	, m_chip_type(chip_type)
+	, m_is_support_xa(is_24bit_addr)
+	, m_xaflag(0)
 {
 }
 
 
 v20_device::v20_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: nec_common_device(mconfig, V20, tag, owner, clock, false, 0, 4, 4, V20_TYPE)
+	: nec_common_device(mconfig, V20, tag, owner, clock, false, false, 0, 4, 4, V20_TYPE)
 {
 }
 
 
 v30_device::v30_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: nec_common_device(mconfig, V30, tag, owner, clock, true, BYTE_XOR_LE(0), 6, 2, V30_TYPE)
+	: nec_common_device(mconfig, V30, tag, owner, clock, true, false, BYTE_XOR_LE(0), 6, 2, V30_TYPE)
 {
 }
 
@@ -154,18 +156,17 @@ device_memory_interface::space_config_vector nec_common_device::memory_space_con
 	};
 }
 
-
 /* FIXME: Need information about prefetch size and cycles for V33.
  * complete guess below, nbbatman will not work
  * properly without. */
 v33_device::v33_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: nec_common_device(mconfig, V33, tag, owner, clock, true, BYTE_XOR_LE(0), 6, 1, V33_TYPE)
+	: nec_common_device(mconfig, V33, tag, owner, clock, true, true, BYTE_XOR_LE(0), 6, 1, V33_TYPE)
 {
 }
 
 
 v33a_device::v33a_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: nec_common_device(mconfig, V33A, tag, owner, clock, true, BYTE_XOR_LE(0), 6, 1, V33_TYPE)
+	: nec_common_device(mconfig, V33A, tag, owner, clock, true, true, BYTE_XOR_LE(0), 6, 1, V33_TYPE)
 {
 }
 
@@ -175,6 +176,14 @@ std::unique_ptr<util::disasm_interface> nec_common_device::create_disassembler()
 	return std::make_unique<nec_disassembler>();
 }
 
+
+bool nec_common_device::memory_translate(int spacenum, int intention, offs_t &address)
+{
+	if (spacenum == AS_PROGRAM)
+		address = get_addr(address);
+
+	return true;
+}
 
 void nec_common_device::prefetch()
 {
@@ -218,7 +227,16 @@ void nec_common_device::do_prefetch(int previous_ICount)
 uint8_t nec_common_device::fetch()
 {
 	prefetch();
-	return m_direct->read_byte((Sreg(PS)<<4)+m_ip++, m_fetch_xor);
+	return m_direct->read_byte(get_addr((Sreg(PS)<<4)+m_ip++), m_fetch_xor);
+}
+
+offs_t nec_common_device::get_addr(offs_t address)
+{
+	if ((m_is_support_xa) && (m_xaflag))
+	{
+		return (m_xareg.w[address >> 14] << 14) | (address & 0x3fff);
+	}
+	return address;
 }
 
 uint16_t nec_common_device::fetchword()
@@ -238,7 +256,57 @@ static uint8_t parity_table[256];
 uint8_t nec_common_device::fetchop()
 {
 	prefetch();
-	return m_direct->read_byte(( Sreg(PS)<<4)+m_ip++, m_fetch_xor);
+	return m_direct->read_byte(get_addr(( Sreg(PS)<<4)+m_ip++), m_fetch_xor);
+}
+
+uint8_t nec_common_device::read_port_byte(offs_t a)
+{
+	if ((m_is_support_xa) && ((a >= 0xff00) && (a <= 0xff80)))
+	{
+		if (a == 0xff80)
+			return m_xaflag ? 1 : 0
+
+		return m_xareg.b[a];
+	}
+
+	return m_io->read_byte(a);
+}
+
+uint16_t nec_common_device::read_port_word(offs_t a)
+{
+	if ((m_is_support_xa) && ((a >= 0xff00) && (a <= 0xff81)))
+	{
+		if ((a & ~1) == 0xff80)
+			return m_xaflag ? 1 : 0
+
+		return m_xareg.w[a >> 1];
+	}
+
+	return m_io->read_word_unaligned(a);
+}
+
+void nec_common_device::write_port_byte(offs_t a, uint8_t d)
+{
+	if ((m_is_support_xa) && ((a >= 0xff00) && (a < 0xff80)))
+	{
+		m_xareg.b[a] = d;
+	}
+	else
+	{
+		m_io->write_byte(a,d);
+	}
+}
+
+void nec_common_device::write_port_word(offs_t a, uint16_t d)
+{
+	if ((m_is_support_xa) && ((a >= 0xff00) && (a < 0xff80)))
+	{
+		m_xareg.w[a >> 1] = d;
+	}
+	else
+	{
+		m_io->write_word_unaligned(a,d);
+	}
 }
 
 
@@ -265,6 +333,7 @@ void nec_common_device::device_reset()
 	m_irq_state = 0;
 	m_poll_state = 1;
 	m_halted = 0;
+	m_xaflag = 0;
 
 	Sreg(PS) = 0xffff;
 	Sreg(SS) = 0;
@@ -391,11 +460,13 @@ void nec_common_device::device_start()
 	m_E16 = 0;
 	m_debugger_temp = 0;
 	m_ip = 0;
-
+	
 	memset(m_regs.w, 0x00, sizeof(m_regs.w));
+	memset(m_xareg.w, 0x00, sizeof(m_xareg.w));
 	memset(m_sregs, 0x00, sizeof(m_sregs));
 
 	save_item(NAME(m_regs.w));
+	save_item(NAME(m_xareg.w));
 	save_item(NAME(m_sregs));
 
 	save_item(NAME(m_ip));

@@ -25,7 +25,7 @@ class nec_common_device : public cpu_device
 {
 protected:
 	// construction/destruction
-	nec_common_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_16bit, offs_t fetch_xor, uint8_t prefetch_size, uint8_t prefetch_cycles, uint32_t chip_type);
+	nec_common_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, bool is_16bit, bool is_24bit_addr, offs_t fetch_xor, uint8_t prefetch_size, uint8_t prefetch_cycles, uint32_t chip_type);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -41,6 +41,7 @@ protected:
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address) override;
 
 	// device_state_interface overrides
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
@@ -50,6 +51,10 @@ protected:
 	// device_disasm_interface overrides
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
 
+	uint8_t read_port_byte(offs_t a);
+	uint16_t read_port_word(offs_t a);
+	void write_port_byte(offs_t a, uint8_t d);
+	void write_port_word(offs_t a, uint16_t d);
 private:
 	address_space_config m_program_config;
 	address_space_config m_io_config;
@@ -62,6 +67,14 @@ private:
 	};
 
 	necbasicregs m_regs;
+	
+	union necxaregs
+	{                   /* 64 address space expansion registers */
+		uint16_t w[64];    /* viewed as 16 bits registers */
+		uint8_t  b[128];   /* or as 8 bit registers */
+	};
+
+	necxaregs m_xareg;
 	offs_t  m_fetch_xor;
 	uint16_t  m_sregs[4];
 
@@ -97,6 +110,8 @@ private:
 	int8_t    m_prefetch_count;
 	uint8_t   m_prefetch_reset;
 	uint32_t  m_chip_type;
+	bool      m_is_support_xa;
+	int       m_xaflag;
 
 	uint32_t  m_prefix_base;    /* base address of the latest prefix segment */
 	uint8_t   m_seg_prefix;     /* prefix segment indicator */
@@ -120,6 +135,7 @@ private:
 	void nec_interrupt(unsigned int_num, int source);
 	void nec_trap();
 	void external_int();
+	inline offs_t get_addr(offs_t address);
 
 	void i_add_br8();
 	void i_add_wr16();

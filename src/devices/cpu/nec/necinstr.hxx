@@ -45,9 +45,9 @@ OP( 0x0f, i_pre_nec  ) { uint32_t ModRM, tmp, tmp2;
 		case 0x2a : ModRM = fetch(); tmp = GetRMByte(ModRM); tmp2 = (Breg(AL) & 0xf)<<4; Breg(AL) = (Breg(AL) & 0xf0) | (tmp&0xf); tmp = tmp2 | (tmp>>4);   PutbackRMByte(ModRM,tmp); CLKM(17,17,13,32,32,19); break;
 		case 0x31 : ModRM = fetch(); ModRM=0; logerror("%06x: Unimplemented bitfield INS\n",PC()); break;
 		case 0x33 : ModRM = fetch(); ModRM=0; logerror("%06x: Unimplemented bitfield EXT\n",PC()); break;
-		case 0xe0 : ModRM = fetch(); ModRM=0; logerror("%06x: V33 unimplemented BRKXA (break to expansion address)\n",PC()); break;
-		case 0xf0 : ModRM = fetch(); ModRM=0; logerror("%06x: V33 unimplemented RETXA (return from expansion address)\n",PC()); break;
-		case 0xff : ModRM = fetch(); ModRM=0; logerror("%06x: unimplemented BRKEM (break to 8080 emulation mode)\n",PC()); break;
+		case 0xe0 : if (m_is_support_xa) { nec_interrupt(fetch(), BRK); m_xaflag = 1; CLKS(12,12,12); } else { ModRM = fetch(); ModRM=0; logerror("%06x: V33 specific BRKXA (break to expansion address)\n",PC()); } break;
+		case 0xf0 : if (m_is_support_xa) { nec_interrupt(fetch(), BRK); m_xaflag = 0; CLKS(12,12,12); } else { ModRM = fetch(); ModRM=0; logerror("%06x: V33 specific RETXA (return from expansion address)\n",PC()); } break;
+		case 0xff : /*if (m_is_support_xa) { */ModRM = fetch(); ModRM=0; logerror("%06x: unimplemented BRKEM (break to 8080 emulation mode)\n",PC());/* } else {}*/ break;
 		default:    logerror("%06x: Unknown V20 instruction\n",PC()); break;
 	}
 }

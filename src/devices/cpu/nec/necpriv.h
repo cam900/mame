@@ -52,15 +52,10 @@ enum BREGS {
 
 /************************************************************************/
 
-#define read_mem_byte(a)            m_program->read_byte(a)
-#define read_mem_word(a)            m_program->read_word_unaligned(a)
-#define write_mem_byte(a,d)         m_program->write_byte((a),(d))
-#define write_mem_word(a,d)         m_program->write_word_unaligned((a),(d))
-
-#define read_port_byte(a)       m_io->read_byte(a)
-#define read_port_word(a)       m_io->read_word_unaligned(a)
-#define write_port_byte(a,d)    m_io->write_byte((a),(d))
-#define write_port_word(a,d)    m_io->write_word_unaligned((a),(d))
+#define read_mem_byte(a)            m_program->read_byte(get_addr(a))
+#define read_mem_word(a)            m_program->read_word_unaligned(get_addr(a))
+#define write_mem_byte(a,d)         m_program->write_byte(get_addr(a),(d))
+#define write_mem_word(a,d)         m_program->write_word_unaligned(get_addr(a),(d))
 
 /************************************************************************/
 
