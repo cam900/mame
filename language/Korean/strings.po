@@ -21,12 +21,12 @@ msgstr ""
 #: src/frontend/mame/ui/auditmenu.cpp:96
 #, c-format
 msgid "Audit ROMs for %1$u machines marked unavailable?"
-msgstr "없음으로 표시된 %1$u 기계의 ROM을 검사합니까?"
+msgstr "없음으로 표시된 %1$u 기기의 ROM을 검사합니까?"
 
 #: src/frontend/mame/ui/auditmenu.cpp:99
 #, c-format
 msgid "Audit ROMs for all %1$u machines?"
-msgstr "모든 %1$u 기계의 ROM을 검사합니까?"
+msgstr "모든 %1$u 기기의 ROM을 검사합니까?"
 
 #: src/frontend/mame/ui/auditmenu.cpp:104
 #, c-format
@@ -39,7 +39,7 @@ msgid ""
 "Auditing ROMs for machine %2$u of %3$u...\n"
 "%1$s"
 msgstr ""
-"기계 총 %3$u 중 %2$u의 ROM을 검사중...\n"
+"기기 총 %3$u 중 %2$u의 ROM을 검사중...\n"
 "%1$s"
 
 #: src/frontend/mame/ui/auditmenu.cpp:142
@@ -144,7 +144,7 @@ msgstr "%1$s, %2$-.100s"
 #: src/frontend/mame/ui/selmenu.cpp:574
 #, c-format
 msgid "Software is clone of: %1$-.100s"
-msgstr "소프트웨어는 다음의 사본입니다: %1$-.100s"
+msgstr "소프트웨어는 다음의 자식입니다: %1$-.100s"
 
 #: src/frontend/mame/ui/selmenu.cpp:576
 msgid "Software is parent"
@@ -170,7 +170,7 @@ msgstr "롬셋: %1$-.100s"
 #: src/frontend/mame/ui/selmenu.cpp:612
 #, c-format
 msgid "Driver is clone of: %1$-.100s"
-msgstr "드라이버는 다음의 사본입니다: %1$-.100s"
+msgstr "드라이버는 다음의 자식입니다: %1$-.100s"
 
 #: src/frontend/mame/ui/selmenu.cpp:614
 msgid "Driver is parent"
@@ -412,7 +412,7 @@ msgid ""
 "One or more ROMs/CHDs for this machine are incorrect. The machine may not "
 "run correctly.\n"
 msgstr ""
-"이 기계에 대한 하나 이상의 ROM/CHD가 잘못되었습니다. 기계가 올바르게 실행되지"
+"이 기기에 대한 하나 이상의 ROM/CHD가 잘못되었습니다. 기기가 올바르게 실행되지"
 "않을 수 있습니다.\n"
 
 #: src/frontend/mame/ui/info.cpp:190
@@ -420,14 +420,14 @@ msgid ""
 "There are known problems with this machine\n"
 "\n"
 msgstr ""
-"이 기계에는 다음과 같은 문제가 있습니다.\n"
+"이 기기에는 다음과 같은 문제가 있습니다.\n"
 "\n"
 
 #: src/frontend/mame/ui/info.cpp:195
 msgid ""
 "One or more ROMs/CHDs for this machine have not been correctly dumped.\n"
 msgstr ""
-"이 기계에 대한 하나 이상의 ROM/CHD가 올바르게 덤프되지 않았습니다.\n"
+"이 기기에 대한 하나 이상의 ROM/CHD가 올바르게 덤프되지 않았습니다.\n"
 
 #: src/frontend/mame/ui/info.cpp:200
 msgid "Completely unemulated features: "
@@ -454,14 +454,14 @@ msgstr "칵테일 모드에서 화면 반전이 지원되지 않습니다."
 
 #: src/frontend/mame/ui/info.cpp:233
 msgid "This machine requires external artwork files.\n"
-msgstr "이 기계는 외부 아트웍 파일이 필요합니다."
+msgstr "이 기기는 외부 아트웍 파일이 필요합니다."
 
 #: src/frontend/mame/ui/info.cpp:235
 msgid ""
 "This machine was never completed. It may exhibit strange behavior or missing "
 "elements that are not bugs in the emulation.\n"
 msgstr ""
-"이 기계는 완성되지 않았습니다. 이상한 동작이나 누락된 요소가 있지만 에뮬레이션 "
+"이 기기는 완성되지 않았습니다. 이상한 동작이나 누락된 요소가 있지만 에뮬레이션 "
 "버그는 아닙니다.\n"
 
 #: src/frontend/mame/ui/info.cpp:237
@@ -469,7 +469,7 @@ msgid ""
 "This machine has no sound hardware, MAME will produce no sounds, this is "
 "expected behaviour.\n"
 msgstr ""
-"이 기계는 사운드 하드웨어가 없습니다. MAME에서 소리가 출력되지 않으며 이것은 "
+"이 기기는 사운드 하드웨어가 없습니다. MAME에서 소리가 출력되지 않으며 이것은 "
 "예상된 동작입니다.\n"
 
 #: src/frontend/mame/ui/info.cpp:241
@@ -480,7 +480,7 @@ msgid ""
 "the developers to improve the emulation.\n"
 msgstr ""
 "\n"
-"이 기계는 동작하지 않습니다. 이 기계의 에뮬레이션이 아직 완성되지 않았습니다. "
+"이 기기는 동작하지 않습니다. 이 기기의 에뮬레이션이 아직 완성되지 않았습니다. "
 "개발자가 에뮬레이션을 개선하기를 기다리지 않고 이 문제를 해결하기 위해 할 수 "
 "있는 일은 없습니다.\n"
 
@@ -492,8 +492,8 @@ msgid ""
 "experience this machine.\n"
 msgstr ""
 "\n"
-"물리적 상호 작용이나 기계 장치로 구성되기 때문에 이 기계의 요소를 에뮬레이션 할 "
-"수 없습니다. 이 기계를 완전히 경험할 수는 없습니다.\n"
+"물리적 상호 작용이나 기계 장치로 구성되기 때문에 이 기기의 요소를 에뮬레이션 할 "
+"수 없습니다. 이 기기를 완전히 경험할 수는 없습니다.\n"
 
 #: src/frontend/mame/ui/info.cpp:265
 #, c-format
@@ -504,7 +504,7 @@ msgid ""
 msgstr ""
 "\n"
 "\n"
-"이 기계의 작동가능한 사본이 있습니다.: %s"
+"이 기기의 작동가능한 자식이 있습니다.: %s"
 
 #: src/frontend/mame/ui/info.cpp:278
 msgid ""
@@ -744,7 +744,7 @@ msgid ""
 "If this is your first time using %2$s, please see the config.txt file in the "
 "docs directory for information on configuring %2$s."
 msgstr ""
-"기계를 찾지 못하였습니다. %1$s.ini 파일에 지정된 rompath를 확인하십시오.\n"
+"기기를 찾지 못하였습니다. %1$s.ini 파일에 지정된 rompath를 확인하십시오.\n"
 "\n"
 "%2$s를 처음 사용하는 경우 %2$s 구성에 대한 정보는 docs 디렉토리의 config.txt를 "
 "확인하십시오."
@@ -959,7 +959,7 @@ msgstr "드라이버"
 
 #: src/frontend/mame/ui/miscmenu.cpp:767
 msgid "This machine has no BIOS."
-msgstr "이 기계엔 바이오스가 없습니다."
+msgstr "이 기기엔 바이오스가 없습니다."
 
 #: src/frontend/mame/ui/miscmenu.cpp:776 src/frontend/mame/ui/mainmenu.cpp:145
 msgid "Add To Favorites"
@@ -971,11 +971,11 @@ msgstr "즐겨찾기에서 제거"
 
 #: src/frontend/mame/ui/miscmenu.cpp:781
 msgid "Save machine configuration"
-msgstr "기계 설정 저장"
+msgstr "기기 설정 저장"
 
 #: src/frontend/mame/ui/miscmenu.cpp:792
 msgid "Configure machine:"
-msgstr "기계 설정:"
+msgstr "기기 설정:"
 
 #: src/frontend/mame/ui/miscmenu.cpp:895 src/frontend/mame/ui/sndmenu.cpp:135
 #: src/frontend/mame/ui/sndmenu.cpp:137 src/frontend/mame/ui/menu.cpp:736
@@ -1022,7 +1022,7 @@ msgstr "입력 (일반)"
 
 #: src/frontend/mame/ui/mainmenu.cpp:62
 msgid "Input (this Machine)"
-msgstr "입력 (이 기계)"
+msgstr "입력 (이 기기)"
 
 #: src/frontend/mame/ui/mainmenu.cpp:66
 msgid "Analog Controls"
@@ -1034,7 +1034,7 @@ msgstr "딥 스위치"
 
 #: src/frontend/mame/ui/mainmenu.cpp:71
 msgid "Machine Configuration"
-msgstr "기계 설정"
+msgstr "기기 설정"
 
 #: src/frontend/mame/ui/mainmenu.cpp:75
 msgid "Bookkeeping Info"
@@ -1042,7 +1042,7 @@ msgstr "부기 정보"
 
 #: src/frontend/mame/ui/mainmenu.cpp:78
 msgid "Machine Information"
-msgstr "기계 정보"
+msgstr "기기 정보"
 
 #: src/frontend/mame/ui/mainmenu.cpp:85
 msgid "Image Information"
@@ -1102,7 +1102,7 @@ msgstr "외부 DAT 보기"
 
 #: src/frontend/mame/ui/mainmenu.cpp:154
 msgid "Select New Machine"
-msgstr "새 기계 선택"
+msgstr "새 기기 선택"
 
 #: src/frontend/mame/ui/custui.cpp:31
 msgid "Show All"
@@ -1190,7 +1190,7 @@ msgstr "서브아이템 색상"
 
 #: src/frontend/mame/ui/custui.cpp:456 src/frontend/mame/ui/custui.cpp:511
 msgid "Clone"
-msgstr "사본"
+msgstr "자식"
 
 #: src/frontend/mame/ui/custui.cpp:457
 msgid "Border"
@@ -1330,7 +1330,7 @@ msgstr "기타 옵션"
 
 #: src/frontend/mame/ui/submenu.cpp:23
 msgid "Re-select last machine played"
-msgstr "마지막으로 플레이한 기계 다시 선택"
+msgstr "마지막으로 플레이한 기기 다시 선택"
 
 #: src/frontend/mame/ui/submenu.cpp:24
 msgid "Enlarge images in the right panel"
@@ -1342,7 +1342,7 @@ msgstr "마우스 포인터 표시"
 
 #: src/frontend/mame/ui/submenu.cpp:27
 msgid "Confirm quit from machines"
-msgstr "기계 종료시 확인"
+msgstr "기기 종료시 확인"
 
 #: src/frontend/mame/ui/submenu.cpp:28
 msgid "Skip information screen at startup"
@@ -1370,7 +1370,7 @@ msgstr "정보 자동 검사"
 
 #: src/frontend/mame/ui/submenu.cpp:34
 msgid "Hide romless machine from available list"
-msgstr "사용가능 목록에서 romless 기계 숨기기"
+msgstr "사용가능 목록에서 romless 기기 숨기기"
 
 #: src/frontend/mame/ui/submenu.cpp:38
 msgid "Advanced Options"
@@ -1666,7 +1666,7 @@ msgstr ""
 
 #: src/frontend/mame/ui/selgame.cpp:437
 msgid "Configure Machine"
-msgstr "기계 설정"
+msgstr "기기 설정"
 
 #: src/frontend/mame/ui/selgame.cpp:849
 #, c-format
@@ -1686,7 +1686,7 @@ msgstr "제조사\t%1$-.100s\n"
 #: src/frontend/mame/ui/selgame.cpp:855
 #, c-format
 msgid "Driver is Clone of\t%1$-.100s\n"
-msgstr "드라이버는 다음의 사본입니다\t%1$-.100s\n"
+msgstr "드라이버는 다음의 자식입니다\t%1$-.100s\n"
 
 #: src/frontend/mame/ui/selgame.cpp:857
 msgid "Driver is Parent\t\n"
@@ -1923,7 +1923,7 @@ msgstr ""
 #: src/frontend/mame/ui/selgame.cpp:1167
 #, c-format
 msgid "%1$s %2$s ( %3$d / %4$d machines (%5$d BIOS) )"
-msgstr "%1$s %2$s ( %3$d / %4$d 기계 (%5$d 바이오스) )"
+msgstr "%1$s %2$s ( %3$d / %4$d 기기 (%5$d 바이오스) )"
 
 #: src/frontend/mame/ui/selgame.cpp:1183 src/frontend/mame/ui/selsoft.cpp:555
 #, c-format
@@ -1951,8 +1951,8 @@ msgid ""
 "Please select a different machine.\n"
 "\n"
 msgstr ""
-"선택한 기계에 대해 하나 이상의 필수 ROM 또는 CHD 이미지가 누락되었습니다. "
-"다른 기계를 선택하여 주십시오.\n"
+"선택한 기기에 대해 하나 이상의 필수 ROM 또는 CHD 이미지가 누락되었습니다. "
+"다른 기기를 선택하여 주십시오.\n"
 "\n"
 
 #: src/frontend/mame/ui/selgame.cpp:1245 src/frontend/mame/ui/selsoft.cpp:462
@@ -2017,7 +2017,7 @@ msgstr "부모"
 
 #: src/frontend/mame/ui/utils.cpp:69 src/frontend/mame/ui/utils.cpp:85
 msgid "Clones"
-msgstr "사본"
+msgstr "자식"
 
 #: src/frontend/mame/ui/utils.cpp:70
 msgid "Manufacturer"
@@ -2134,7 +2134,7 @@ msgstr "그룹"
 
 #: src/frontend/mame/ui/utils.cpp:1047
 msgid "Include clones"
-msgstr "포함된 사본"
+msgstr "포함된 자식"
 
 #: src/frontend/mame/ui/selsoft.cpp:456
 msgid ""
@@ -2199,7 +2199,7 @@ msgstr ""
 
 #: src/frontend/mame/ui/menu.cpp:294
 msgid "Return to Machine"
-msgstr "기계로 돌아가기"
+msgstr "기기로 돌아가기"
 
 #: src/frontend/mame/ui/menu.cpp:299 src/frontend/mame/ui/menu.cpp:301
 msgid "Exit"
@@ -2244,7 +2244,7 @@ msgstr "연사 상태"
 
 #: src/frontend/mame/ui/cheatopt.cpp:316
 msgid "No buttons found on this machine!"
-msgstr "이 기계에서 버튼을 찾지 못하였습니다!"
+msgstr "이 기기에서 버튼을 찾지 못하였습니다!"
 
 #: src/frontend/mame/ui/cheatopt.cpp:327 src/frontend/mame/ui/cheatopt.cpp:331
 msgid "Autofire Delay"
