@@ -2695,43 +2695,43 @@ msgstr "오퍼레이터"
 
 #: plugins/cheatfind/init.lua:561
 msgid "Left less than right, value is difference"
-msgstr ""
+msgstr "왼쪽이 오른쪽보다 작고, 값이 다름"
 
 #: plugins/cheatfind/init.lua:563
 msgid "Left greater than right, value is difference"
-msgstr ""
+msgstr "왼쪽이 오른쪽보다 크고, 값이 다름"
 
 #: plugins/cheatfind/init.lua:565
 msgid "Left equal to right"
-msgstr ""
+msgstr "왼쪽과 오른쪽이 서로 같음"
 
 #: plugins/cheatfind/init.lua:567
 msgid "Left not equal to right, value is difference"
-msgstr ""
+msgstr "왼쪽과 오른쪽이 서로 다르고, 값이 다름"
 
 #: plugins/cheatfind/init.lua:569
 msgid "Left equal to right with bitmask"
-msgstr ""
+msgstr "비트 마스크를 사용하며 왼쪽과 오른쪽이 서로 같음"
 
 #: plugins/cheatfind/init.lua:571
 msgid "Left not equal to right with bitmask"
-msgstr ""
+msgstr "비트 마스크를 사용하며 왼쪽과 오른쪽이 서로 다름"
 
 #: plugins/cheatfind/init.lua:573
 msgid "Left less than value"
-msgstr ""
+msgstr "왼쪽이 값보다 작음"
 
 #: plugins/cheatfind/init.lua:575
 msgid "Left greater than value"
-msgstr ""
+msgstr "왼쪽이 값보다 큼"
 
 #: plugins/cheatfind/init.lua:577
 msgid "Left equal to value"
-msgstr ""
+msgstr "왼쪽이 값과 같음"
 
 #: plugins/cheatfind/init.lua:579
 msgid "Left not equal to value"
-msgstr ""
+msgstr "왼쪽이 값과 다름"
 
 #: plugins/cheatfind/init.lua:590
 msgid "Right operand"
@@ -2755,7 +2755,7 @@ msgstr "마지막 검색 취소 -- #"
 
 #: plugins/cheatfind/init.lua:636
 msgid "Match block"
-msgstr ""
+msgstr "짝 블록"
 
 #: plugins/cheatfind/init.lua:639
 msgid "All"
@@ -2780,7 +2780,7 @@ msgstr "쓰기"
 
 #: plugins/cheatfind/init.lua:771
 msgid "Watch"
-msgstr ""
+msgstr "보기"
 
 #: plugins/cheatfind/init.lua:788
 msgid "Page"
@@ -2788,7 +2788,7 @@ msgstr "페이지"
 
 #: plugins/cheatfind/init.lua:806
 msgid "Clear Watches"
-msgstr ""
+msgstr "보기 초기화"
 
 #: plugins/cheatfind/init.lua:816
 msgid "Cheat Finder"
