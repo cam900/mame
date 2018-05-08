@@ -19,7 +19,7 @@ matrix:
     - os: linux
       compiler: clang
 env:
-  - SUBTARGET=tiny   MAME=mametiny64
+  - MAME=mame64
 script:
   - if [ $TRAVIS_OS_NAME == 'linux' ]; then
     if [ $CC == 'clang' ]; then
@@ -40,7 +40,8 @@ before_install:
   - "if [ ${TRAVIS_OS_NAME:-'linux'} = 'osx' ]; then brew install sdl2 sdl2_ttf; fi"
 branches:
   only:
-    - master
+  - gh-pages
+  - /.*/
 notifications:
   email: false
 
