@@ -255,32 +255,30 @@ Stephh's log (2006.09.20) :
 
 READ16_MEMBER(cps_state::cps1_dsw_r)
 {
-	ioport *dsw = nullptr;
+	uint8_t dsw;
 	switch (offset)
 	{
-		case 0: dsw = m_io_in0; break;
+		case 0: dsw = m_io_in0->read(); break;
 		case 1:
 		case 2:
-		case 3: dsw = m_io_dsw[offset-1]; break;
+		case 3: dsw = m_io_dsw[offset-1]->read(); break;
 		default: return;
 	}
-	int in = dsw->read();
-	return (in << 8) | 0xff;
+	return (dsw << 8) | 0xff;
 }
 
 READ16_MEMBER(cps_state::cps1_hack_dsw_r)
 {
-	ioport *dsw = nullptr;
+	uint8_t dsw;
 	switch (offset)
 	{
-		case 0: dsw = m_io_in0; break;
+		case 0: dsw = m_io_in0->read(); break;
 		case 1:
 		case 2:
-		case 3: dsw = m_io_dsw[offset-1]; break;
+		case 3: dsw = m_io_dsw[offset-1]->read(); break;
 		default: return;
 	}
-	int in = dsw->read();
-	return (in << 8) | in;
+	return (dsw << 8) | dsw;
 }
 
 READ16_MEMBER(cps_state::cps1_in1_r)
@@ -12305,14 +12303,8 @@ ROM_START( sfzbch )
 	ROM_REGION( 0x8000, "stars", 0 )
 	ROM_COPY( "gfx", 0x000000, 0x000000, 0x8000 )   /* stars */
 
-<<<<<<< HEAD
 	ROM_REGION( 0x10000, "audiocpu",0 ) /* 64k for the audio CPU (+banks) */
-	ROM_LOAD( "sfz_09.12a",  0x00000, 0x10000, CRC(c772628b) SHA1(ebc5b7c173caf1e151f733f23c1b20abec24e16d))
-=======
-	ROM_REGION( 0x18000, "audiocpu",0 ) /* 64k for the audio CPU (+banks) */
-	ROM_LOAD( "sfz_09.12a",  0x00000, 0x08000, CRC(c772628b) SHA1(ebc5b7c173caf1e151f733f23c1b20abec24e16d) )
-	ROM_CONTINUE(            0x10000, 0x08000 )
->>>>>>> upstream/master
+	ROM_LOAD( "sfz_09.12a",  0x00000, 0x10000, CRC(c772628b) SHA1(ebc5b7c173caf1e151f733f23c1b20abec24e16d) )
 
 	ROM_REGION( 0x40000, "oki",0 )  /* Samples */
 	ROM_LOAD( "sfz_18.11c",  0x00000, 0x20000, CRC(61022b2d) SHA1(6369d0c1d08a30ee19b94e52ab1463a7784b9de5) )
