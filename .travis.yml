@@ -19,7 +19,7 @@ matrix:
     - os: linux
       compiler: clang
 env:
-  - SOURCES=src/mame/drivers/cps1.cpp SOURCES=src/mame/drivers/cps2.cpp SOURCES=src/mame/drivers/fcrash.cpp REGENIE=1 MAME=mame64
+  - SOURCES=src/mame/drivers/argus.cpp REGENIE=1 MAME=mame64
 script:
   - if [ $TRAVIS_OS_NAME == 'linux' ]; then
     if [ $CC == 'clang' ]; then
