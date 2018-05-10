@@ -4131,11 +4131,11 @@ MACHINE_CONFIG_START(toaplan2_state::batrider)
 
 	// these two latches are always written together, via a single move.l instruction
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
-	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<0>))
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(WRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<0>))
 	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch2")
-	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<1>))
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(WRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<1>))
 	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch3")
@@ -4209,11 +4209,11 @@ MACHINE_CONFIG_START(toaplan2_state::bbakraid)
 
 	// these two latches are always written together, via a single move.l instruction
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
-	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<0>))
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(WRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<0>))
 	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch2")
-	MCFG_GENERIC_LATCH_DATA_PENDING_CB(DEVWRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<1>))
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(WRITELINE("batrider_sndirq", input_merger_any_high_device, in_w<1>))
 	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch3")
