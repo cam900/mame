@@ -19,7 +19,7 @@ matrix:
     - os: linux
       compiler: clang
 env:
-  - SOURCES=src/mame/drivers/atarigt.cpp SOURCES=src/mame/drivers/metalmx.cpp SOURCES=src/mame/drivers/seattle.cpp REGENIE=1 MAME=mame64
+  - SOURCES=src/mame/drivers/highvdeo.cpp REGENIE=1 MAME=mame64
 script:
   - if [ $TRAVIS_OS_NAME == 'linux' ]; then
     if [ $CC == 'clang' ]; then
