@@ -28,6 +28,8 @@
     Big Fight/Cyclewarriors - misc graphics problems.
     Cyclewarriors - test mode text does not appear as it needs a -256 Y scroll offset from somewhere.
 
+    reference of bigfight : https://youtu.be/aUUoUCr6yhk
+
     Emulation by Bryan McPhail, mish@tendril.co.uk
 
 
@@ -819,17 +821,17 @@ static const gfx_layout roundup5_vramlayout =
 	8*16
 };
 
-static GFXDECODE_START( apache3 )
+static GFXDECODE_START( gfx_apache3 )
 	GFXDECODE_ENTRY( "sprites", 0, spritelayout,    1024, 128)
 	GFXDECODE_ENTRY( "text",    0, gfx_8x8x3_planar, 768,  16)
 GFXDECODE_END
 
-static GFXDECODE_START( roundup5 )
+static GFXDECODE_START( gfx_roundup5 )
 	GFXDECODE_ENTRY( "sprites", 0, spritelayout,     1024, 256)
 	GFXDECODE_ENTRY(  nullptr,  0, roundup5_vramlayout, 0,  16)
 GFXDECODE_END
 
-static GFXDECODE_START( cyclwarr )
+static GFXDECODE_START( gfx_cyclwarr )
 	GFXDECODE_ENTRY( "sprites", 0, spritelayout,  8192, 512)
 	GFXDECODE_ENTRY( "tilerom", 0, gfx_8x8x3_planar, 0,  16)
 GFXDECODE_END
@@ -846,7 +848,7 @@ WRITE_LINE_MEMBER(apache3_state::apache3_68000_reset)
 	m_subcpu2->set_input_line(INPUT_LINE_RESET, PULSE_LINE);
 }
 
-MACHINE_RESET_MEMBER(apache3_state,apache3)
+void apache3_state::machine_reset_apache3()
 {
 	m_subcpu2->set_input_line(INPUT_LINE_RESET, ASSERT_LINE); // TODO
 
@@ -875,7 +877,7 @@ MACHINE_CONFIG_START(apache3_state::apache3)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(6000))
 	MCFG_NVRAM_ADD_0FILL("nvram")
-	MCFG_MACHINE_RESET_OVERRIDE(apache3_state, apache3)
+	set_machine_reset_cb(config, driver_callback_delegate(&machine_reset_apache3, this));
 
 	MCFG_DEVICE_ADD("adc", M58990, 1000000) // unknown clock
 	MCFG_ADC0808_IN0_CB(IOPORT("STICK_X"))
@@ -893,7 +895,7 @@ MACHINE_CONFIG_START(apache3_state::apache3)
 	MCFG_SCREEN_RAW_PARAMS(CLOCK_2 / 8, 400, 0, 320, 280, 0, 240) // TODO: Hook up CRTC
 	MCFG_SCREEN_UPDATE_DRIVER(apache3_state, screen_update_apache3)
 
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", apache3)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_apache3)
 	MCFG_PALETTE_ADD("palette", 1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
 	MCFG_PALETTE_FORMAT(xRRRRRGGGGGBBBBB)
 
@@ -905,7 +907,7 @@ MACHINE_CONFIG_START(apache3_state::apache3)
 	bit 0:  3.9kOhm resistor
 	*/
 
-	MCFG_VIDEO_START_OVERRIDE(apache3_state, apache3)
+	set_video_start_cb(config, driver_callback_delegate(&video_start_apache3, this));
 
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
@@ -948,13 +950,13 @@ MACHINE_CONFIG_START(roundup5_state::roundup5)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 	MCFG_SCREEN_UPDATE_DRIVER(roundup5_state, screen_update_roundup5)
 
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", roundup5)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_roundup5)
 	MCFG_PALETTE_ADD("palette", 1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
 	MCFG_PALETTE_FORMAT(xRRRRRGGGGGBBBBB)
 	MCFG_PALETTE_MEMBITS(8)
 	MCFG_PALETTE_ENDIANNESS(ENDIANNESS_BIG)
 
-	MCFG_VIDEO_START_OVERRIDE(roundup5_state,roundup5)
+	set_video_start_cb(config, driver_callback_delegate(&video_start_roundup5, this));
 
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
@@ -1007,11 +1009,11 @@ MACHINE_CONFIG_START(cyclwarr_state::cyclwarr)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 	MCFG_SCREEN_UPDATE_DRIVER(cyclwarr_state, screen_update_cyclwarr)
 
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", cyclwarr)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_cyclwarr)
 	MCFG_PALETTE_ADD("palette", 8192 + 8192)
 	MCFG_PALETTE_FORMAT(xRRRRRGGGGGBBBBB)
 
-	MCFG_VIDEO_START_OVERRIDE(cyclwarr_state, cyclwarr)
+	set_video_start_cb(config, driver_callback_delegate(&video_start_cyclwarr, this));
 
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
@@ -1067,11 +1069,11 @@ MACHINE_CONFIG_START(cyclwarr_state::bigfight)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 	MCFG_SCREEN_UPDATE_DRIVER(cyclwarr_state, screen_update_bigfight)
 
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", cyclwarr)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_cyclwarr)
 	MCFG_PALETTE_ADD("palette", 8192 + 8192)
 	MCFG_PALETTE_FORMAT(xRRRRRGGGGGBBBBB)
 
-	MCFG_VIDEO_START_OVERRIDE(cyclwarr_state, bigfight)
+	set_video_start_cb(config, driver_callback_delegate(&video_start_bigfight, this));
 
 	/* sound hardware */
 	SPEAKER(config, "lspeaker").front_left();
@@ -1385,13 +1387,13 @@ ROM_END
 
 /***************************************************************************/
 
-DRIVER_INIT_MEMBER(apache3_state,apache3)
+void apache3_state::init_apache3()
 {
 	uint8_t *dst = memregion("sprites")->base();
 	uint8_t *src1 = memregion("sprites_l")->base();
 	uint8_t *src2 = memregion("sprites_h")->base();
 
-	for (int i=0; i<0x100000; i+=32)
+	for (int i = 0; i < 0x100000; i += 32)
 	{
 		memcpy(dst,src1,32);
 		src1+=32;
@@ -1417,13 +1419,13 @@ DRIVER_INIT_MEMBER(apache3_state,apache3)
 	// TODO: ym2151_set_port_write_handler for CT1/CT2 outputs
 }
 
-DRIVER_INIT_MEMBER(roundup5_state,roundup5)
+void roundup5_state::init_roundup5()
 {
 	uint8_t *dst = memregion("sprites")->base();
 	uint8_t *src1 = memregion("sprites_l")->base();
 	uint8_t *src2 = memregion("sprites_h")->base();
 
-	for (int i=0; i<0xc0000; i+=32)
+	for (int i = 0; i < 0xc0000; i += 32)
 	{
 		memcpy(dst,src1,32);
 		src1+=32;
@@ -1442,7 +1444,7 @@ DRIVER_INIT_MEMBER(roundup5_state,roundup5)
 	tatsumi_reset();
 }
 
-DRIVER_INIT_MEMBER(cyclwarr_state,cyclwarr)
+void cyclwarr_state::init_cyclwarr()
 {
 	uint8_t *dst = memregion("sprites")->base();
 	uint8_t *src1 = memregion("sprites_l")->base();
@@ -1450,7 +1452,7 @@ DRIVER_INIT_MEMBER(cyclwarr_state,cyclwarr)
 	uint8_t *src2 = memregion("sprites_h")->base();
 	int len2 = memregion("sprites_h")->bytes();
 
-	for (int i=0; i<len1; i+=32)
+	for (int i = 0; i < len1; i += 32)
 	{
 		memcpy(dst,src1,32);
 		src1+=32;
@@ -1482,9 +1484,9 @@ DRIVER_INIT_MEMBER(cyclwarr_state,cyclwarr)
 /* http://www.tatsu-mi.co.jp/game/trace/index.html */
 
 /* ** 1987  grayout    - Gray Out (not dumped yet) */
-GAME( 1988, apache3,   0,        apache3,   apache3,  apache3_state,  apache3,  ROT0, "Tatsumi", "Apache 3", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1988, apache3a,  apache3,  apache3,   apache3,  apache3_state,  apache3,  ROT0, "Tatsumi (Kana Corporation license)", "Apache 3 (Kana Corporation license)", MACHINE_IMPERFECT_GRAPHICS )
-GAMEL(1989, roundup5,  0,        roundup5,  roundup5, roundup5_state, roundup5, ROT0, "Tatsumi", "Round Up 5 - Super Delta Force", MACHINE_IMPERFECT_GRAPHICS, layout_roundup5 )
-GAME( 1991, cyclwarr,  0,        cyclwarr,  cyclwarr, cyclwarr_state, cyclwarr, ROT0, "Tatsumi", "Cycle Warriors (rev C)", MACHINE_IMPERFECT_GRAPHICS ) // Rev C & B CPU code
-GAME( 1991, cyclwarra, cyclwarr, cyclwarr,  cyclwarb, cyclwarr_state, cyclwarr, ROT0, "Tatsumi", "Cycle Warriors (rev B)", MACHINE_IMPERFECT_GRAPHICS ) // Rev B & A CPU code
-GAME( 1992, bigfight,  0,        bigfight,  bigfight, cyclwarr_state, cyclwarr, ROT0, "Tatsumi", "Big Fight - Big Trouble In The Atlantic Ocean", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1988, apache3,   0,        apache3,   apache3,  apache3_state,  init_apache3,  ROT0, "Tatsumi", "Apache 3", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1988, apache3a,  apache3,  apache3,   apache3,  apache3_state,  init_apache3,  ROT0, "Tatsumi (Kana Corporation license)", "Apache 3 (Kana Corporation license)", MACHINE_IMPERFECT_GRAPHICS )
+GAMEL(1989, roundup5,  0,        roundup5,  roundup5, roundup5_state, init_roundup5, ROT0, "Tatsumi", "Round Up 5 - Super Delta Force", MACHINE_IMPERFECT_GRAPHICS, layout_roundup5 )
+GAME( 1991, cyclwarr,  0,        cyclwarr,  cyclwarr, cyclwarr_state, init_cyclwarr, ROT0, "Tatsumi", "Cycle Warriors (rev C)", MACHINE_IMPERFECT_GRAPHICS ) // Rev C & B CPU code
+GAME( 1991, cyclwarra, cyclwarr, cyclwarr,  cyclwarb, cyclwarr_state, init_cyclwarr, ROT0, "Tatsumi", "Cycle Warriors (rev B)", MACHINE_IMPERFECT_GRAPHICS ) // Rev B & A CPU code
+GAME( 1992, bigfight,  0,        bigfight,  bigfight, cyclwarr_state, init_cyclwarr, ROT0, "Tatsumi", "Big Fight - Big Trouble In The Atlantic Ocean", MACHINE_IMPERFECT_GRAPHICS )

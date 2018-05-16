@@ -315,7 +315,7 @@ WRITE8_MEMBER(leland_state::indyheat_analog_w)
  *
  *************************************/
 
-MACHINE_START_MEMBER(leland_state,leland)
+void leland_state::machine_start_leland()
 {
 	/* start scanline interrupts going */
 	m_master_int_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(leland_state::leland_interrupt_callback),this));
@@ -337,7 +337,7 @@ MACHINE_START_MEMBER(leland_state,leland)
 }
 
 
-MACHINE_RESET_MEMBER(leland_state,leland)
+void leland_state::machine_reset_leland()
 {
 	m_master_int_timer->adjust(m_screen->time_until_pos(8), 8);
 
@@ -372,7 +372,7 @@ MACHINE_RESET_MEMBER(leland_state,leland)
 }
 
 
-MACHINE_START_MEMBER(leland_state,ataxx)
+void leland_state::machine_start_ataxx()
 {
 	/* set the odd data banks */
 	m_extra_tram = std::make_unique<uint8_t[]>(ATAXX_EXTRA_TRAM_SIZE);
@@ -391,7 +391,7 @@ MACHINE_START_MEMBER(leland_state,ataxx)
 }
 
 
-MACHINE_RESET_MEMBER(leland_state,ataxx)
+void leland_state::machine_reset_ataxx()
 {
 	memset(m_extra_tram.get(), 0, ATAXX_EXTRA_TRAM_SIZE);
 	m_master_int_timer->adjust(m_screen->time_until_pos(8), 8);

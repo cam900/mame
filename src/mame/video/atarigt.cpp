@@ -76,7 +76,7 @@ TILEMAP_MAPPER_MEMBER(atarigt_state::atarigt_playfield_scan)
  *
  *************************************/
 
-VIDEO_START_MEMBER(atarigt_state,atarigt)
+void atarigt_state::video_start_atarigt()
 {
 	m_expanded_mram = make_unique_clear<uint32_t[]>(MRAM_ENTRIES * 3);
 	/* blend the playfields and free the temporary one */
