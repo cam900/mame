@@ -21,16 +21,17 @@ class atarigt_state : public atarigen_state
 {
 public:
 	atarigt_state(const machine_config &mconfig, device_type type, const char *tag)
-		: atarigen_state(mconfig, type, tag),
-			m_colorram(*this, "colorram", 32),
-			m_adc(*this, "adc"),
-			m_playfield_tilemap(*this, "playfield"),
-			m_alpha_tilemap(*this, "alpha"),
-			m_rle(*this, "rle"),
-			m_mo_command(*this, "mo_command"),
-			m_cage(*this, "cage") { }
+		: atarigen_state(mconfig, type, tag)
+		, m_colorram(*this, "colorram", 32)
+		, m_adc(*this, "adc")
+		, m_playfield_tilemap(*this, "playfield")
+		, m_alpha_tilemap(*this, "alpha")
+		, m_rle(*this, "rle")
+		, m_mo_command(*this, "mo_command")
+		, m_cage(*this, "cage")
+	{ }
 
-	uint8_t           m_is_primrage;
+	bool           m_is_primrage;
 	required_shared_ptr<uint16_t> m_colorram;
 
 	optional_device<adc0808_device> m_adc;
@@ -49,7 +50,7 @@ public:
 
 	uint32_t          m_tram_checksum;
 
-	uint32_t          m_expanded_mram[MRAM_ENTRIES * 3];
+	std::unique_ptr<uint32_t[]> m_expanded_mram;
 
 	required_shared_ptr<uint32_t> m_mo_command;
 	optional_device<atari_cage_device> m_cage;
@@ -86,9 +87,9 @@ public:
 	TILE_GET_INFO_MEMBER(get_alpha_tile_info);
 	TILE_GET_INFO_MEMBER(get_playfield_tile_info);
 	TILEMAP_MAPPER_MEMBER(atarigt_playfield_scan);
-	DECLARE_MACHINE_START(atarigt);
-	DECLARE_MACHINE_RESET(atarigt);
-	DECLARE_VIDEO_START(atarigt);
+	void machine_start_atarigt() ATTR_COLD;
+	void machine_reset_atarigt();
+	void video_start_atarigt() ATTR_COLD;
 	uint32_t screen_update_atarigt(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void atarigt(machine_config &config);
 	void tmek(machine_config &config);
