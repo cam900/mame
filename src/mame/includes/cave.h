@@ -261,6 +261,8 @@ protected:
 	uint16_t     m_sprite_zbuf_baseval;
 
 	int          m_num_sprites[4];
+	int          m_sprite_clock[4];
+	int          m_sprite_limits;
 
 	int          m_spriteram_bank[4];
 	int          m_spriteram_bank_delay[4];

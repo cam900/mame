@@ -306,6 +306,15 @@ void cave_state::cave_vh_start( int num )
 {
 	assert(m_palette_map != nullptr);
 
+	const rectangle &visarea = m_screen->visible_area();
+	// Sprite is limited related to screen/each sprite size
+	// TODO : Verify screen total size of each games/sprite clock for sprite limit correction
+	m_sprite_limits = 272; // total scanline is 272
+	if (visarea.max_x <= 320) // screen visible size is <=320, HTOTAL is 448 at most case
+		m_sprite_limits *= 448;
+	else // screen visible size is >320, HTOTAL is 512 at most case
+		m_sprite_limits *= 512;
+
 	m_tilemap[0] = nullptr;
 	m_tilemap[1] = nullptr;
 	m_tilemap[2] = nullptr;
@@ -441,6 +450,7 @@ VIDEO_START_MEMBER(cave_state,sailormn_3_layers)
 void cave_state::get_sprite_info_cave(int chip)
 {
 	chip %= 4;
+	m_sprite_clock[chip] = 0;
 	pen_t base_pal = 0;
 	const uint8_t *base_gfx = m_spriteregion[chip]->base();
 	int code_max = m_spriteregion[chip]->bytes() / (16*16);
@@ -462,6 +472,10 @@ void cave_state::get_sprite_info_cave(int chip)
 
 	for (; source < finish; source += 8)
 	{
+		m_sprite_clock[chip] += 16;
+		if (m_sprite_clock[chip] >= m_sprite_limits)
+			break;
+
 		int x, y, attr, code, zoomx, zoomy, size, flipx, flipy;
 		int total_width_f, total_height_f;
 
@@ -486,6 +500,10 @@ void cave_state::get_sprite_info_cave(int chip)
 
 		if (!sprite->tile_width || !sprite->tile_height)
 			continue;
+
+		m_sprite_clock[chip] += ((sprite->tile_width * sprite->tile_height) >> 1);
+		if (m_sprite_clock[chip] >= m_sprite_limits)
+			break;
 
 		/* Bound checking */
 		code %= code_max;
@@ -566,6 +584,7 @@ void cave_state::get_sprite_info_cave(int chip)
 void cave_state::get_sprite_info_donpachi(int chip)
 {
 	chip %= 4;
+	m_sprite_clock[chip] = 0;
 	pen_t base_pal = 0;
 	const uint8_t *base_gfx = m_spriteregion[chip]->base();
 	int code_max = m_spriteregion[chip]->bytes() / (16*16);
@@ -587,6 +606,10 @@ void cave_state::get_sprite_info_donpachi(int chip)
 
 	for (; source < finish; source += 8)
 	{
+		m_sprite_clock[chip] += 16;
+		if (m_sprite_clock[chip] >= m_sprite_limits)
+			break;
+
 		int x, y, attr, code, size, flipx, flipy;
 
 		attr = source[0];
@@ -602,6 +625,10 @@ void cave_state::get_sprite_info_donpachi(int chip)
 
 		sprite->tile_width  = sprite->total_width  = ((size >> 8) & 0x1f) * 16;
 		sprite->tile_height = sprite->total_height = ((size >> 0) & 0x1f) * 16;
+
+		m_sprite_clock[chip] += ((sprite->tile_width * sprite->tile_height) >> 1);
+		if (m_sprite_clock[chip] >= m_sprite_limits)
+			break;
 
 		/* Bound checking */
 		code %= code_max;
