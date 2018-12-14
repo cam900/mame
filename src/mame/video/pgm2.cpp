@@ -334,7 +334,7 @@ WRITE_LINE_MEMBER(pgm2_state::screen_vblank)
 	// rising edge
 	if (state)
 	{
-		draw_sprites(m_screen->visible_area());
+		draw_sprites(m_screen->visible_area()); // 1 frame delayed
 		m_arm_aic->set_irq(12, ASSERT_LINE);
 	}
 }
