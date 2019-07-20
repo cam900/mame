@@ -1541,3 +1541,39 @@ if (SOUNDS["SWP30"]~=null) then
 		MAME_DIR .. "src/devices/sound/swp30.h",
 	}
 end
+
+---------------------------------------------------
+--
+--@src/devices/sound/jkms8p64.h,SOUNDS["JKMS8P64"] = true
+---------------------------------------------------
+
+if (SOUNDS["JKMS8P64"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/jkms8p64.cpp",
+		MAME_DIR .. "src/devices/sound/jkms8p64.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/sound/jkms8w8.h,SOUNDS["JKMS8W8"] = true
+---------------------------------------------------
+
+if (SOUNDS["JKMS8W8"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/jkms8w8.cpp",
+		MAME_DIR .. "src/devices/sound/jkms8w8.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/sound/jkms8w64.h,SOUNDS["JKMS8W64"] = true
+---------------------------------------------------
+
+if (SOUNDS["JKMS8W64"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/jkms8w64.cpp",
+		MAME_DIR .. "src/devices/sound/jkms8w64.h",
+	}
+end

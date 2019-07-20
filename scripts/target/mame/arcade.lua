@@ -4610,6 +4610,7 @@ files {
 	MAME_DIR .. "src/mame/includes/cave.h",
 	MAME_DIR .. "src/mame/video/cave.cpp",
 	MAME_DIR .. "src/mame/drivers/cavepc.cpp",
+	MAME_DIR .. "src/mame/drivers/common_blitter.cpp",
 	MAME_DIR .. "src/mame/drivers/cv1k.cpp",
 	MAME_DIR .. "src/mame/drivers/cb2001.cpp",
 	MAME_DIR .. "src/mame/drivers/cdi.cpp",
