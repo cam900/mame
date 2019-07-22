@@ -21,13 +21,12 @@ jkms8w8_device::jkms8w8_device(const machine_config &mconfig, const char *tag, d
 
 void jkms8w8_device::device_start()
 {
-	m_waveform = make_unique_clear<u8[]>(WAVE_SIZE);
+	m_waveform = make_unique_clear<u16[]>(WAVE_SIZE);
 	m_stream = machine().sound().stream_alloc(*this, 0, 2, clock() / 16);
 
 	for (int ch = 0; ch < MAX_CHANNEL; ch++)
 	{
 		channel_t *chan = &m_channel[ch];
-		save_item(NAME(chan->rng), ch);
 		save_item(NAME(chan->wave_clock), ch);
 		save_item(NAME(chan->wave_xor), ch);
 		save_item(NAME(chan->wave_pingpong), ch);
@@ -55,7 +54,6 @@ void jkms8w8_device::device_reset()
 	for (int ch = 0; ch < MAX_CHANNEL; ch++)
 	{
 		channel_t *chan = &m_channel[ch];
-		chan->rng = 1;
 		chan->wave_clock = 0;
 		chan->wave_xor = 0;
 		chan->wave_pingpong = 0;
@@ -113,10 +111,10 @@ void jkms8w8_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 			}
 			if (((chan->ctrl & 0x40) == 0) && chan->playing)
 			{
-				s32 out_l = 0, out_r = 0;
-				s32 out = s8(m_waveform[get_wave_offs(chan)] ^ chan->wave_xor ^ chan->wave_pingpong) * chan->mvol;
-				out_l = (out * ((chan->ctrl & 0x100) ? -chan->lvol : chan->lvol)) >> 8;
-				out_r = (out * ((chan->ctrl & 0x200) ? -chan->rvol : chan->rvol)) >> 8;
+				s64 out_l = 0, out_r = 0;
+				s64 out = s16(m_waveform[get_wave_offs(chan)] ^ chan->wave_xor ^ chan->wave_pingpong) * chan->mvol;
+				out_l = (out * ((chan->ctrl & 0x100) ? -chan->lvol : chan->lvol)) >> 16;
+				out_r = (out * ((chan->ctrl & 0x200) ? -chan->rvol : chan->rvol)) >> 16;
 				chan->tick();
 				outputs[0][sample] += out_l;
 				outputs[1][sample] += out_r;
@@ -159,13 +157,43 @@ u16 jkms8w8_device::word_r(offs_t offset)
 	return ret;
 }
 
+/*
+	Register Map
+
+		fedcba98 76543210
+	0	e------- -------- Keyon execute bit
+		-p------ -------- Pause execute bit
+		----w--- -------- Invert waveform
+		-----a-- -------- Invert waveaddr
+		------r- -------- Invert right output
+		-------l -------- Invert left output
+		-------- k------- Keyon
+		-------- -p------ Pause
+		-------- --p----- Waveform pingpong
+		-------- ---p---- Waveaddr pingpong
+		-------- ----i--- Invert pingpong
+		-------- -----mmm Pingpong mode
+	1	ffffffff ffffffff Frequency (clock / (f + 1))
+	2	----oooo oooooooo Wave offset
+	3	pppppppp -------- Wave position
+		-------- llllllll Wave length
+	4	llllllll -------- Left volume
+		-------- rrrrrrrr Right volume
+	5	mmmmmmmm -------- Master volume
+		-------- e------- Execute keyon
+		-------- -p------ Execute pause
+		-------- -----sss Channel select
+	6	----wwww wwwwwwww Waveram Address
+	7	dddddddd dddddddd Waveram data
+*/
+
 void jkms8w8_device::word_w(offs_t offset, u16 data, u16 mem_mask)
 {
 	channel_t *chan = &m_channel[m_chan_offs & 7];
 	switch (offset & 7)
 	{
 		case 0:
-			chan->wave_xor = BIT(chan->ctrl, 11) ? 0xff : 0;
+			chan->wave_xor = BIT(chan->ctrl, 11) ? 0xffff : 0;
 			chan->reverse = BIT(chan->ctrl, 10) ? 1 : 0;
 			const u16 old_ctrl = chan->ctrl;
 			COMBINE_DATA(&chan->ctrl);
@@ -205,8 +233,7 @@ void jkms8w8_device::word_w(offs_t offset, u16 data, u16 mem_mask)
 			COMBINE_DATA(&m_wave_offs);
 			break;
 		case 7:
-			if (ACCESSING_BITS_0_7)
-				m_waveform[m_wave_offs & WAVE_MASK] = data & 0xff;
+			COMBINE_DATA(&m_waveform[m_wave_offs & WAVE_MASK]);
 			break;
 	}
 }

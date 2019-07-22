@@ -27,7 +27,6 @@ void jkms8w64_device::device_start()
 	{
 		channel_t *chan = &m_channel[ch];
 		save_item(NAME(chan->wave_xor), ch);
-		save_item(NAME(chan->wave_pingpong), ch);
 		save_item(NAME(chan->reverse), ch);
 		save_item(NAME(chan->playing), ch);
 		save_item(NAME(chan->fm_ctrl), ch);
@@ -61,7 +60,6 @@ void jkms8w64_device::device_reset()
 	{
 		channel_t *chan = &m_channel[ch];
 		chan->wave_xor = 0;
-		chan->wave_pingpong = 0;
 		chan->reverse = 0;
 		chan->playing = false;
 		chan->fm_ctrl = 0;
@@ -142,8 +140,9 @@ void jkms8w64_device::sound_stream_update(sound_stream &stream, stream_sample_t 
 					stack_l /= stack;
 					stack_r /= stack;
 				}
-				s64 out_l = s16(m_waveform[get_wave_offs(chan, stack_l)] ^ chan->wave_xor ^ chan->wave_pingpong);
-				s64 out_r = s16(m_waveform[get_wave_offs(chan, stack_r)] ^ chan->wave_xor ^ chan->wave_pingpong);
+				u16 wave_pingpong_l = 0, wave_pingpong_r = 0;
+				s64 out_l = s16(m_waveform[get_wave_offs(chan, stack_l, wave_pingpong_l)] ^ chan->wave_xor ^ wave_pingpong_l);
+				s64 out_r = s16(m_waveform[get_wave_offs(chan, stack_r, wave_pingpong_r)] ^ chan->wave_xor ^ wave_pingpong_r);
 				const s32 lvol = (chan->ctrl & 0x100) ? -chan->lvol : chan->lvol;
 				const s32 rvol = (chan->ctrl & 0x200) ? -chan->rvol : chan->rvol;
 				if (chan->fm_ctrl & 0x20)
@@ -214,10 +213,10 @@ u16 jkms8w64_device::word_r(offs_t offset)
 			ret = (chan->stack_lscale[3] << 8) | chan->stack_rscale[3];
 			break;
 		case 12:
-			ret = (chan->fm_ctrl << 8) | chan->mvol;
+			ret = (chan->fm_ctrl << 8) | chan->stack_scale;
 			break;
 		case 13:
-			ret = (chan->stack_scale << 8) | m_keyon_ex | m_chan_offs;
+			ret = (chan->mvol << 8) | m_keyon_ex | m_chan_offs;
 			break;
 		case 14:
 			ret = m_wave_offs;
@@ -228,6 +227,54 @@ u16 jkms8w64_device::word_r(offs_t offset)
 	}
 	return ret;
 }
+
+/*
+	Register Map
+
+		fedcba98 76543210
+	0	e------- -------- Keyon execute bit
+		-p------ -------- Pause execute bit
+		----w--- -------- Invert waveform
+		-----a-- -------- Invert waveaddr
+		------r- -------- Invert right output
+		-------l -------- Invert left output
+		-------- k------- Keyon
+		-------- -p------ Pause
+		-------- --p----- Waveform pingpong
+		-------- ---p---- Waveaddr pingpong
+		-------- ----i--- Invert pingpong
+		-------- -----mmm Pingpong mode
+	1	-------- ffffffff Frequency Hi bits (f * (clock / 1024 / 65536))
+	2	ffffffff ffffffff Frequency Low bits (f * (clock / 1024 / 65536))
+	3	oooooooo oooooooo Wave offset
+	4	pppppppp -------- FM Stack output level
+		-------- ----llll Wave length (1 << l)
+	5	llllllll -------- Left volume
+		-------- rrrrrrrr Right volume
+	6	iiiiiiii -------- FM Stack input A offset
+		-------- iiiiiiii FM Stack input B offset
+	7	iiiiiiii -------- FM Stack input C offset
+		-------- iiiiiiii FM Stack input D offset
+	8	llllllll -------- FM Stack input A Left scale
+		-------- rrrrrrrr FM Stack input A Right scale
+	9	llllllll -------- FM Stack input B Left scale
+		-------- rrrrrrrr FM Stack input B Right scale
+	a	llllllll -------- FM Stack input C Left scale
+		-------- rrrrrrrr FM Stack input C Right scale
+	b	llllllll -------- FM Stack input D Left scale
+		-------- rrrrrrrr FM Stack input D Right scale
+	c	--o----- -------- FM Stack output enable
+		---o---- -------- FM Stack direct output enable
+		----i--- -------- FM Stack input enable
+		------nn -------- Number of FM Stack inputs
+		-------- ssssssss Global FM Stack input scale
+	d	mmmmmmmm -------- Master volume
+		-------- e------- Execute keyon
+		-------- -p------ Execute pause
+		-------- --ssssss Channel select
+	e	wwwwwwww wwwwwwww Waveram Address
+	f	dddddddd dddddddd Waveram data
+*/
 
 void jkms8w64_device::word_w(offs_t offset, u16 data, u16 mem_mask)
 {
@@ -310,11 +357,11 @@ void jkms8w64_device::word_w(offs_t offset, u16 data, u16 mem_mask)
 			if (ACCESSING_BITS_8_15)
 				chan->fm_ctrl = (data >> 8) & 0xff;
 			if (ACCESSING_BITS_0_7)
-				chan->mvol = data & 0xff;
+				chan->stack_scale = data & 0xff;
 			break;
 		case 13:
 			if (ACCESSING_BITS_8_15)
-				chan->stack_scale = (data >> 8) & 0xff;
+				chan->mvol = (data >> 8) & 0xff;
 			if (ACCESSING_BITS_0_7)
 			{
 				m_keyon_ex = data & 0xc0;

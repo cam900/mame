@@ -43,7 +43,6 @@ private:
 	{
 		bool playing = false;
 		u16 wave_xor = 0;
-		u16 wave_pingpong = 0;
 		u16 reverse = 0;
 		u8 fm_ctrl = 0;
 		u16 ctrl = 0;
@@ -65,7 +64,6 @@ private:
 		{
 			pos = 0;
 			playing = true;
-			wave_pingpong = 0;
 		}
 
 		void keyoff()
@@ -82,51 +80,54 @@ private:
 		}
 	};
 
-	u16 get_wave_offs(channel_t *chan, s32 stack)
+	u16 get_wave_offs(channel_t *chan, s32 stack, u16 &wave_pingpong)
 	{
 		const u32 mask = (1 << (chan->shift)) - 1;
 		u64 pos = ((chan->pos >> 16) + stack) & mask;
-		const u8 wave_clock = (pos >> chan->shift) & 3;
+		u8 wave_clock = (pos >> chan->shift) & 3;
 		u8 pingpong = 0;
 		if (chan->ctrl & 0x20)
 		{
 			if (chan->ctrl & 0x10)
 			{
-				switch ((chan->ctrl >> 3) & 7)
+				if (chan->ctrl & 8)
+					wave_clock ^= 3;
+
+				switch (chan->ctrl & 7)
 				{
 					case 0:
 					case 1:
-						chan->wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
+						wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
 						pingpong = BIT(wave_clock, 0) ? 1 : 0;
 						break;
 					case 2:
-						chan->wave_pingpong = BIT(wave_clock, 1) ? 0xffff : 0;
+						wave_pingpong = BIT(wave_clock, 1) ? 0xffff : 0;
 						pingpong = BIT(wave_clock, 0) ? 1 : 0;
 						break;
 					case 3:
-						chan->wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
+						wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
 						pingpong = BIT(wave_clock, 1) ? 1 : 0;
 						break;
 					case 4:
-						chan->wave_pingpong = ((wave_clock == 1) || (wave_clock == 2)) ? 0xffff : 0;
-						pingpong = ((wave_clock == 2) || (wave_clock == 3)) ? 1 : 0;
+						wave_pingpong = BIT(wave_clock, 0) ^ BIT(wave_clock, 1) ? 0xffff : 0;
+						pingpong = BIT(wave_clock, 0) ? 1 : 0;
 						break;
 					case 5:
-						chan->wave_pingpong = ((wave_clock == 2) || (wave_clock == 3)) ? 0xffff : 0;
-						pingpong = ((wave_clock == 1) || (wave_clock == 2)) ? 1 : 0;
+						wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
+						pingpong = BIT(wave_clock, 0) ^ BIT(wave_clock, 1) ? 1 : 0;
 						break;
 					case 6:
-						chan->wave_pingpong = ((wave_clock == 2)) ? 0xffff : 0;
-						pingpong = ((wave_clock > 0) && (wave_clock < 3)) ? 1 : 0;
+						wave_pingpong = BIT(wave_clock, 0) ^ BIT(wave_clock, 1) ? 0xffff : 0;
+						pingpong = BIT(wave_clock, 1) ? 1 : 0;
 						break;
 					case 7:
-						chan->wave_pingpong = ((wave_clock > 0) && (wave_clock < 3)) ? 0xffff : 0;
-						pingpong = ((wave_clock == 2)) ? 1 : 0;
+						wave_pingpong = BIT(wave_clock, 1) ? 0xffff : 0;
+						pingpong = BIT(wave_clock, 0) ^ BIT(wave_clock, 1) ? 1 : 0;
 						break;
 				}
 			}
 			else
-				chan->wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
+				wave_pingpong = BIT(wave_clock, 0) ? 0xffff : 0;
 		}
 		else if (chan->ctrl & 0x10)
 		{

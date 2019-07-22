@@ -146,7 +146,7 @@ private:
 							adpcm[out].save_loop();
 					}
 				}
-				if (ctrl & 1)
+				if (ctrl & 8)
 				{
 					if (pos >= loopend)
 					{
@@ -176,7 +176,7 @@ private:
 		for (int i = 0; i < 2; i++)
 			chan->prev_sample[i] = chan->curr_sample[i];
 
-		switch (chan->ctrl & 0xe)
+		switch (chan->ctrl & 7)
 		{
 			case 0:
 				for (int j = 0; j < 2; j++)
@@ -184,37 +184,37 @@ private:
 					chan->curr_sample[j] = chan->adpcm[j].update((m_sampledata->read_byte(chan->start + (chan->pos >> 1)) >> ((~chan->pos & 1) << 2)) & 0xf);
 				}
 				break;
-			case 2:
+			case 1:
 				for (int j = 0; j < 2; j++)
 				{
 					chan->curr_sample[j] = s16(m_sampledata->read_byte(chan->start + chan->pos) << 8);
 				}
 				break;
-			case 4:
+			case 2:
 				for (int j = 0; j < 2; j++)
 				{
 					chan->curr_sample[j] = m_mulaw[m_sampledata->read_byte(chan->start + chan->pos)];
 				}
 				break;
-			case 6:
+			case 3:
 				for (int j = 0; j < 2; j++)
 				{
 					chan->curr_sample[j] = s16(m_sampledata->read_byte(chan->start + (chan->pos * 2)) | (m_sampledata->read_byte(chan->start + (chan->pos * 2) + 1) << 8));
 				}
 				break;
-			case 8:
+			case 4:
 				chan->curr_sample[0] = chan->adpcm[0].update((m_sampledata->read_byte(chan->start + chan->pos) >> 4) & 0xf);
 				chan->curr_sample[1] = chan->adpcm[1].update((m_sampledata->read_byte(chan->start + chan->pos) >> 0) & 0xf);
 				break;
-			case 0xa:
+			case 5:
 				chan->curr_sample[0] = s16(m_sampledata->read_byte(chan->start + (chan->pos * 2)) << 8);
 				chan->curr_sample[1] = s16(m_sampledata->read_byte(chan->start + (chan->pos * 2) + 1) << 8);
 				break;
-			case 0xc:
+			case 6:
 				chan->curr_sample[0] = m_mulaw[m_sampledata->read_byte(chan->start + (chan->pos * 2))];
 				chan->curr_sample[1] = m_mulaw[m_sampledata->read_byte(chan->start + (chan->pos * 2) + 1)];
 				break;
-			case 0xe:
+			case 7:
 				chan->curr_sample[0] = s16(m_sampledata->read_byte(chan->start + (chan->pos * 4) + 0) | (m_sampledata->read_byte(chan->start + (chan->pos * 4) + 1) << 8));
 				chan->curr_sample[1] = s16(m_sampledata->read_byte(chan->start + (chan->pos * 4) + 2) | (m_sampledata->read_byte(chan->start + (chan->pos * 4) + 3) << 8));
 				break;

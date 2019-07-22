@@ -184,6 +184,32 @@ u32 jkms8p64_device::dword_r(offs_t offset)
 	}
 }
 
+/*
+	Register Map
+
+		fedcba98 76543210 fedcba98 76543210
+	0	-------- -------- e------- -------- Keyon execute bit
+		-------- -------- -p------ -------- Pause execute bit
+		-------- -------- ------r- -------- Invert right output
+		-------- -------- -------l -------- Invert left output
+		-------- -------- -------- k------- Keyon
+		-------- -------- -------- -p------ Pause
+		-------- -------- -------- ----l--- Loop enable
+		-------- -------- -------- -----s-- Stereo sample
+		-------- -------- -------- ------mm Sample format (4bit ADPCM, 8bit PCM, u-Law, 16bit PCM)
+	1	-------- ffffffff ffffffff ffffffff Frequency (f * (clock / 1024 / 65536))
+	2	ssssssss ssssssss ssssssss ssssssss Start offset
+	3	llllllll llllllll llllllll llllllll Loop start
+	4	llllllll llllllll llllllll llllllll Loop end
+	5	eeeeeeee eeeeeeee eeeeeeee eeeeeeee Length
+	6	llllllll llllllll -------- -------- Left volume
+		-------- -------- rrrrrrrr rrrrrrrr Right volume
+	7	mmmmmmmm mmmmmmmm -------- -------- Master volume
+		-------- -------- -------- e------- Execute keyon
+		-------- -------- -------- -p------ Execute pause
+		-------- -------- -------- -----sss Channel select
+*/
+
 void jkms8p64_device::dword_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	channel_t *chan = &m_channel[m_channel_offs];

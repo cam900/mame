@@ -42,10 +42,9 @@ private:
 	struct channel_t
 	{
 		bool playing = false;
-		u32 rng = 0;
 		u8 wave_clock = 0;
-		u8 wave_xor = 0;
-		u8 wave_pingpong = 0;
+		u16 wave_xor = 0;
+		u16 wave_pingpong = 0;
 		u8 pingpong = 0;
 		u8 reverse = 0;
 		u16 ctrl = 0;
@@ -62,9 +61,9 @@ private:
 		{
 			remain = freq;
 			playing = true;
-			pingpong = 0;
-			wave_pingpong = (((ctrl & 7) == 1) && (rng & 1)) ? 0xff : 0;
-			wave_clock = 0;
+			pingpong = (ctrl & 8) ? 1 : 0;
+			wave_pingpong = (ctrl & 8) ? 0xffff : 0;
+			wave_clock = (ctrl & 8) ? 3 : 0;
 		}
 
 		void keyoff()
@@ -94,54 +93,53 @@ private:
 								switch (ctrl & 7)
 								{
 									case 0:
-										wave_pingpong ^= 0xff;
-										pingpong ^= 1;
-										break;
 									case 1:
-										rng ^= (((rng & 1) ^ ((rng >> 3) & 1)) << 17);
-										rng >>= 1;
-										wave_pingpong = (rng & 1) ? 0xff : 0;
-										pingpong = (rng & 8) ? 1 : 0;
+										wave_pingpong ^= 0xffff;
+										pingpong ^= 1;
 										break;
 									case 2:
 										if (BIT(wave_clock, 0))
-											wave_pingpong ^= 0xff;
+											wave_pingpong ^= 0xffff;
 										pingpong ^= 1;
 										break;
 									case 3:
-										wave_pingpong ^= 0xff;
+										wave_pingpong ^= 0xffff;
 										if (BIT(wave_clock, 0))
 											pingpong ^= 1;
 										break;
 									case 4:
-										if (BIT(wave_pingpong, 0) == BIT(pingpong, 0))
-											wave_pingpong ^= 0xff;
-										else
-											pingpong ^= 1;
+										wave_pingpong ^= 0xffff;
+										pingpong ^= 1;
+										if (BIT(wave_clock, 0))
+											wave_pingpong ^= 0xffff;
 										break;
 									case 5:
-										if (BIT(wave_pingpong, 0) == BIT(pingpong, 0))
+										wave_pingpong ^= 0xffff;
+										pingpong ^= 1;
+										if (BIT(wave_clock, 0))
 											pingpong ^= 1;
-										else
-											wave_pingpong ^= 0xff;
 										break;
 									case 6:
-										if ((BIT(wave_clock, 0)) ^ (BIT(wave_clock, 1)))
-											wave_pingpong ^= 0xff;
-										else
+										wave_pingpong ^= 0xffff;
+										pingpong ^= 1;
+										if (BIT(~wave_clock, 0))
+											wave_pingpong ^= 0xffff;
+										if (BIT(wave_clock, 0))
 											pingpong ^= 1;
 										break;
 									case 7:
-										if ((BIT(wave_clock, 0)) ^ (BIT(wave_clock, 1)))
+										wave_pingpong ^= 0xffff;
+										pingpong ^= 1;
+										if (BIT(wave_clock, 0))
+											wave_pingpong ^= 0xffff;
+										if (BIT(~wave_clock, 0))
 											pingpong ^= 1;
-										else
-											wave_pingpong ^= 0xff;
 										break;
 								}
-								wave_clock++;
+								wave_clock = ((ctrl & 8) ? (wave_clock - 1) : (wave_clock + 1)) & 3;
 							}
 							else
-								wave_pingpong ^= 0xff;
+								wave_pingpong ^= 0xffff;
 						}
 						else
 						{
@@ -158,7 +156,7 @@ private:
 	u16 get_wave_offs(channel_t *chan) { return (chan->offs + ((chan->reverse ^ chan->pingpong) ? (chan->len - chan->pos - 1) : chan->pos)) & WAVE_MASK; }
 
 	channel_t m_channel[8];
-	std::unique_ptr<u8[]> m_waveform;
+	std::unique_ptr<u16[]> m_waveform;
 	sound_stream *m_stream;
 	u16 m_wave_offs;
 	u8 m_chan_offs;
