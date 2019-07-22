@@ -766,7 +766,6 @@ void lua_engine::initialize()
 	emu["romname"] = [this](){ return machine().basename(); };
 	emu["softname"] = [this]() { return machine().options().software_name(); };
 	emu["keypost"] = [this](const char *keys){ machine().ioport().natkeyboard().post_utf8(keys); };
-	emu["paste"] = [this](){ machine().ioport().natkeyboard().paste(); };
 	emu["time"] = [this](){ return machine().time().as_double(); };
 	emu["start"] = [this](const char *driver) {
 			int i = driver_list::find(driver);
@@ -1672,6 +1671,7 @@ void lua_engine::initialize()
 
 	sol().registry().new_usertype<ioport_manager>("ioport", "new", sol::no_constructor,
 			"count_players", &ioport_manager::count_players,
+			"natkeyboard", &ioport_manager::natkeyboard,
 			"ports", sol::property([this](ioport_manager &im) {
 					sol::table port_table = sol().create_table();
 					for (auto &port : im.ports())
@@ -1679,6 +1679,23 @@ void lua_engine::initialize()
 					return port_table;
 				}));
 
+/*  natkeyboard library
+ *
+ * manager:machine():ioport():natkeyboard()
+ *
+ * natkeyboard.empty - is the natural keyboard buffer empty?
+ * natkeyboard.in_use - is the natural keyboard in use?
+ * natkeyboard:paste() - paste clipboard data
+ * natkeyboard:post() - post data to natural keyboard
+ * natkeyboard:post_coded() - post data to natural keyboard
+ */
+
+	sol().registry().new_usertype<natural_keyboard>("natkeyboard", "new", sol::no_constructor,
+			"empty", sol::property(&natural_keyboard::empty),
+			"in_use", sol::property(&natural_keyboard::in_use, &natural_keyboard::set_in_use),
+			"paste", &natural_keyboard::paste,
+			"post", [](natural_keyboard &nat, const std::string &text)			{ nat.post_utf8(text); },
+			"post_coded", [](natural_keyboard &nat, const std::string &text)	{ nat.post_coded(text); });
 
 /*  ioport_port library
  *
@@ -1758,6 +1775,18 @@ void lua_engine::initialize()
 
 	sol().registry().new_usertype<ioport_field>("ioport_field", "new", sol::no_constructor,
 			"set_value", &ioport_field::set_value,
+			"set_input_seq", [](ioport_field &f, const std::string &seq_type_string, sol::user<input_seq> seq) {
+				input_seq_type seq_type = SEQ_TYPE_STANDARD;
+				if (seq_type_string == "increment")
+					seq_type = SEQ_TYPE_INCREMENT;
+				else if (seq_type_string == "decrement")
+					seq_type = SEQ_TYPE_DECREMENT;
+
+				ioport_field::user_settings settings;
+				f.get_user_settings(settings);
+				settings.seq[seq_type] = seq;
+				f.set_user_settings(settings);
+			},
 			"device", sol::property(&ioport_field::device),
 			"name", sol::property(&ioport_field::name),
 			"default_name", sol::property([](ioport_field &f) {
@@ -1851,6 +1880,7 @@ void lua_engine::initialize()
 			"skip_this_frame", &video_manager::skip_this_frame,
 			"speed_factor", &video_manager::speed_factor,
 			"speed_percent", &video_manager::speed_percent,
+			"effective_frameskip", &video_manager::effective_frameskip,
 			"frame_update", &video_manager::frame_update,
 			"size", [](video_manager &vm) {
 					s32 width, height;
@@ -2135,19 +2165,31 @@ void lua_engine::initialize()
 			"refresh", [](screen_device &sdev) { return ATTOSECONDS_TO_HZ(sdev.refresh_attoseconds()); },
 			"refresh_attoseconds", [](screen_device &sdev) { return sdev.refresh_attoseconds(); },
 			"snapshot", [this](screen_device &sdev, sol::object filename) -> sol::object {
-					emu_file file(machine().options().snapshot_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-					osd_file::error filerr;
-					if(filename.is<const char *>())
+					std::string snapstr;
+					bool is_absolute_path = false;
+					if (filename.is<const char *>())
 					{
-						std::string snapstr(filename.as<const char *>());
-						strreplace(snapstr, "/", PATH_SEPARATOR);
-						strreplace(snapstr, "%g", machine().basename());
-						filerr = file.open(snapstr.c_str());
+						// a filename was specified; if it isn't absolute postprocess it
+						snapstr = filename.as<const char *>();
+						is_absolute_path = osd_is_absolute_path(snapstr);
+						if (!is_absolute_path)
+						{
+							strreplace(snapstr, "/", PATH_SEPARATOR);
+							strreplace(snapstr, "%g", machine().basename());
+						}
 					}
+
+					// open the file
+					emu_file file(is_absolute_path ? "" : machine().options().snapshot_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+					osd_file::error filerr;
+					if (!snapstr.empty())
+						filerr = file.open(snapstr);
 					else
 						filerr = machine().video().open_next(file, "png");
-					if(filerr != osd_file::error::NONE)
+					if (filerr != osd_file::error::NONE)
 						return sol::make_object(sol(), filerr);
+
+					// and save the snapshot
 					machine().video().save_snapshot(&sdev, file);
 					return sol::make_object(sol(), sol::nil);
 				},
@@ -2368,7 +2410,9 @@ void lua_engine::initialize()
  * image:image_type_name() - floppy/cart/cdrom/tape/hdd etc
  * image:load()
  * image:unload()
+ * image:create()
  * image:crc()
+ * image:display()
  *
  * image.device - get associated device_t
  * image.software_parent
@@ -2376,6 +2420,7 @@ void lua_engine::initialize()
  * image.is_writeable
  * image.is_creatable
  * image.is_reset_on_load
+ * image.must_be_loaded
  */
 
 	sol().registry().new_usertype<device_image_interface>("image", "new", sol::no_constructor,
@@ -2389,12 +2434,16 @@ void lua_engine::initialize()
 			"image_type_name", &device_image_interface::image_type_name,
 			"load", &device_image_interface::load,
 			"unload", &device_image_interface::unload,
+			"create", [](device_image_interface &di, const std::string &filename) { return di.create(filename); },
 			"crc", &device_image_interface::crc,
+			"display", [](device_image_interface &di) { return di.call_display(); },
 			"device", sol::property(static_cast<const device_t &(device_image_interface::*)() const>(&device_image_interface::device)),
 			"is_readable", sol::property(&device_image_interface::is_readable),
 			"is_writeable", sol::property(&device_image_interface::is_writeable),
 			"is_creatable", sol::property(&device_image_interface::is_creatable),
-			"is_reset_on_load", sol::property(&device_image_interface::is_reset_on_load));
+			"is_reset_on_load", sol::property(&device_image_interface::is_reset_on_load),
+			"must_be_loaded", sol::property(&device_image_interface::must_be_loaded)
+		);
 
 
 /*  mame_machine_manager library
