@@ -34,12 +34,12 @@ void jkms8w64_device::device_start()
 		save_item(NAME(chan->freq), ch);
 		save_item(NAME(chan->offs), ch);
 		save_item(NAME(chan->pos), ch);
-		save_item(NAME(chan->shift), ch);
 		save_item(NAME(chan->len), ch);
 		save_item(NAME(chan->mvol), ch);
 		save_item(NAME(chan->tl), ch);
 		save_item(NAME(chan->lvol), ch);
 		save_item(NAME(chan->rvol), ch);
+		save_item(NAME(chan->output), ch);
 		save_item(NAME(chan->stack_offs), ch);
 		save_item(NAME(chan->stack_lscale), ch);
 		save_item(NAME(chan->stack_rscale), ch);
@@ -52,6 +52,7 @@ void jkms8w64_device::device_start()
 	save_item(NAME(m_chan_offs));
 	save_item(NAME(m_stack_offs));
 	save_item(NAME(m_keyon_ex));
+	save_item(NAME(m_total_output));
 }
 
 void jkms8w64_device::device_reset()
@@ -67,7 +68,6 @@ void jkms8w64_device::device_reset()
 		chan->freq = 0;
 		chan->offs = 0;
 		chan->pos = 0;
-		chan->shift = 0;
 		chan->len = 0;
 		chan->mvol = 0;
 		chan->tl = 0;
@@ -97,10 +97,12 @@ void jkms8w64_device::sound_stream_update(sound_stream &stream, stream_sample_t 
 	std::fill_n(&outputs[1][0], samples, 0);
 	for (int sample = 0; sample < samples; sample++)
 	{
+		std::fill(std::begin(m_total_output), std::end(m_total_output), 0);
 		for (int ch = 0; ch < MAX_CHANNEL; ch++)
 		{
 			channel_t *chan = &m_channel[ch];
-			if (m_keyon_ex & 0x80)
+			std::fill(std::begin(chan->output), std::end(chan->output), 0);
+			if (m_keyon_ex & 0x2)
 			{
 				if (chan->ctrl & 0x08)
 				{
@@ -117,7 +119,7 @@ void jkms8w64_device::sound_stream_update(sound_stream &stream, stream_sample_t 
 					chan->ctrl &= ~0x80;
 				}
 			}
-			if (m_keyon_ex & 0x40)
+			if (m_keyon_ex & 0x1)
 			{
 				if (chan->ctrl & 0x4000)
 					chan->ctrl |= 0x40;
@@ -135,8 +137,8 @@ void jkms8w64_device::sound_stream_update(sound_stream &stream, stream_sample_t 
 						stack_l += (m_stack_l[(m_stack_offs + chan->stack_offs[stack]) & 0xff] * chan->stack_lscale[stack]) >> 8;
 						stack_r += (m_stack_r[(m_stack_offs + chan->stack_offs[stack]) & 0xff] * chan->stack_rscale[stack]) >> 8;
 					}
-					stack_l = (stack_l * chan->stack_scale) >> 8;
-					stack_r = (stack_r * chan->stack_scale) >> 8;
+					stack_l = (stack_l * chan->stack_scale) >> 16;
+					stack_r = (stack_r * chan->stack_scale) >> 16;
 					stack_l /= stack;
 					stack_r /= stack;
 				}
@@ -149,254 +151,297 @@ void jkms8w64_device::sound_stream_update(sound_stream &stream, stream_sample_t 
 				{
 					if (chan->fm_ctrl & 0x10)
 					{
-						m_stack_l[m_stack_offs] = (out_l * chan->tl) >> 8;
-						m_stack_r[m_stack_offs] = (out_r * chan->tl) >> 8;
+						m_stack_l[m_stack_offs] = (out_l * chan->tl) >> 16;
+						m_stack_r[m_stack_offs] = (out_r * chan->tl) >> 16;
 					}
 					else
 					{
-						m_stack_l[m_stack_offs] = (((out_l * chan->mvol) >> 8) * lvol * chan->tl) >> 16;
-						m_stack_r[m_stack_offs] = (((out_r * chan->mvol) >> 8) * rvol * chan->tl) >> 16;
+						m_stack_l[m_stack_offs] = (((out_l * chan->mvol) >> 16) * lvol * chan->tl) >> 32;
+						m_stack_r[m_stack_offs] = (((out_r * chan->mvol) >> 16) * rvol * chan->tl) >> 32;
 					}
 				}
-				out_l = (out_l * chan->mvol * lvol) >> 16;
-				out_r = (out_r * chan->mvol * rvol) >> 16;
+				out_l *= chan->mvol * lvol;
+				out_r *= chan->mvol * rvol;
+				chan->output[0] = out_l;
+				chan->output[1] = out_r;
 				chan->tick();
-				outputs[0][sample] += out_l;
-				outputs[1][sample] += out_r;
+				for (int out = 0; out < 2; out++)
+					m_total_output[out] += chan->output[out];
 			}
 			m_stack_offs++;
 		}
-		m_keyon_ex &= ~0xc0;
+		outputs[0][sample] += m_total_output[0] >> 38;
+		outputs[1][sample] += m_total_output[1] >> 38;
+		m_keyon_ex = 0;
 	}
 }
 
-u16 jkms8w64_device::word_r(offs_t offset)
+u64 jkms8w64_device::qword_r(offs_t offset)
 {
 	u16 ret = 0;
 	channel_t *chan = &m_channel[m_chan_offs & 0x3f];
 	switch (offset & 15)
 	{
 		case 0:
-			ret = chan->ctrl;
+			ret = (chan->freq << 32) | (chan->tl << 16) | chan->ctrl;
 			break;
 		case 1:
-			ret = chan->freq >> 16;
+			ret = (chan->offs << 48) | (chan->len << 32) | (chan->lvol << 16) | chan->rvol;
 			break;
 		case 2:
-			ret = chan->freq & 0xffff;
+			ret = (chan->stack_lscale[0] << 56) | (chan->stack_rscale[0] << 48) | 
+					(chan->stack_lscale[1] << 40) | (chan->stack_rscale[1] << 32) | 
+					(chan->stack_lscale[2] << 24) | (chan->stack_rscale[2] << 16) | 
+					(chan->stack_lscale[3] << 8) | chan->stack_rscale[3];
 			break;
 		case 3:
-			ret = chan->offs;
+			ret = (chan->stack_offs[0] << 56) | (chan->stack_offs[1] << 48) | (chan->stack_offs[2] << 40) | (chan->stack_offs[3] << 32) |
+					(chan->stack_scale << 16) | chan->fm_ctrl;
 			break;
 		case 4:
-			ret = (chan->tl << 8) | chan->shift;
-			break;
 		case 5:
-			ret = (u8(chan->lvol) << 8) | u8(chan->rvol);
-			break;
 		case 6:
-			ret = (chan->stack_offs[0] << 8) | chan->stack_offs[1];
-			break;
 		case 7:
-			ret = (chan->stack_offs[2] << 8) | chan->stack_offs[3];
+			ret = (m_wave_offs << 48) | (m_waveform[m_wave_offs & WAVE_MASK] << 32) | (chan->mvol << 16) | (m_keyon_ex << 8) | m_chan_offs;
 			break;
 		case 8:
-			ret = (chan->stack_lscale[0] << 8) | chan->stack_rscale[0];
-			break;
-		case 9:
-			ret = (chan->stack_lscale[1] << 8) | chan->stack_rscale[1];
-			break;
-		case 10:
-			ret = (chan->stack_lscale[2] << 8) | chan->stack_rscale[2];
-			break;
-		case 11:
-			ret = (chan->stack_lscale[3] << 8) | chan->stack_rscale[3];
-			break;
 		case 12:
-			ret = (chan->fm_ctrl << 8) | chan->stack_scale;
-			break;
+			return chan->output[0];
+		case 9:
 		case 13:
-			ret = (chan->mvol << 8) | m_keyon_ex | m_chan_offs;
-			break;
+			return chan->output[1];
+		case 10:
 		case 14:
-			ret = m_wave_offs;
-			break;
+			return m_total_output[0];
+		case 11:
 		case 15:
-			ret = m_waveform[m_wave_offs & WAVE_MASK];
-			break;
+			return m_total_output[1];
 	}
 	return ret;
 }
 
 /*
-	Register Map
+	Register Map (64bit)
 
-		fedcba98 76543210
-	0	e------- -------- Keyon execute bit
-		-p------ -------- Pause execute bit
-		----w--- -------- Invert waveform
-		-----a-- -------- Invert waveaddr
-		------r- -------- Invert right output
-		-------l -------- Invert left output
-		-------- k------- Keyon
-		-------- -p------ Pause
-		-------- --p----- Waveform pingpong
-		-------- ---p---- Waveaddr pingpong
-		-------- ----i--- Invert pingpong
-		-------- -----mmm Pingpong mode
-	1	-------- ffffffff Frequency Hi bits (f * (clock / 1024 / 65536))
-	2	ffffffff ffffffff Frequency Low bits (f * (clock / 1024 / 65536))
-	3	oooooooo oooooooo Wave offset
-	4	pppppppp -------- FM Stack output level
-		-------- ----llll Wave length (1 << l)
-	5	llllllll -------- Left volume
-		-------- rrrrrrrr Right volume
-	6	iiiiiiii -------- FM Stack input A offset
-		-------- iiiiiiii FM Stack input B offset
-	7	iiiiiiii -------- FM Stack input C offset
-		-------- iiiiiiii FM Stack input D offset
-	8	llllllll -------- FM Stack input A Left scale
-		-------- rrrrrrrr FM Stack input A Right scale
-	9	llllllll -------- FM Stack input B Left scale
-		-------- rrrrrrrr FM Stack input B Right scale
-	a	llllllll -------- FM Stack input C Left scale
-		-------- rrrrrrrr FM Stack input C Right scale
-	b	llllllll -------- FM Stack input D Left scale
-		-------- rrrrrrrr FM Stack input D Right scale
-	c	--o----- -------- FM Stack output enable
-		---o---- -------- FM Stack direct output enable
-		----i--- -------- FM Stack input enable
-		------nn -------- Number of FM Stack inputs
-		-------- ssssssss Global FM Stack input scale
-	d	mmmmmmmm -------- Master volume
-		-------- e------- Execute keyon
-		-------- -p------ Execute pause
-		-------- --ssssss Channel select
-	e	wwwwwwww wwwwwwww Waveram Address
-	f	dddddddd dddddddd Waveram data
+		fedcba98 76543210 fedcba98 76543210 fedcba98 76543210 fedcba98 76543210
+	0	-------- ffffffff ffffffff ffffffff -------- -------- -------- -------- Frequency (f * (clock / 1024 / 65536))
+		-------- -------- -------- -------- pppppppp pppppppp -------- -------- FM Stack output level
+		-------- -------- -------- -------- -------- -------- e------- -------- Keyon execute bit
+		-------- -------- -------- -------- -------- -------- -p------ -------- Pause execute bit
+		-------- -------- -------- -------- -------- -------- ----w--- -------- Invert waveform
+		-------- -------- -------- -------- -------- -------- -----a-- -------- Invert waveaddr
+		-------- -------- -------- -------- -------- -------- ------r- -------- Invert right output
+		-------- -------- -------- -------- -------- -------- -------l -------- Invert left output
+		-------- -------- -------- -------- -------- -------- -------- k------- Keyon
+		-------- -------- -------- -------- -------- -------- -------- -p------ Pause
+		-------- -------- -------- -------- -------- -------- -------- --p----- Waveform pingpong
+		-------- -------- -------- -------- -------- -------- -------- ---p---- Waveaddr pingpong
+		-------- -------- -------- -------- -------- -------- -------- ----i--- Invert pingpong
+		-------- -------- -------- -------- -------- -------- -------- -----mmm Pingpong mode
+	1	oooooooo oooooooo -------- -------- -------- -------- -------- -------- Wave offset
+		-------- -------- llllllll llllllll -------- -------- -------- -------- Wave length
+		-------- -------- -------- -------- llllllll llllllll -------- -------- Left volume
+		-------- -------- -------- -------- -------- -------- rrrrrrrr rrrrrrrr Right volume
+	2	llllllll -------- -------- -------- -------- -------- -------- -------- FM Stack input A Left scale
+		-------- rrrrrrrr -------- -------- -------- -------- -------- -------- FM Stack input A Right scale
+		-------- -------- llllllll -------- -------- -------- -------- -------- FM Stack input B Left scale
+		-------- -------- -------- rrrrrrrr -------- -------- -------- -------- FM Stack input B Right scale
+		-------- -------- -------- -------- llllllll -------- -------- -------- FM Stack input C Left scale
+		-------- -------- -------- -------- -------- rrrrrrrr -------- -------- FM Stack input C Right scale
+		-------- -------- -------- -------- -------- -------- llllllll -------- FM Stack input D Left scale
+		-------- -------- -------- -------- -------- -------- -------- rrrrrrrr FM Stack input D Right scale
+	3	iiiiiiii -------- -------- -------- -------- -------- -------- -------- FM Stack input A offset
+		-------- iiiiiiii -------- -------- -------- -------- -------- -------- FM Stack input B offset
+		-------- -------- iiiiiiii -------- -------- -------- -------- -------- FM Stack input C offset
+		-------- -------- -------- iiiiiiii -------- -------- -------- -------- FM Stack input D offset
+		-------- -------- -------- -------- ssssssss ssssssss -------- -------- Global FM Stack input scale
+		-------- -------- -------- -------- -------- -------- -------- --o----- FM Stack output enable
+		-------- -------- -------- -------- -------- -------- -------- ---o---- FM Stack direct output enable
+		-------- -------- -------- -------- -------- -------- -------- ----i--- FM Stack input enable
+		-------- -------- -------- -------- -------- -------- -------- ------nn Number of FM Stack inputs
+	4*	wwwwwwww wwwwwwww -------- -------- -------- -------- -------- -------- Waveram Address
+		-------- -------- dddddddd dddddddd -------- -------- -------- -------- Waveram data
+		-------- -------- -------- -------- mmmmmmmm mmmmmmmm -------- -------- Master volume
+		-------- -------- -------- -------- -------- -------- ------e- -------- Execute keyon
+		-------- -------- -------- -------- -------- -------- -------p -------- Execute pause
+		-------- -------- -------- -------- -------- -------- -------- --ssssss Channel select
+		* : 01xx (x : don't care)
 */
 
-void jkms8w64_device::word_w(offs_t offset, u16 data, u16 mem_mask)
+void jkms8w64_device::qword_w(offs_t offset, u64 data, u64 mem_mask)
 {
 	channel_t *chan = &m_channel[m_chan_offs & 0x3f];
 	switch (offset & 15)
 	{
 		case 0:
-			chan->wave_xor = BIT(chan->ctrl, 11) ? 0xffff : 0;
-			chan->reverse = BIT(chan->ctrl, 10) ? 1 : 0;
-			const u16 old_ctrl = chan->ctrl;
-			COMBINE_DATA(&chan->ctrl);
-			if (((chan->ctrl & 0x80) == 0x80) && ((old_ctrl & 0x80) == 0))
-				chan->keyon();
-			else if (((chan->ctrl & 0x80) == 0) && ((old_ctrl & 0x80) == 0x80))
-				chan->keyoff();
+			if (ACCESSING_BITS_0_15)
+			{
+				const u16 old_ctrl = chan->ctrl;
+				chan->ctrl = ((chan->ctrl & ~mem_mask) | (data & mem_mask)) & 0xffff;
+				chan->wave_xor = BIT(chan->ctrl, 11) ? 0xffff : 0;
+				chan->reverse = BIT(chan->ctrl, 10) ? 1 : 0;
+				if (((chan->ctrl & 0x80) == 0x80) && ((old_ctrl & 0x80) == 0))
+					chan->keyon();
+				else if (((chan->ctrl & 0x80) == 0) && ((old_ctrl & 0x80) == 0x80))
+					chan->keyoff();
+			}
+			if (ACCESSING_BITS_16_31)
+			{
+				chan->tl = ((chan->tl & ~(mem_mask >> 16)) | ((data & mem_mask) >> 16)) & 0xffff;
+			}
+			if (ACCESSING_BITS_32_63)
+			{
+				data = (data >> 32) & 0xffffff;
+				mem_mask = (mem_mask >> 32) & 0xffffff;
+				COMBINE_DATA(&chan->freq);
+			}
 			break;
 		case 1:
-			if (ACCESSING_BITS_0_7)
+			if (ACCESSING_BITS_48_63)
 			{
-				data &= 0xff;
-				mem_mask &= 0xff;
-				chan->freq = (chan->freq & ~(mem_mask << 16)) | ((data & mem_mask) << 16);
+				chan->offs = ((chan->offs & ~(mem_mask >> 48)) | ((data & mem_mask) >> 48)) & 0xffff;
+			}
+			if (ACCESSING_BITS_32_47)
+			{
+				chan->len = ((chan->len & ~(mem_mask >> 32)) | ((data & mem_mask) >> 32)) & 0xffff;
+			}
+			if (ACCESSING_BITS_16_31)
+			{
+				chan->lvol = ((chan->lvol & ~(mem_mask >> 16)) | ((data & mem_mask) >> 16)) & 0xffff;
+			}
+			if (ACCESSING_BITS_0_15)
+			{
+				chan->rvol = ((chan->rvol & ~mem_mask) | (data & mem_mask)) & 0xffff;
 			}
 			break;
 		case 2:
-			chan->freq = (chan->freq & ~mem_mask) | (data & mem_mask);
-			break;
-		case 3:
-			COMBINE_DATA(&chan->offs);
-			break;
-		case 4:
-			if (ACCESSING_BITS_8_15)
-				chan->tl = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->shift = data & 0xf;
-			break;
-		case 5:
-			if (ACCESSING_BITS_8_15)
-				chan->lvol = s8(data >> 8);
-			if (ACCESSING_BITS_0_7)
-				chan->rvol = s8(data & 0xff);
-			break;
-		case 6:
-			if (ACCESSING_BITS_8_15)
-				chan->stack_offs[0] = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_offs[1] = data & 0xff;
-			break;
-		case 7:
-			if (ACCESSING_BITS_8_15)
-				chan->stack_offs[2] = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_offs[3] = data & 0xff;
-			break;
-		case 8:
-			if (ACCESSING_BITS_8_15)
-				chan->stack_lscale[0] = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_rscale[0] = data & 0xff;
-			break;
-		case 9:
-			if (ACCESSING_BITS_8_15)
-				chan->stack_lscale[1] = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_rscale[1] = data & 0xff;
-			break;
-		case 10:
-			if (ACCESSING_BITS_8_15)
-				chan->stack_lscale[2] = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_rscale[2] = data & 0xff;
-			break;
-		case 11:
+			if (ACCESSING_BITS_56_63)
+				chan->stack_lscale[0] = (data >> 56) & 0xff;
+			if (ACCESSING_BITS_48_55)
+				chan->stack_rscale[0] = (data >> 48) & 0xff;
+			if (ACCESSING_BITS_40_47)
+				chan->stack_lscale[1] = (data >> 40) & 0xff;
+			if (ACCESSING_BITS_32_39)
+				chan->stack_rscale[1] = (data >> 32) & 0xff;
+			if (ACCESSING_BITS_24_31)
+				chan->stack_lscale[2] = (data >> 24) & 0xff;
+			if (ACCESSING_BITS_16_23)
+				chan->stack_rscale[2] = (data >> 16) & 0xff;
 			if (ACCESSING_BITS_8_15)
 				chan->stack_lscale[3] = (data >> 8) & 0xff;
 			if (ACCESSING_BITS_0_7)
 				chan->stack_rscale[3] = data & 0xff;
 			break;
-		case 12:
-			if (ACCESSING_BITS_8_15)
-				chan->fm_ctrl = (data >> 8) & 0xff;
-			if (ACCESSING_BITS_0_7)
-				chan->stack_scale = data & 0xff;
+		case 3:
+			if (ACCESSING_BITS_56_63)
+				chan->stack_offs[0] = (data >> 56) & 0xff;
+			if (ACCESSING_BITS_48_55)
+				chan->stack_offs[1] = (data >> 48) & 0xff;
+			if (ACCESSING_BITS_40_47)
+				chan->stack_offs[2] = (data >> 40) & 0xff;
+			if (ACCESSING_BITS_32_39)
+				chan->stack_offs[3] = (data >> 32) & 0xff;
+			if (ACCESSING_BITS_16_31)
+				chan->stack_scale = ((chan->stack_scale & ~(mem_mask >> 16)) | ((data & mem_mask) >> 16)) & 0xffff;
+			if (ACCESSING_BITS_0_15)
+				chan->fm_ctrl = ((chan->fm_ctrl & ~mem_mask) | (data & mem_mask)) & 0xffff;
 			break;
-		case 13:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+			if (ACCESSING_BITS_48_63)
+			{
+				m_wave_offs = ((m_wave_offs & ~(mem_mask >> 48)) | ((data & mem_mask) >> 48)) & 0xffff;
+			}
+			if (ACCESSING_BITS_32_47)
+			{
+				m_waveform[m_wave_offs & WAVE_MASK] = ((m_waveform[m_wave_offs & WAVE_MASK] & ~(mem_mask >> 32)) | ((data & mem_mask) >> 32)) & 0xffff;
+			}
+			if (ACCESSING_BITS_16_31)
+			{
+				chan->mvol = ((chan->mvol & ~(mem_mask >> 16)) | ((data & mem_mask) >> 16)) & 0xffff;
+			}
 			if (ACCESSING_BITS_8_15)
-				chan->mvol = (data >> 8) & 0xff;
+			{
+				m_keyon_ex = data & 0x3;
+			}
 			if (ACCESSING_BITS_0_7)
 			{
-				m_keyon_ex = data & 0xc0;
 				m_chan_offs = data & 0x3f;
 			}
-			break;
-		case 14:
-			COMBINE_DATA(&m_wave_offs);
-			break;
-		case 15:
-			COMBINE_DATA(&m_waveform[m_wave_offs & WAVE_MASK]);
 			break;
 	}
 }
 
+u32 jkms8w64_device::dword_be_r(offs_t offset)
+{
+	const u8 shift = (~offset & 1) << 5;
+	return (qword_r(offset >> 1) >> shift) & 0xffffffff;
+}
+
+u32 jkms8w64_device::dword_le_r(offs_t offset)
+{
+	const u8 shift = (offset & 1) << 5;
+	return (qword_r(offset >> 1) >> shift) & 0xffffffff;
+}
+
+void jkms8w64_device::dword_be_w(offs_t offset, u32 data, u32 mem_mask)
+{
+	const u8 shift = (~offset & 1) << 5;
+	qword_w(offset >> 1, data << shift, mem_mask << shift);
+}
+
+void jkms8w64_device::dword_le_w(offs_t offset, u32 data, u32 mem_mask)
+{
+	const u8 shift = (offset & 1) << 5;
+	qword_w(offset >> 1, data << shift, mem_mask << shift);
+}
+
+u16 jkms8w64_device::word_be_r(offs_t offset)
+{
+	const u8 shift = (~offset & 3) << 4;
+	return (qword_r(offset >> 2) >> shift) & 0xffff;
+}
+
+u16 jkms8w64_device::word_le_r(offs_t offset)
+{
+	const u8 shift = (offset & 3) << 4;
+	return (qword_r(offset >> 2) >> shift) & 0xffff;
+}
+
+void jkms8w64_device::word_be_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	const u8 shift = (~offset & 3) << 4;
+	qword_w(offset >> 2, data << shift, mem_mask << shift);
+}
+
+void jkms8w64_device::word_le_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	const u8 shift = (offset & 3) << 4;
+	qword_w(offset >> 2, data << shift, mem_mask << shift);
+}
+
 u8 jkms8w64_device::byte_be_r(offs_t offset)
 {
-	const u8 shift = (~offset & 1) << 3;
-	return (word_r(offset >> 1) >> offset) & 0xff;
+	const u8 shift = (~offset & 7) << 3;
+	return (qword_r(offset >> 3) >> shift) & 0xff;
 }
 
 u8 jkms8w64_device::byte_le_r(offs_t offset)
 {
-	const u8 shift = (offset & 1) << 3;
-	return (word_r(offset >> 1) >> offset) & 0xff;
+	const u8 shift = (offset & 7) << 3;
+	return (qword_r(offset >> 3) >> shift) & 0xff;
 }
 
 void jkms8w64_device::byte_be_w(offs_t offset, u8 data, u8 mem_mask)
 {
-	const u8 shift = (~offset & 1) << 3;
-	word_w(offset >> 1, data << shift, mem_mask << shift);
+	const u8 shift = (~offset & 7) << 3;
+	qword_w(offset >> 3, data << shift, mem_mask << shift);
 }
 
 void jkms8w64_device::byte_le_w(offs_t offset, u8 data, u8 mem_mask)
 {
-	const u8 shift = (offset & 1) << 3;
-	word_w(offset >> 1, data << shift, mem_mask << shift);
+	const u8 shift = (offset & 7) << 3;
+	qword_w(offset >> 3, data << shift, mem_mask << shift);
 }

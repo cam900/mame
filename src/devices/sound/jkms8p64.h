@@ -16,8 +16,14 @@ class jkms8p64_device : public device_t, public device_sound_interface, public d
 public:
 	jkms8p64_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	u32 dword_r(offs_t offset);
-	void dword_w(offs_t offset, u32 data, u32 mem_mask = ~0);
+	u64 qword_r(offs_t offset);
+	void qword_w(offs_t offset, u64 data, u64 mem_mask = ~0);
+
+	u32 dword_be_r(offs_t offset);
+	void dword_be_w(offs_t offset, u32 data, u32 mem_mask = ~0);
+
+	u32 dword_le_r(offs_t offset);
+	void dword_le_w(offs_t offset, u32 data, u32 mem_mask = ~0);
 
 	u16 word_be_r(offs_t offset);
 	void word_be_w(offs_t offset, u16 data, u16 mem_mask = ~0);
@@ -111,6 +117,7 @@ private:
 		u16 rvol = 0;
 		s32 prev_sample[2] = {0, 0};
 		s32 curr_sample[2] = {0, 0};
+		s64 output[2] = {0, 0};
 		yadpcm_t adpcm[2];
 
 		void keyon()
@@ -228,6 +235,7 @@ private:
 	address_space *m_sampledata;
 	u16 m_channel_offs;
 	u32 m_keyon_ex;
+	s64 m_total_output[2];
 };
 
 DECLARE_DEVICE_TYPE(JKMS8P64, jkms8p64_device)

@@ -120,6 +120,7 @@ void jkms8w8_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 				outputs[1][sample] += out_r;
 			}
 		}
+		m_keyon_ex = 0;
 	}
 }
 
@@ -173,7 +174,7 @@ u16 jkms8w8_device::word_r(offs_t offset)
 		-------- ---p---- Waveaddr pingpong
 		-------- ----i--- Invert pingpong
 		-------- -----mmm Pingpong mode
-	1	ffffffff ffffffff Frequency (clock / (f + 1))
+	1	ffffffff ffffffff Frequency ((clock / 16) / (f + 1))
 	2	----oooo oooooooo Wave offset
 	3	pppppppp -------- Wave position
 		-------- llllllll Wave length
