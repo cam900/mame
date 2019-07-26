@@ -11410,6 +11410,9 @@ leadang                         // (c) 1988 Seibu Kaihatsu
 popnrun                         // (c) 1987 Seibu Kaihatsu + Yukai Tsukai
 popnruna                        // (c) 1987 Seibu Kaihatsu + Yukai Tsukai
 
+@source:debut.cpp
+debutm
+
 @source:dec0.cpp
 automat                         // bootleg
 baddudes                        // EI (c) 1988 Data East USA (US)
@@ -34440,6 +34443,7 @@ hustlerb                        // bootleg
 hustlerb2                       // bootleg
 hustlerb4                       // bootleg
 hustlerb5                       // bootleg
+hustlerb6                       // bootleg
 hustlerd                        // GX343 (c) 1981 Konami + Dynamo Games license
 mimonkey                        // (c) 1982 Universal Video Games (US Copyright Office info - http://cocatalog.loc.gov)
 mimonsco                        // (c) 1982 bootleg
