@@ -239,7 +239,7 @@ u64 jkms8w64_device::qword_r(offs_t offset)
 		-------- -------- -------- -------- -------- -------- -------- ----i--- Invert pingpong
 		-------- -------- -------- -------- -------- -------- -------- -----mmm Pingpong mode
 	1	oooooooo oooooooo -------- -------- -------- -------- -------- -------- Wave offset
-		-------- -------- llllllll llllllll -------- -------- -------- -------- Wave length
+		-------- -------- llllllll llllllll -------- -------- -------- -------- Wave length + 1
 		-------- -------- -------- -------- llllllll llllllll -------- -------- Left volume
 		-------- -------- -------- -------- -------- -------- rrrrrrrr rrrrrrrr Right volume
 	2	llllllll -------- -------- -------- -------- -------- -------- -------- FM Stack input A Left scale

@@ -177,7 +177,7 @@ u16 jkms8w8_device::word_r(offs_t offset)
 	1	ffffffff ffffffff Frequency ((clock / 16) / (f + 1))
 	2	----oooo oooooooo Wave offset
 	3	pppppppp -------- Wave position
-		-------- llllllll Wave length
+		-------- llllllll Wave length + 1
 	4	llllllll -------- Left volume
 		-------- rrrrrrrr Right volume
 	5	mmmmmmmm -------- Master volume
