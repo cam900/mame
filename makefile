@@ -1628,14 +1628,14 @@ endif
 
 ifeq (posix,$(SHELLTYPE))
 $(GENDIR)/version.cpp: $(GENDIR)/git_desc | $(GEN_FOLDERS)
-	@echo '#define BARE_BUILD_VERSION "0.211"' > $@
+	@echo '#define BARE_BUILD_VERSION "0.212"' > $@
 	@echo 'extern const char bare_build_version[];' >> $@
 	@echo 'extern const char build_version[];' >> $@
 	@echo 'const char bare_build_version[] = BARE_BUILD_VERSION;' >> $@
 	@echo 'const char build_version[] = BARE_BUILD_VERSION " ($(NEW_GIT_VERSION))";' >> $@
 else
 $(GENDIR)/version.cpp: $(GENDIR)/git_desc
-	@echo #define BARE_BUILD_VERSION "0.211" > $@
+	@echo #define BARE_BUILD_VERSION "0.212" > $@
 	@echo extern const char bare_build_version[]; >> $@
 	@echo extern const char build_version[]; >> $@
 	@echo const char bare_build_version[] = BARE_BUILD_VERSION; >> $@
@@ -1685,13 +1685,13 @@ ifeq ($(OS),windows)
 	$(shell for /r src %%i in (*.hxx) do srcclean %%i >&2 )
 	$(shell for /r hash %%i in (*.xml) do srcclean %%i >&2 )
 else
-	$(shell find src/ -name *.c -exec ./srcclean {} >&2 ;)
-	$(shell find src/ -name *.h -exec ./srcclean {}  >&2 ;)
-	$(shell find src/ -name *.mak -exec ./srcclean {} >&2 ;)
-	$(shell find src/ -name *.lst -exec ./srcclean {} >&2 ;)
-	$(shell find src/ -name *.lay -exec ./srcclean {} >&2 ;)
-	$(shell find src/ -name *.hxx -exec ./srcclean {} >&2 ;)
-	$(shell find hash/ -name *.xml -exec ./srcclean {} >&2 ;)
+	@find src/ -name \*.c -exec ./srcclean {} \; >&2
+	@find src/ -name \*.h -exec ./srcclean {} \; >&2
+	@find src/ -name \*.mak -exec ./srcclean {} \; >&2
+	@find src/ -name \*.lst -exec ./srcclean {} \; >&2
+	@find src/ -name \*.lay -exec ./srcclean {} \; >&2
+	@find src/ -name \*.hxx -exec ./srcclean {} \; >&2
+	@find hash/ -name \*.xml -exec ./srcclean {} \; >&2
 endif
 
 #-------------------------------------------------

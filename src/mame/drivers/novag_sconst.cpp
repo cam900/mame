@@ -2,13 +2,16 @@
 // copyright-holders:hap
 /******************************************************************************
 
-Novag Super Constellation Chess Computer (model 844)
+Novag Super Constellation (model 844)
 
 Hardware notes:
 - UMC UM6502C @ 4 MHz (8MHz XTAL)
 - 2*2KB RAM TC5516APL-2 battery-backed, 2*32KB ROM custom label
 - TTL, buzzer, 24 LEDs, 8*8 chessboard buttons
 - external ports for clock and printer, not emulated here
+
+I/O is nearly identical to Constellation (novag_const.cpp), the main difference
+is additional outputs to external ports.
 
 ******************************************************************************/
 
@@ -41,7 +44,7 @@ public:
 	{ }
 
 	// machine drivers
-	void scon(machine_config &config);
+	void sconst(machine_config &config);
 
 protected:
 	virtual void machine_start() override;
@@ -162,7 +165,7 @@ void sconst_state::main_map(address_map &map)
     Input Ports
 ******************************************************************************/
 
-static INPUT_PORTS_START( scon )
+static INPUT_PORTS_START( sconst )
 	PORT_START("IN.0")
 	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_I) PORT_NAME("New Game")
 	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_KEYPAD) PORT_CODE(KEYCODE_8) PORT_NAME("Multi Move / Player/Player / King")
@@ -202,7 +205,7 @@ INPUT_PORTS_END
     Machine Drivers
 ******************************************************************************/
 
-void sconst_state::scon(machine_config &config)
+void sconst_state::sconst(machine_config &config)
 {
 	/* basic machine hardware */
 	M6502(config, m_maincpu, 8_MHz_XTAL/2); // UM6502C
@@ -237,7 +240,7 @@ void sconst_state::scon(machine_config &config)
 
 ROM_START( supercon )
 	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD("novag_8441", 0x0000, 0x8000, CRC(b853cf6e) SHA1(1a759072a5023b92c07f1fac01b7a21f7b5b45d0) ) // label obscured by Q.C. sticker
+	ROM_LOAD("novag_8443", 0x0000, 0x8000, CRC(b853cf6e) SHA1(1a759072a5023b92c07f1fac01b7a21f7b5b45d0) )
 	ROM_LOAD("novag_8442", 0x8000, 0x8000, CRC(c8f82331) SHA1(f7fd039f9a3344db9749931490ded9e9e309cfbe) )
 ROM_END
 
@@ -249,5 +252,5 @@ ROM_END
     Drivers
 ******************************************************************************/
 
-//    YEAR  NAME      PARENT CMP MACHINE  INPUT  STATE       INIT        COMPANY, FULLNAME, FLAGS
-CONS( 1984, supercon, 0,      0, scon,    scon,  sconst_state, empty_init, "Novag", "Super Constellation", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
+//    YEAR  NAME      PARENT CMP MACHINE  INPUT   STATE         INIT        COMPANY, FULLNAME, FLAGS
+CONS( 1984, supercon, 0,      0, sconst,  sconst, sconst_state, empty_init, "Novag", "Super Constellation", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK )
