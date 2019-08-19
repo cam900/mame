@@ -53,6 +53,8 @@ protected:
 		virtual void write(uint16_t adr, uint8_t val) override;
 	};
 
+	virtual offs_t translated(offs_t adr) { return adr; }
+
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
@@ -190,19 +192,19 @@ protected:
 	void eat_remaining();
 
 	// read a byte from given memory location
-	inline uint8_t read_memory(uint16_t address)             { eat(1); return m_mintf->read(address); }
+	inline uint8_t read_memory(uint16_t address)             { eat(1); return m_mintf->read(translated(address)); }
 
 	// write a byte to given memory location
-	inline void write_memory(uint16_t address, uint8_t data) { eat(1); m_mintf->write(address, data); }
+	inline void write_memory(uint16_t address, uint8_t data) { eat(1); m_mintf->write(translated(address), data); }
 
 	// read_opcode() is like read_memory() except it is used for reading opcodes. In  the case of a system
 	// with memory mapped I/O, this function can be used  to greatly speed up emulation.
-	inline uint8_t read_opcode(uint16_t address)             { eat(1); return m_mintf->read_opcode(address); }
+	inline uint8_t read_opcode(uint16_t address)             { eat(1); return m_mintf->read_opcode(translated(address)); }
 
 	// read_opcode_arg() is identical to read_opcode() except it is used for reading opcode  arguments. This
 	// difference can be used to support systems that use different encoding mechanisms for opcodes
 	// and opcode arguments.
-	inline uint8_t read_opcode_arg(uint16_t address)         { eat(1); return m_mintf->read_opcode_arg(address); }
+	inline uint8_t read_opcode_arg(uint16_t address)         { eat(1); return m_mintf->read_opcode_arg(translated(address)); }
 
 	// read_opcode() and bump the program counter
 	inline uint8_t read_opcode()                           { return read_opcode(m_pc.w++); }

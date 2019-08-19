@@ -40,8 +40,9 @@ public:
 	// General, or 6309 only?
 	enum m6x09_instruction_level
 	{
-		M6x09_GENERAL,
-		HD6309_EXCLUSIVE
+		M6x09_GENERAL = 0,
+		HD6309_EXCLUSIVE = (1 << 0),
+		JKM6409_EXCLUSIVE = (1 << 1)
 	};
 
 	m6x09_base_disassembler(const opcodeinfo *opcodes, size_t opcode_count, m6x09_instruction_level level)
@@ -67,6 +68,7 @@ protected:
 		IMM_RR,             // Register-to-register
 		IMM_BW,             // Bitwise operations (6309 only)
 		IMM_TFM,            // Transfer from memory (6309 only)
+		IMM_MMR,            // MMR (6409 only)
 		PG1,                // Switch to page 1 opcodes
 		PG2                 // Switch to page 2 opcodes
 	};
@@ -99,6 +101,7 @@ protected:
 	static const char *const m6x09_regs[5];
 	static const char *const m6x09_btwregs[5];
 	static const char *const hd6309_tfmregs[16];
+	static const char *const jkm6409_mmrregs[16];
 	static const char *const tfm_s[];
 
 	virtual void indexed(std::ostream &stream, uint8_t pb, const data_buffer &params, offs_t &p) = 0;

@@ -35,7 +35,12 @@ const char *const m6x09_base_disassembler::m6x09_regs[5] = { "X", "Y", "U", "S",
 const char *const m6x09_base_disassembler::m6x09_btwregs[5] = { "CC", "A", "B", "inv" };
 
 const char *const m6x09_base_disassembler::hd6309_tfmregs[16] = {
-	"D",   "X",   "Y",   "U",   "S", "inv", "inv", "inv",
+	"D",   "X",   "Y",   "U",   "S",  "PC", "W",  "V",
+	"inv", "inv", "inv", "inv", "inv", "inv", "inv", "inv"
+};
+
+const char *const m6x09_base_disassembler::jkm6409_mmrregs[16] = {
+	"D",   "X",   "Y",   "U",   "S",  "PC", "W",  "V",
 	"inv", "inv", "inv", "inv", "inv", "inv", "inv", "inv"
 };
 
@@ -275,6 +280,12 @@ offs_t m6x09_base_disassembler::disassemble(std::ostream &stream, offs_t pc, con
 		util::stream_format(stream, tfm_s[op->opcode() & 0x07], hd6309_tfmregs[(pb >> 4) & 0xf], hd6309_tfmregs[pb & 0xf]);
 		break;
 
+	case IMM_MMR:
+		pb = params.r8(ppc);
+		util::stream_format(stream, "%s,", jkm6409_mmrregs[(pb >> 4) & 0xf]);
+		util::stream_format(stream, "#$%02X", (pb >> 0) & 0xf);
+		break;
+
 	default:
 		throw false;
 	}
@@ -314,6 +325,7 @@ const m6x09_base_disassembler::opcodeinfo m6x09_disassembler::m6x09_opcodes[] =
 	{ 0x14, 1, "SEXW",  INH,    HD6309_EXCLUSIVE },
 	{ 0x16, 3, "LBRA",  LREL,   M6x09_GENERAL },
 	{ 0x17, 3, "LBSR",  LREL,   M6x09_GENERAL, STEP_OVER },
+	{ 0x18, 2, "LDM",   IMM_MMR, JKM6409_EXCLUSIVE },
 	{ 0x19, 1, "DAA",   INH,    M6x09_GENERAL },
 	{ 0x1A, 2, "ORCC",  IMM,    M6x09_GENERAL },
 	{ 0x1C, 2, "ANDCC", IMM,    M6x09_GENERAL },
@@ -346,6 +358,7 @@ const m6x09_base_disassembler::opcodeinfo m6x09_disassembler::m6x09_opcodes[] =
 	{ 0x35, 2, "PULS",  PULS,   M6x09_GENERAL },
 	{ 0x36, 2, "PSHU",  PSHU,   M6x09_GENERAL },
 	{ 0x37, 2, "PULU",  PULU,   M6x09_GENERAL },
+	{ 0x38, 2, "STM",   IMM_MMR, JKM6409_EXCLUSIVE },
 	{ 0x39, 1, "RTS",   INH ,   M6x09_GENERAL },
 	{ 0x3A, 1, "ABX",   INH,    M6x09_GENERAL },
 	{ 0x3B, 1, "RTI",   INH,    M6x09_GENERAL },
@@ -692,6 +705,58 @@ const m6x09_base_disassembler::opcodeinfo m6x09_disassembler::m6x09_opcodes[] =
 	{ 0x10FF, 4, "STS",   EXT,  M6x09_GENERAL },
 
 	// Page 2 opcodes (0x11 0x..)
+	{ 0x1100, 2, "INA W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1101, 2, "INB W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1102, 2, "INE D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1103, 2, "INF D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1104, 3, "INA",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1105, 3, "INB",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1106, 3, "INE",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1107, 3, "INF",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1108, 3, "INA",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x1109, 3, "INB",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x110a, 3, "INE",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x110b, 3, "INF",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x110c, 4, "INA",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x110d, 4, "INB",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x110e, 4, "INE",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x110f, 4, "INF",    EXT,   JKM6409_EXCLUSIVE },
+
+	{ 0x1110, 2, "OUTA W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1111, 2, "OUTB W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1112, 2, "OUTE D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1113, 2, "OUTF D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1114, 3, "OUTA",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1115, 3, "OUTB",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1116, 3, "OUTE",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1117, 3, "OUTF",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1118, 3, "OUTA",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x1119, 3, "OUTB",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x111a, 3, "OUTE",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x111b, 3, "OUTF",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x111c, 4, "OUTA",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x111d, 4, "OUTB",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x111e, 4, "OUTE",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x111f, 4, "OUTF",    EXT,   JKM6409_EXCLUSIVE },
+
+	{ 0x1120, 2, "INID W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1121, 2, "INIW D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1122, 3, "INID",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1123, 3, "INIW",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x1124, 3, "INID",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x1125, 3, "INIW",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x1126, 4, "INID",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x1127, 4, "INIW",    EXT,   JKM6409_EXCLUSIVE },
+
+	{ 0x1128, 2, "OUTID W",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x1129, 2, "OUTIW D",  INH,   JKM6409_EXCLUSIVE },
+	{ 0x112a, 3, "OUTID",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x112b, 3, "OUTIW",    DIR,   JKM6409_EXCLUSIVE },
+	{ 0x112c, 3, "OUTID",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x112d, 3, "OUTIW",    IND,   JKM6409_EXCLUSIVE },
+	{ 0x112e, 4, "OUTID",    EXT,   JKM6409_EXCLUSIVE },
+	{ 0x112f, 4, "OUTIW",    EXT,   JKM6409_EXCLUSIVE },
+
 	{ 0x1130, 4, "BAND",  IMM_BW,   HD6309_EXCLUSIVE },
 	{ 0x1131, 4, "BIAND", IMM_BW,   HD6309_EXCLUSIVE },
 	{ 0x1132, 4, "BOR",   IMM_BW,   HD6309_EXCLUSIVE },
