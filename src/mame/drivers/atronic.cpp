@@ -317,6 +317,9 @@ Markings bottom: 6 470.5020 00.07
 #include "emu.h"
 #include "cpu/z180/z180.h"
 #include "cpu/tms34010/tms34010.h"
+#include "machine/ds1386.h"
+#include "machine/pcf8584.h"
+#include "machine/z80scc.h"
 #include "emupal.h"
 #include "screen.h"
 #include "video/ramdac.h"
@@ -330,12 +333,18 @@ public:
 			m_palette(*this, "palette"),
 			m_maincpu(*this, "maincpu"),
 			m_videocpu(*this, "tms"),
+			m_ramdac(*this, "ramdac"),
 			m_vidram(*this, "vidram")
 	{ }
 
 	void atronic(machine_config &config);
 
 private:
+	u32 screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+
+	u8 serial_r();
+	void serial_w(u8 data);
+
 	void atronic_map(address_map &map);
 	void atronic_portmap(address_map &map);
 
@@ -348,6 +357,7 @@ private:
 	required_device<palette_device> m_palette;
 	required_device<cpu_device> m_maincpu;
 	required_device<tms34020_device> m_videocpu;
+	required_device<ramdac_device> m_ramdac;
 
 	required_shared_ptr<uint16_t> m_vidram;
 
@@ -357,18 +367,39 @@ private:
 
 };
 
+u32 atronic_state::screen_update( screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect )
+{
+	return 0;
+}
+
+
+u8 atronic_state::serial_r()
+{
+	// bit 3 = serial input?
+	return 0xff;
+}
+
+void atronic_state::serial_w(u8 data)
+{
+	// bits 7 & 6 = serial clock and data?
+}
+
+
 void atronic_state::atronic_map(address_map &map)
 {
 	map(0x00000, 0x7ffff).rom();
-	map(0xf8000, 0xfffff).ram();
+	map(0xf8000, 0xfffff).rw("timekpr", FUNC(ds1386_32k_device::data_r), FUNC(ds1386_32k_device::data_w));
 }
 
 
 void atronic_state::atronic_portmap(address_map &map)
 {
-//  ADDRESS_MAP_GLOBAL_MASK(0xff)
 	map.unmap_value_high();
-	map(0x00, 0x3f).ram();
+	map(0x0000, 0x003f).noprw(); // internal registers
+	map(0x0068, 0x0069).rw("i2cbc", FUNC(pcf8584_device::read), FUNC(pcf8584_device::write));
+	map(0x0074, 0x0074).r(FUNC(atronic_state::serial_r));
+	map(0x0078, 0x007b).rw("scc", FUNC(scc85c30_device::ab_dc_r), FUNC(scc85c30_device::ab_dc_w));
+	map(0x0270, 0x0270).w(FUNC(atronic_state::serial_w));
 }
 
 
@@ -409,9 +440,9 @@ void atronic_state::video_map(address_map &map)
 {
 	map(0x00000000, 0x01ffffff).ram().share("vidram");
 	
-	map(0xa0000010, 0xa000001f).w("ramdac", FUNC(ramdac_device::index_w)).umask16(0x00ff);
-	map(0xa0000020, 0xa000002f).w("ramdac", FUNC(ramdac_device::pal_w)).umask16(0x00ff);
-	map(0xa0000030, 0xa000003f).w("ramdac", FUNC(ramdac_device::mask_w)).umask16(0x00ff);
+	map(0xa0000010, 0xa000001f).w(m_ramdac, FUNC(ramdac_device::index_w)).umask16(0x00ff);
+	map(0xa0000020, 0xa000002f).w(m_ramdac, FUNC(ramdac_device::pal_w)).umask16(0x00ff);
+	map(0xa0000030, 0xa000003f).w(m_ramdac, FUNC(ramdac_device::mask_w)).umask16(0x00ff);
 
 	map(0xfc000000, 0xffffffff).rom().region("user1", 0);
 }
@@ -429,7 +460,7 @@ void atronic_state::video_map(address_map &map)
 
 void atronic_state::ramdac_map(address_map &map)
 {
-	map(0x000, 0x3ff).rw("ramdac", FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb888_w));
+	map(0x000, 0x2ff).rw(m_ramdac, FUNC(ramdac_device::ramdac_pal_r), FUNC(ramdac_device::ramdac_rgb888_w));
 }
 
 void atronic_state::atronic(machine_config &config)
@@ -440,13 +471,19 @@ void atronic_state::atronic(machine_config &config)
 	m_maincpu->set_addrmap(AS_IO, &atronic_state::atronic_portmap);
 	m_maincpu->set_vblank_int("screen", FUNC(atronic_state::irq0_line_hold));
 
+	DS1386_32K(config, "timekpr", 32768);
+
+	PCF8584(config, "i2cbc", 3000000);
+
+	SCC85C30(config, "scc", 5000000);
+
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(VIDEO_CLOCK/2, 640, 0, 512, 257, 0, 224); // ??
 	m_screen->set_screen_update("tms", FUNC(tms34020_device::tms340x0_rgb32));
 
 	PALETTE(config, "palette").set_entries(256);
-	ramdac_device &ramdac(RAMDAC(config, "ramdac", 0, m_palette));
-	ramdac.set_addrmap(0, &atronic_state::ramdac_map);
+	RAMDAC(config, m_ramdac, 0, m_palette);
+	m_ramdac->set_addrmap(0, &atronic_state::ramdac_map);
 
 	TMS34020(config, m_videocpu, VIDEO_CLOCK);
 	m_videocpu->set_addrmap(AS_PROGRAM, &atronic_state::video_map);
