@@ -691,6 +691,11 @@ void lua_engine::on_machine_stop()
 	execute_function("LUA_ON_STOP");
 }
 
+void lua_engine::on_machine_before_load_settings()
+{
+	execute_function("LUA_ON_BEFORE_LOAD_SETTINGS");
+}
+
 void lua_engine::on_machine_pause()
 {
 	execute_function("LUA_ON_PAUSE");
@@ -784,6 +789,7 @@ void lua_engine::initialize()
  * emu.register_callback(callback, name) - register callback to be used by MAME via lua_engine::call_plugin()
  * emu.register_menu(event_callback, populate_callback, name) - register callbacks for plugin menu
  * emu.register_mandatory_file_manager_override(callback) - register callback invoked to override mandatory file manager
+ * emu.register_before_load_settings(callback) - register callback to be run before settings are loaded
  * emu.show_menu(menu_name) - show menu by name and pause the machine
  *
  * emu.print_verbose(str) - output to stderr at verbose level
@@ -824,6 +830,7 @@ void lua_engine::initialize()
 	emu["register_frame_done"] = [this](sol::function func){ register_function(func, "LUA_ON_FRAME_DONE"); };
 	emu["register_periodic"] = [this](sol::function func){ register_function(func, "LUA_ON_PERIODIC"); };
 	emu["register_mandatory_file_manager_override"] = [this](sol::function func) { register_function(func, "LUA_ON_MANDATORY_FILE_MANAGER_OVERRIDE"); };
+	emu["register_before_load_settings"] = [this](sol::function func) { register_function(func, "LUA_ON_BEFORE_LOAD_SETTINGS"); };
 	emu["register_menu"] = [this](sol::function cb, sol::function pop, const std::string &name) {
 			std::string cbfield = "menu_cb_" + name;
 			std::string popfield = "menu_pop_" + name;
@@ -1702,6 +1709,7 @@ void lua_engine::initialize()
  * manager:machine():ioport()
  *
  * ioport:count_players() - get count of player controllers
+ * ioport:type_group(type, player)
  *
  * ioport.ports[] - ioports table (k=tag, v=ioport_port)
  */
@@ -1709,6 +1717,9 @@ void lua_engine::initialize()
 	sol().registry().new_usertype<ioport_manager>("ioport", "new", sol::no_constructor,
 			"count_players", &ioport_manager::count_players,
 			"natkeyboard", &ioport_manager::natkeyboard,
+			"type_group", [](ioport_manager &im, ioport_type type, int player) {
+				return im.type_group(type, player);
+			},
 			"ports", sol::property([this](ioport_manager &im) {
 					sol::table port_table = sol().create_table();
 					for (auto &port : im.ports())
@@ -1786,10 +1797,13 @@ void lua_engine::initialize()
  * field:set_value(value)
  * field:set_input_seq(seq_type, seq)
  * field:input_seq(seq_type)
+ * field:set_default_input_seq(seq_type, seq)
+ * field:default_input_seq(seq_type)
+ * field:keyboard_codes(which)
  *
  * field.device - get associated device_t
+ * field.port - get associated ioport_port
  * field.live - get ioport_field_live
-
  * field.name
  * field.default_name
  * field.player
@@ -1829,7 +1843,24 @@ void lua_engine::initialize()
 				input_seq_type seq_type = parse_seq_type(seq_type_string);
 				return sol::make_user(f.seq(seq_type));
 			},
+			"set_default_input_seq", [](ioport_field &f, const std::string &seq_type_string, sol::user<input_seq> seq) {
+				input_seq_type seq_type = parse_seq_type(seq_type_string);
+				f.set_defseq(seq_type, seq);
+			},
+			"default_input_seq", [](ioport_field &f, const std::string &seq_type_string) {
+				input_seq_type seq_type = parse_seq_type(seq_type_string);
+				return sol::make_user(f.defseq(seq_type));
+			},
+			"keyboard_codes", [this](ioport_field &f, int which)
+			{
+				sol::table result = sol().create_table();
+				int index = 1;
+				for (char32_t code : f.keyboard_codes(which))
+					result[index++] = code;
+				return result;
+			},
 			"device", sol::property(&ioport_field::device),
+			"port", sol::property(&ioport_field::port),
 			"name", sol::property(&ioport_field::name),
 			"default_name", sol::property([](ioport_field &f) {
 					return f.specific_name() ? f.specific_name() : f.manager().type_name(f.type(), f.player());
@@ -2009,6 +2040,7 @@ void lua_engine::initialize()
  * input:seq_pressed(seq) - get pressed state for input_seq
  * input:seq_to_tokens(seq) - get KEYCODE_* string tokens for seq
  * input:seq_name(seq) - get seq friendly name
+ * input:seq_clean(seq) - clean the seq and remove invalid elements
  * input:seq_poll_start(class, [opt] start_seq) - start polling for input_item_class passed as string
  *                                                (switch/abs[olute]/rel[ative]/max[imum])
  * input:seq_poll() - poll once, returns true if input was fetched
@@ -2025,6 +2057,7 @@ void lua_engine::initialize()
 			"seq_pressed", [](input_manager &input, sol::user<input_seq> seq) { return input.seq_pressed(seq); },
 			"seq_to_tokens", [](input_manager &input, sol::user<input_seq> seq) { return input.seq_to_tokens(seq); },
 			"seq_name", [](input_manager &input, sol::user<input_seq> seq) { return input.seq_name(seq); },
+			"seq_clean", [](input_manager &input, sol::user<input_seq> seq) { input_seq cleaned_seq = input.seq_clean(seq); return sol::make_user(cleaned_seq); },
 			"seq_poll_start", [](input_manager &input, const char *cls_string, sol::object seq) {
 				input_item_class cls;
 				if (!strcmp(cls_string, "switch"))

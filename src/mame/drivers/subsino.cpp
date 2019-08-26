@@ -235,6 +235,7 @@ To Do:
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
+#include "tilemap.h"
 
 #include "victor5.lh"
 #include "victor21.lh"
@@ -2924,7 +2925,7 @@ void subsino_state::mtrainnv(machine_config &config)
   with CPU brick.
 
   Dumped by Team Europe.
-  
+
 ***************************************************************************/
 
 ROM_START( victor5 )

@@ -248,6 +248,7 @@ uint8_t s3virge_vga_device::s3_crtc_reg_read(uint8_t index)
 				switch(s3virge.linear_address_size & 0x03)
 				{
 					case 0:  // 64kB
+					default:
 						res = (s3virge.linear_address & 0x00ff0000) >> 16;
 						break;
 					case 1:  // 1MB
@@ -898,7 +899,7 @@ READ32_MEMBER(s3virge_vga_device::s3d_register_r)
 {
 	uint32_t res = 0;
 	int op_type = (((offset*4) & 0x0f00) / 4) - 1;
-	
+
 	switch(offset)
 	{
 		case 0x4d4/4:
@@ -932,7 +933,7 @@ READ32_MEMBER(s3virge_vga_device::s3d_register_r)
 			res = 0xffffffff;
 			LOGMMIO("MMIO unknown/unused register read MM%04X\n", (offset*4)+0xa000);
 	}
-	
+
 	return res;
 }
 
