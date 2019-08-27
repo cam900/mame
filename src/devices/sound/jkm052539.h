@@ -1,7 +1,7 @@
 // license:BSD-3-Clause
 // copyright-holders:Bryan McPhail
-#ifndef MAME_SOUND_K051649_H
-#define MAME_SOUND_K051649_H
+#ifndef MAME_SOUND_JKM052539_H
+#define MAME_SOUND_JKM052539_H
 
 #pragma once
 
@@ -10,24 +10,21 @@
 //  TYPE DEFINITIONS
 //**************************************************************************
 
-// ======================> k051649_device
+// ======================> jkm052539_device
 
-class k051649_device : public device_t,
+class jkm052539_device : public device_t,
 						public device_sound_interface
 {
 public:
-	k051649_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	jkm052539_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
-	void k051649_waveform_w(offs_t offset, u8 data);
-	u8   k051649_waveform_r(offs_t offset);
-	void k051649_volume_w(offs_t offset, u8 data);
-	void k051649_frequency_w(offs_t offset, u8 data);
-	void k051649_keyonoff_w(u8 data);
-	void k051649_test_w(u8 data);
-	u8   k051649_test_r();
-
-	void k052539_waveform_w(offs_t offset, u8 data);
-	u8   k052539_waveform_r(offs_t offset);
+	void jkm052539_waveform_w(offs_t offset, u8 data);
+	u8   jkm052539_waveform_r(offs_t offset);
+	void jkm052539_volume_w(offs_t offset, u8 data);
+	void jkm052539_frequency_w(offs_t offset, u8 data);
+	void jkm052539_keyonoff_w(u8 data);
+	void jkm052539_test_w(u8 data);
+	u8   jkm052539_test_r();
 
 	void scc_map(address_map &map);
 protected:
@@ -72,12 +69,12 @@ private:
 	/* mixer tables and internal buffers */
 	std::unique_ptr<s16[]> m_mixer_table;
 	s16 *m_mixer_lookup;
-	std::vector<s16> m_mixer_buffer;
+	std::vector<s16> m_mixer_buffer[2];
 
 	/* chip registers */
 	u8 m_test;
 };
 
-DECLARE_DEVICE_TYPE(K051649, k051649_device)
+DECLARE_DEVICE_TYPE(JKM052539, jkm052539_device)
 
-#endif // MAME_SOUND_K051649_H
+#endif // MAME_SOUND_JKM052539_H

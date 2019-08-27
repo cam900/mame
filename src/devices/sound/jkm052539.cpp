@@ -2,46 +2,30 @@
 // copyright-holders:Bryan McPhail
 /***************************************************************************
 
-    Konami 051649 - SCC1 sound as used in Haunted Castle, City Bomber
+	MATRIX JKM052539
 
-    This file is pieced together by Bryan McPhail from a combination of
-    Namco Sound, Amuse by Cab, Haunted Castle schematics and whoever first
-    figured out SCC!
-
-    The 051649 is a 5 channel sound generator, each channel gets its
-    waveform from RAM (32 bytes per waveform, 8 bit signed data).
-
-    This sound chip is the same as the sound chip in some Konami
-    megaROM cartridges for the MSX. It is actually well researched
-    and documented:
-
-        http://bifi.msxnet.org/msxnet/tech/scc.html
-
-    Thanks to Sean Young (sean@mess.org) for some bugfixes.
-
-    K052539 is more or less equivalent to this chip except channel 5
-    does not share waveram with channel 4.
+	K052539 with stereo output, 16 bit frequency
 
 ***************************************************************************/
 
 #include "emu.h"
-#include "k051649.h"
+#include "jkm052539.h"
 #include <algorithm>
 
 #define FREQ_BITS   16
 #define DEF_GAIN    8
 
-void k051649_device::scc_map(address_map &map)
+void jkm052539_device::scc_map(address_map &map)
 {
-	map(0x00, 0x7f).rw(FUNC(k051649_device::k051649_waveform_r), FUNC(k051649_device::k051649_waveform_w));
-	map(0x80, 0x89).mirror(0x10).w(FUNC(k051649_device::k051649_frequency_w));
-	map(0x8a, 0x8e).mirror(0x10).w(FUNC(k051649_device::k051649_volume_w));
-	map(0x8f, 0x8f).mirror(0x10).w(FUNC(k051649_device::k051649_keyonoff_w));
-	map(0xe0, 0xe0).mirror(0x1f).rw(FUNC(k051649_device::k051649_test_r), FUNC(k051649_device::k051649_test_w));
+	map(0x00, 0x9f).rw(FUNC(jkm052539_device::jkm052539_waveform_r), FUNC(jkm052539_device::jkm052539_waveform_w));
+	map(0xa0, 0xa9).mirror(0x10).w(FUNC(jkm052539_device::jkm052539_frequency_w));
+	map(0xaa, 0xae).mirror(0x10).w(FUNC(jkm052539_device::jkm052539_volume_w));
+	map(0xaf, 0xaf).mirror(0x10).w(FUNC(jkm052539_device::jkm052539_keyonoff_w));
+	map(0xc0, 0xc0).mirror(0x1f).rw(FUNC(jkm052539_device::jkm052539_test_r), FUNC(jkm052539_device::jkm052539_test_w));
 }
 
 // device type definition
-DEFINE_DEVICE_TYPE(K051649, k051649_device, "k051649", "K051649 SCC1")
+DEFINE_DEVICE_TYPE(JKM052539, jkm052539_device, "jkm052539", "JKM052539 SCC1")
 
 
 //**************************************************************************
@@ -49,11 +33,11 @@ DEFINE_DEVICE_TYPE(K051649, k051649_device, "k051649", "K051649 SCC1")
 //**************************************************************************
 
 //-------------------------------------------------
-//  k051649_device - constructor
+//  jkm052539_device - constructor
 //-------------------------------------------------
 
-k051649_device::k051649_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: device_t(mconfig, K051649, tag, owner, clock)
+jkm052539_device::jkm052539_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
+	: device_t(mconfig, JKM052539, tag, owner, clock)
 	, device_sound_interface(mconfig, *this)
 	, m_stream(nullptr)
 	, m_mclock(0)
@@ -69,15 +53,16 @@ k051649_device::k051649_device(const machine_config &mconfig, const char *tag, d
 //  device_start - device-specific startup
 //-------------------------------------------------
 
-void k051649_device::device_start()
+void jkm052539_device::device_start()
 {
 	// get stream channels
 	m_rate = clock()/16;
-	m_stream = stream_alloc(0, 1, m_rate);
+	m_stream = stream_alloc(0, 2, m_rate);
 	m_mclock = clock();
 
 	// allocate a buffer to mix into - 1 second's worth should be more than enough
-	m_mixer_buffer.resize(2 * m_rate);
+	m_mixer_buffer[0].resize(2 * m_rate);
+	m_mixer_buffer[1].resize(2 * m_rate);
 
 	// build the mixer table
 	make_mixer_table(5);
@@ -99,13 +84,13 @@ void k051649_device::device_start()
 //  device_reset - device-specific reset
 //-------------------------------------------------
 
-void k051649_device::device_reset()
+void jkm052539_device::device_reset()
 {
 	// reset all the voices
 	for (sound_channel &voice : m_channel_list)
 	{
 		voice.frequency = 0;
-		voice.volume = 0xf;
+		voice.volume = 0;
 		voice.counter = 0;
 		voice.key = false;
 	}
@@ -119,7 +104,7 @@ void k051649_device::device_reset()
 //  device_post_load - device-specific post-load
 //-------------------------------------------------
 
-void k051649_device::device_post_load()
+void jkm052539_device::device_post_load()
 {
 	device_clock_changed();
 }
@@ -130,7 +115,7 @@ void k051649_device::device_post_load()
 //  changes
 //-------------------------------------------------
 
-void k051649_device::device_clock_changed()
+void jkm052539_device::device_clock_changed()
 {
 	const u32 old_rate = m_rate;
 	m_rate = clock()/16;
@@ -138,7 +123,8 @@ void k051649_device::device_clock_changed()
 
 	if (old_rate < m_rate)
 	{
-		m_mixer_buffer.resize(2 * m_rate, 0);
+		m_mixer_buffer[0].resize(2 * m_rate, 0);
+		m_mixer_buffer[1].resize(2 * m_rate, 0);
 	}
 	m_stream->set_sample_rate(m_rate);
 }
@@ -148,15 +134,16 @@ void k051649_device::device_clock_changed()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void k051649_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+void jkm052539_device::sound_stream_update(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
 {
 	// zap the contents of the mixer buffer
-	std::fill(m_mixer_buffer.begin(), m_mixer_buffer.end(), 0);
+	std::fill(m_mixer_buffer[0].begin(), m_mixer_buffer[0].end(), 0);
+	std::fill(m_mixer_buffer[1].begin(), m_mixer_buffer[1].end(), 0);
 
 	for (sound_channel &voice : m_channel_list)
 	{
-		// channel is halted for freq < 9
-		if (voice.frequency > 8)
+		// channel is halted for freq <= 0
+		if (voice.frequency > 0)
 		{
 			const int v = voice.volume * voice.key;
 			int c = voice.counter;
@@ -167,7 +154,8 @@ void k051649_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 			{
 				c += step;
 				const int offs = (c >> FREQ_BITS) & 0x1f;
-				m_mixer_buffer[i] += (voice.waveram[offs] * v) >> 3;
+				m_mixer_buffer[0][i] += (voice.waveram[offs] * (v & 0xf)) >> 3;
+				m_mixer_buffer[1][i] += (voice.waveram[offs] * ((v >> 4) & 0xf)) >> 3;
 			}
 
 			// update the counter for this voice
@@ -176,51 +164,20 @@ void k051649_device::sound_stream_update(sound_stream &stream, stream_sample_t *
 	}
 
 	// mix it down
-	stream_sample_t *buffer = outputs[0];
+	stream_sample_t *buffer_l = outputs[0];
+	stream_sample_t *buffer_r = outputs[1];
 	for (int i = 0; i < samples; i++)
-		*buffer++ = m_mixer_lookup[m_mixer_buffer[i]];
+	{
+		*buffer_l++ = m_mixer_lookup[m_mixer_buffer[0][i]];
+		*buffer_r++ = m_mixer_lookup[m_mixer_buffer[1][i]];
+	}
 }
 
 
 /********************************************************************************/
 
 
-void k051649_device::k051649_waveform_w(offs_t offset, u8 data)
-{
-	// waveram is read-only?
-	if (m_test & 0x40 || (m_test & 0x80 && offset >= 0x60))
-		return;
-
-	m_stream->update();
-
-	if (offset >= 0x60)
-	{
-		// channel 5 shares waveram with channel 4
-		m_channel_list[3].waveram[offset & 0x1f] = data;
-		m_channel_list[4].waveram[offset & 0x1f] = data;
-	}
-	else
-		m_channel_list[offset >> 5].waveram[offset & 0x1f] = data;
-}
-
-
-u8 k051649_device::k051649_waveform_r(offs_t offset)
-{
-	// test-register bits 6/7 expose the internal counter
-	if (m_test & 0xc0)
-	{
-		m_stream->update();
-
-		if (offset >= 0x60)
-			offset += (m_channel_list[3 + (m_test >> 6 & 1)].counter >> FREQ_BITS);
-		else if (m_test & 0x40)
-			offset += (m_channel_list[offset >> 5].counter >> FREQ_BITS);
-	}
-	return m_channel_list[offset >> 5].waveram[offset & 0x1f];
-}
-
-
-void k051649_device::k052539_waveform_w(offs_t offset, u8 data)
+void jkm052539_device::jkm052539_waveform_w(offs_t offset, u8 data)
 {
 	// waveram is read-only?
 	if (m_test & 0x40)
@@ -231,7 +188,7 @@ void k051649_device::k052539_waveform_w(offs_t offset, u8 data)
 }
 
 
-u8 k051649_device::k052539_waveform_r(offs_t offset)
+u8 jkm052539_device::jkm052539_waveform_r(offs_t offset)
 {
 	// test-register bit 6 exposes the internal counter
 	if (m_test & 0x40)
@@ -243,14 +200,14 @@ u8 k051649_device::k052539_waveform_r(offs_t offset)
 }
 
 
-void k051649_device::k051649_volume_w(offs_t offset, u8 data)
+void jkm052539_device::jkm052539_volume_w(offs_t offset, u8 data)
 {
 	m_stream->update();
-	m_channel_list[offset & 0x7].volume = data & 0xf;
+	m_channel_list[offset & 0x7].volume = data & 0xff;
 }
 
 
-void k051649_device::k051649_frequency_w(offs_t offset, u8 data)
+void jkm052539_device::jkm052539_frequency_w(offs_t offset, u8 data)
 {
 	const int freq_hi = offset & 1;
 	offset >>= 1;
@@ -260,18 +217,18 @@ void k051649_device::k051649_frequency_w(offs_t offset, u8 data)
 	// test-register bit 5 resets the internal counter
 	if (m_test & 0x20)
 		m_channel_list[offset].counter = ~0;
-	else if (m_channel_list[offset].frequency < 9)
+	else if (m_channel_list[offset].frequency <= 0)
 		m_channel_list[offset].counter |= ((1 << FREQ_BITS) - 1);
 
 	// update frequency
 	if (freq_hi)
-		m_channel_list[offset].frequency = (m_channel_list[offset].frequency & 0x0ff) | (data << 8 & 0xf00);
+		m_channel_list[offset].frequency = (m_channel_list[offset].frequency & 0x00ff) | (data << 8 & 0xff00);
 	else
-		m_channel_list[offset].frequency = (m_channel_list[offset].frequency & 0xf00) | data;
+		m_channel_list[offset].frequency = (m_channel_list[offset].frequency & 0xff00) | data;
 }
 
 
-void k051649_device::k051649_keyonoff_w(u8 data)
+void jkm052539_device::jkm052539_keyonoff_w(u8 data)
 {
 	m_stream->update();
 
@@ -282,17 +239,17 @@ void k051649_device::k051649_keyonoff_w(u8 data)
 }
 
 
-void k051649_device::k051649_test_w(u8 data)
+void jkm052539_device::jkm052539_test_w(u8 data)
 {
 	m_test = data;
 }
 
 
-u8 k051649_device::k051649_test_r()
+u8 jkm052539_device::jkm052539_test_r()
 {
 	// reading the test register sets it to $ff!
 	if (!machine().side_effects_disabled())
-		k051649_test_w(0xff);
+		jkm052539_test_w(0xff);
 	return 0xff;
 }
 
@@ -301,7 +258,7 @@ u8 k051649_device::k051649_test_r()
 // build a table to divide by the number of voices
 //-------------------------------------------------
 
-void k051649_device::make_mixer_table(int voices)
+void jkm052539_device::make_mixer_table(int voices)
 {
 	// allocate memory
 	m_mixer_table = std::make_unique<s16[]>(512 * voices);
