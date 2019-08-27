@@ -619,7 +619,7 @@ YM2203 Japanese datasheet contents, translated: http://www.larwe.com/technical/c
 #define TONE_ENABLEQ(_chan)   ((m_regs[AY_ENABLE] >> (_chan)) & 1)
 #define TONE_PERIOD(_chan)    ( m_regs[(_chan) << 1] | ((m_regs[((_chan) << 1) | 1] & (m_flags & AY8910_EXTFRQ ? 0xff : 0x0f)) << 8) )
 #define NOISE_PERIOD()        ( m_regs[AY_NOISEPER] & (m_flags & AY8910_EXTFRQ ? 0xff : 0x1f))
-#define TONE_PAN(_chan)       (m_flags & AY8910_STEREO ? (m_regs[AY_AVOL + (_chan)] >> 6) & 0x03 : 0)
+#define TONE_PAN(_chan)       (m_flags & AY8910_STEREO ? ((m_regs[AY_AVOL + (_chan)] >> 6) & 0x03) : 0)
 #define TONE_VOLUME(_chan)    ( m_regs[AY_AVOL + (_chan)] & 0x0f)
 #define TONE_ENVELOPE(_chan)  ((m_regs[AY_AVOL + (_chan)] >> 4) & ((m_flags & AY8910_EXTENV) ? 3 : 1))
 #define ENVELOPE_PERIOD()     ((m_regs[AY_EFINE] | (m_regs[AY_ECOARSE]<<8)))
