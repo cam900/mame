@@ -51,6 +51,9 @@
 #define YM2149_PIN26_HIGH           (0x00) /* or N/C */
 #define YM2149_PIN26_LOW            (0x10)
 
+#define AY8910_EXTFRQ               (0x20)
+#define AY8910_EXTENV               (0x40)
+#define AY8910_STEREO               (0x80)
 
 class ay8910_device : public device_t, public device_sound_interface
 {
@@ -113,7 +116,7 @@ public:
 
 protected:
 	ay8910_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner,
-					u32 clock, psg_type_t psg_type, int streams, int ioports);
+					u32 clock, psg_type_t psg_type, int streams, int ioports, u8 flags = 0);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -134,7 +137,7 @@ private:
 
 	// internal helpers
 	void set_type(psg_type_t psg_type);
-	inline u16 mix_3D();
+	inline u16 mix_3D(int out = 0);
 	void ay8910_write_reg(int r, int v);
 	void build_mixer_table();
 	void ay8910_statesave();
@@ -234,6 +237,14 @@ public:
 };
 
 DECLARE_DEVICE_TYPE(YM3439, ym3439_device)
+
+class jkm3439_device : public ay8910_device
+{
+public:
+	jkm3439_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+};
+
+DECLARE_DEVICE_TYPE(JKM3439, jkm3439_device)
 
 class ymz284_device : public ay8910_device
 {
