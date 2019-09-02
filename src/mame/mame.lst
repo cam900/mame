@@ -1184,6 +1184,9 @@ wrldtour                        //
 wrldtour2                       //
 wrldtour3                       //
 
+@source:am1000.cpp
+am1000                          // (c) 1988 Alpha Micro
+
 @source:amaticmg.cpp
 am_mg24                         // (c) 2000 Amatic
 am_mg24a                        // (c) 2000 Amatic
@@ -15311,6 +15314,7 @@ gnw_fire                        // Nintendo
 gnw_fireatk                     // Nintendo
 gnw_gcliff                      // Nintendo
 gnw_ghouse                      // Nintendo
+gnw_helmet                      // Nintendo
 gnw_lboat                       // Nintendo
 gnw_manhole                     // Nintendo
 gnw_mario                       // Nintendo
@@ -15329,6 +15333,7 @@ gnw_squish                      // Nintendo
 gnw_stennis                     // Nintendo
 gnw_tbridge                     // Nintendo
 gnw_tfish                       // Nintendo
+gnw_vermin                      // Nintendo
 gnw_zelda                       // Nintendo
 kbilly                          // Konami
 kblades                         // Konami
@@ -21457,7 +21462,9 @@ menghong                        // 2004? Sealy
 @source:mephisto_brikett.cpp
 mephisto
 mephisto2
+mephisto2e
 mephisto3
+mephisto3b
 
 @source:mephisto_glasgow.cpp
 amsterd                         // Amsterdam
@@ -31050,6 +31057,7 @@ noki8890                        //
 
 @source:norautp.cpp
 bjpoker                         // (c) M. Kramer Inc.
+cdrawpkr                        // (c) 1984, Coinmaster
 cgip30cs                        // (c) 1999, CGI
 cgidjp                          // (c) 1999, CGI
 df_djpkr                        // (c) DellFern Ltd.
@@ -31108,7 +31116,10 @@ cfortea                         //
 cforteb                         //
 
 @source:novag_const.cpp
-const                           //
+const
+const36
+ssensor4
+supercon
 
 @source:novag_diablo.cpp
 diablo68                        //
@@ -31120,9 +31131,7 @@ npresto                         //
 
 @source:novag_savant.cpp
 savant                          //
-
-@source:novag_sconst.cpp
-supercon                        //
+savant2                         //
 
 @source:novag_sexpert.cpp
 sexperta                        //
@@ -31428,10 +31437,12 @@ pacgal2                         // bootleg
 pacheart                        // hack
 pacman                          // (c) 1980 Midway
 pacmanf                         // hack
+pacmanfm                        // bootleg (FAMARE S.A.)
 pacmanjpm                       // bootleg
 pacmanpe                        //
 pacmanso                        //
 pacmansp                        // hack (Video Game SA)
+pacmanug                        // bootleg (U.G.)
 pacmanvg                        // bootleg (Video Game SA)
 pacmod                          // (c) 1981 Midway
 pacplus                         // (c) 1982 Namco (Midway license)
@@ -31463,7 +31474,6 @@ superabco                       // hack
 theglobme                       // (c) 1983 Magic Electronics
 theglobp                        // (c) 1983 Epos Corporation
 titanpac                        // hack
-pacmanfm                        // bootleg (FAMARE S.A.)
 vanvan                          // (c) 1983 Sanritsu
 vanvanb                         // (c) 1983 Karateco (bootleg?)
 vanvank                         // (c) 1983 Karateco (bootleg?)
@@ -33115,8 +33125,8 @@ powerinsa                       // (c) 1993 Atlus (bootleg of USA version)
 powerinsb                       // (c) 1993 Atlus (bootleg of USA version)
 powerinsc                       // (c) 1993 Atlus (bootleg of USA version)
 powerinsj                       // (c) 1993 Atlus (Japan)
-powerinspj                      // prototype (USA)
-powerinspu                      // prototype (Japan)
+powerinspj                      // prototype (Japan)
+powerinspu                      // prototype (USA)
 
 @source:powerstack.cpp
 powerstk                        // Motorola Powerstack II
@@ -34228,6 +34238,10 @@ cp2000                          //
 
 @source:saitek_delta1.cpp
 ccdelta1                        //
+
+@source:saitek_mark5.cpp
+ccmk5
+ccmk6
 
 @source:saitek_risc2500.cpp
 risc2500                        //
