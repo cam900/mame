@@ -3,7 +3,7 @@
 /* Sega 315-5313 - Megadrive VDP */
 
 #include "emu.h"
-#include "video/315_5313.h"
+#include "video/315_53134.h"
 
 /*  The VDP occupies addresses C00000h to C0001Fh.
 
@@ -21,7 +21,7 @@
  C00017h    -   SN76489 PSG (mirror)
 */
 
-#define MEGADRIV_VDP_VRAM(address) m_vram[(address)&0x7fff]
+#define MEGADRIV_VDP_VRAM(address) m_vram[(address) & 0x7ffff]
 
 
 
@@ -41,13 +41,13 @@
 
  */
 
-#define MEGADRIVE_REG0_UNUSED          ((m_regs[0x00]&0xc0)>>6)
-#define MEGADRIVE_REG0_BLANK_LEFT      ((m_regs[0x00]&0x20)>>5) // like SMS, not used by any commercial games?
-#define MEGADRIVE_REG0_IRQ4_ENABLE     ((m_regs[0x00]&0x10)>>4)
-#define MEGADRIVE_REG0_INVALID_MODE    ((m_regs[0x00]&0x08)>>3) // invalid display mode, unhandled
-#define MEGADRIVE_REG0_SPECIAL_PAL     ((m_regs[0x00]&0x04)>>2) // strange palette mode, unhandled
-#define MEGADRIVE_REG0_HVLATCH_ENABLE  ((m_regs[0x00]&0x02)>>1) // HV Latch, used by lightgun games
-#define MEGADRIVE_REG0_DISPLAY_DISABLE ((m_regs[0x00]&0x01)>>0)
+#define MEGADRIVE_REG0_UNUSED           ((m_regs[0x00] & 0xc0) >> 6)
+#define MEGADRIVE_REG0_BLANK_LEFT       ((m_regs[0x00] & 0x20) >> 5) // like SMS, not used by any commercial games?
+#define MEGADRIVE_REG0_IRQ4_ENABLE      ((m_regs[0x00] & 0x10) >> 4)
+#define MEGADRIVE_REG0_INVALID_MODE     ((m_regs[0x00] & 0x08) >> 3) // invalid display mode, unhandled
+#define MEGADRIVE_REG0_SPECIAL_PAL      ((m_regs[0x00] & 0x04) >> 2) // strange palette mode, unhandled
+#define MEGADRIVE_REG0_HVLATCH_ENABLE   ((m_regs[0x00] & 0x02) >> 1) // HV Latch, used by lightgun games
+#define MEGADRIVE_REG0_DISPLAY_DISABLE  ((m_regs[0x00] & 0x01) >> 0)
 
 /*
 
@@ -65,84 +65,76 @@
 
 */
 
-#define MEGADRIVE_REG01_TMS9918_SELECT  ((m_regs[0x01]&0x80)>>7)
-#define MEGADRIVE_REG01_DISP_ENABLE     ((m_regs[0x01]&0x40)>>6)
-#define MEGADRIVE_REG01_IRQ6_ENABLE     ((m_regs[0x01]&0x20)>>5)
-#define MEGADRIVE_REG01_DMA_ENABLE      ((m_regs[0x01]&0x10)>>4)
-#define MEGADRIVE_REG01_240_LINE        ((m_regs[0x01]&0x08)>>3)
-#define MEGADRIVE_REG01_SMS_SELECT      ((m_regs[0x01]&0x04)>>2)
-#define MEGADRIVE_REG01_UNUSED          ((m_regs[0x01]&0x02)>>1)
-#define MEGADRIVE_REG01_STRANGE_VIDEO   ((m_regs[0x01]&0x01)>>0) // unhandled, does strange things to the display
+#define MEGADRIVE_REG01_TMS9918_SELECT  ((m_regs[0x01] & 0x80) >> 7)
+#define MEGADRIVE_REG01_DISP_ENABLE     ((m_regs[0x01] & 0x40) >> 6)
+#define MEGADRIVE_REG01_IRQ6_ENABLE     ((m_regs[0x01] & 0x20) >> 5)
+#define MEGADRIVE_REG01_DMA_ENABLE      ((m_regs[0x01] & 0x10) >> 4)
+#define MEGADRIVE_REG01_240_LINE        ((m_regs[0x01] & 0x08) >> 3)
+#define MEGADRIVE_REG01_SMS_SELECT      ((m_regs[0x01] & 0x04) >> 2)
+#define MEGADRIVE_REG01_UNUSED          ((m_regs[0x01] & 0x02) >> 1)
+#define MEGADRIVE_REG01_STRANGE_VIDEO   ((m_regs[0x01] & 0x01) >> 0) // unhandled, does strange things to the display
 
-#define MEGADRIVE_REG02_UNUSED1         ((m_regs[0x02]&0xe0)>>5)
-#define MEGADRIVE_REG02_PATTERN_ADDR_A  ((m_regs[0x02]&0x18)>>3)
-#define MEGADRIVE_REG02_UNUSED2         ((m_regs[0x02]&0x07)>>0)
+#define MEGADRIVE_REG02_PATTERN_ADDR_A  ((m_regs[0x02] & 0xff) >> 0)
+#define MEGADRIVE_REG03_PATTERN_ADDR_B  ((m_regs[0x03] & 0xff) >> 0)
+#define MEGADRIVE_REG04_PATTERN_ADDR_C  ((m_regs[0x04] & 0xff) >> 0)
+#define MEGADRIVE_REG05_PATTERN_ADDR_D  ((m_regs[0x05] & 0xff) >> 0)
+#define MEGADRIVE_REG06_PATTERN_ADDR_W  ((m_regs[0x06] & 0xff) >> 0)
 
-#define MEGADRIVE_REG03_UNUSED1         ((m_regs[0x03]&0xf0)>>4)
-#define MEGADRIVE_REG03_PATTERN_ADDR_W  ((m_regs[0x03]&0x0e)>>1)
-#define MEGADRIVE_REG03_UNUSED2         ((m_regs[0x03]&0x01)>>0)
+#define MEGADRIVE_REG07_FB_SPRITE       ((m_regs[0x07] & 0x80) >> 7)
+#define MEGADRIVE_REG07_UNUSED          ((m_regs[0x07] & 0x70) >> 4)
+#define MEGADRIVE_REG07_SPRITE_ADDR     ((m_regs[0x07] & 0x0f) >> 0)
 
-#define MEGADRIVE_REG04_UNUSED          ((m_regs[0x04]&0xfc)>>2)
-#define MEGADRIVE_REG04_PATTERN_ADDR_B  ((m_regs[0x04]&0x03)>>0)
+#define MEGADRIVE_REG08_BGCOLOUR        ((m_regs[0x08] & 0xff) >> 0)
+#define MEGADRIVE_REG09_BGCOLOUR        ((m_regs[0x09] & 0x0f) >> 0)
 
-#define MEGADRIVE_REG05_UNUSED          ((m_regs[0x05]&0xe0)>>5)
-#define MEGADRIVE_REG05_SPRITE_ADDR     ((m_regs[0x05]&0x1f)>>0)
+#define MEGADRIVE_REG0A_HINT_VALUE      ((m_regs[0x0a] & 0xff) >> 0)
 
-/* 6? */
+#define MEGADRIVE_REG0B_UNUSED          ((m_regs[0x0b] & 0xf0) >> 4)
+#define MEGADRIVE_REG0B_IRQ2_ENABLE     ((m_regs[0x0b] & 0x08) >> 3)
+#define MEGADRIVE_REG0B_VSCROLL_MODE    ((m_regs[0x0b] & 0x04) >> 2)
+#define MEGADRIVE_REG0B_HSCROLL_MODE    ((m_regs[0x0b] & 0x03) >> 0)
 
-#define MEGADRIVE_REG06_BGCOLOUR        ((m_regs[0x07]&0x0f)>>0)
-#define MEGADRIVE_REG07_BGCOLOUR        ((m_regs[0x07]&0xff)>>0)
+#define MEGADRIVE_REG0C_RS0             ((m_regs[0x0c] & 0x80) >> 7)
+#define MEGADRIVE_REG0C_UNUSED1         ((m_regs[0x0c] & 0x40) >> 6)
+#define MEGADRIVE_REG0C_SPECIAL         ((m_regs[0x0c] & 0x20) >> 5)
+#define MEGADRIVE_REG0C_UNUSED2         ((m_regs[0x0c] & 0x10) >> 4)
+#define MEGADRIVE_REG0C_SHADOW_HIGLIGHT ((m_regs[0x0c] & 0x08) >> 3)
+#define MEGADRIVE_REG0C_INTERLEAVE      ((m_regs[0x0c] & 0x06) >> 1)
+#define MEGADRIVE_REG0C_RS1             ((m_regs[0x0c] & 0x01) >> 0)
 
-/* 8? */
-/* 9? */
-
-#define MEGADRIVE_REG0A_HINT_VALUE      ((m_regs[0x0a]&0xff)>>0)
-
-#define MEGADRIVE_REG0B_UNUSED          ((m_regs[0x0b]&0xf0)>>4)
-#define MEGADRIVE_REG0B_IRQ2_ENABLE     ((m_regs[0x0b]&0x08)>>3)
-#define MEGADRIVE_REG0B_VSCROLL_MODE    ((m_regs[0x0b]&0x04)>>2)
-#define MEGADRIVE_REG0B_HSCROLL_MODE    ((m_regs[0x0b]&0x03)>>0)
-
-#define MEGADRIVE_REG0C_RS0             ((m_regs[0x0c]&0x80)>>7)
-#define MEGADRIVE_REG0C_UNUSED1         ((m_regs[0x0c]&0x40)>>6)
-#define MEGADRIVE_REG0C_SPECIAL         ((m_regs[0x0c]&0x20)>>5)
-#define MEGADRIVE_REG0C_UNUSED2         ((m_regs[0x0c]&0x10)>>4)
-#define MEGADRIVE_REG0C_SHADOW_HIGLIGHT ((m_regs[0x0c]&0x08)>>3)
-#define MEGADRIVE_REG0C_INTERLEAVE      ((m_regs[0x0c]&0x06)>>1)
-#define MEGADRIVE_REG0C_RS1             ((m_regs[0x0c]&0x01)>>0)
-
-#define MEGADRIVE_REG0D_UNUSED          ((m_regs[0x0d]&0xc0)>>6)
-#define MEGADRIVE_REG0D_HSCROLL_ADDR    ((m_regs[0x0d]&0x3f)>>0)
+#define MEGADRIVE_REG0D_HSCROLL_ADDR    ((m_regs[0x0d] & 0xff) >> 0)
 
 /* e? */
 
-#define MEGADRIVE_REG0F_AUTO_INC        ((m_regs[0x0f]&0xff)>>0)
+#define MEGADRIVE_REG0F_AUTO_INC        ((m_regs[0x0f] & 0xff) >> 0)
 
-#define MEGADRIVE_REG10_UNUSED1        ((m_regs[0x10]&0xc0)>>6)
-#define MEGADRIVE_REG10_VSCROLL_SIZE   ((m_regs[0x10]&0x30)>>4)
-#define MEGADRIVE_REG10_UNUSED2        ((m_regs[0x10]&0x0c)>>2)
-#define MEGADRIVE_REG10_HSCROLL_SIZE   ((m_regs[0x10]&0x03)>>0)
+#define MEGADRIVE_REG10_UNUSED1         ((m_regs[0x10] & 0xc0) >> 6)
+#define MEGADRIVE_REG10_VSCROLL_SIZE    ((m_regs[0x10] & 0x30) >> 4)
+#define MEGADRIVE_REG10_UNUSED2         ((m_regs[0x10] & 0x0c) >> 2)
+#define MEGADRIVE_REG10_HSCROLL_SIZE    ((m_regs[0x10] & 0x03) >> 0)
 
-#define MEGADRIVE_REG11_WINDOW_RIGHT   ((m_regs[0x11]&0x80)>>7)
-#define MEGADRIVE_REG11_UNUSED         ((m_regs[0x11]&0x60)>>5)
-#define MEGADRIVE_REG11_WINDOW_HPOS      ((m_regs[0x11]&0x1f)>>0)
+#define MEGADRIVE_REG11_WINDOW_RIGHT    ((m_regs[0x11] & 0x80) >> 7)
+#define MEGADRIVE_REG11_UNUSED          ((m_regs[0x11] & 0x60) >> 5)
+#define MEGADRIVE_REG11_WINDOW_HPOS     ((m_regs[0x11] & 0x1f) >> 0)
 
-#define MEGADRIVE_REG12_WINDOW_DOWN    ((m_regs[0x12]&0x80)>>7)
-#define MEGADRIVE_REG12_UNUSED         ((m_regs[0x12]&0x60)>>5)
-#define MEGADRIVE_REG12_WINDOW_VPOS      ((m_regs[0x12]&0x1f)>>0)
+#define MEGADRIVE_REG12_WINDOW_DOWN     ((m_regs[0x12] & 0x80) >> 7)
+#define MEGADRIVE_REG12_UNUSED          ((m_regs[0x12] & 0x60) >> 5)
+#define MEGADRIVE_REG12_WINDOW_VPOS     ((m_regs[0x12] & 0x1f) >> 0)
 
-#define MEGADRIVE_REG13_DMALENGTH1     ((m_regs[0x13]&0xff)>>0)
+#define MEGADRIVE_REG17_DMATYPE         ((m_regs[0x17] & 0xc0) >> 6)
+#define MEGADRIVE_REG17_UNUSED          ((m_regs[0x17] & 0x3f) >> 0)
 
-#define MEGADRIVE_REG14_DMALENGTH2      ((m_regs[0x14]&0xff)>>0)
+#define MEGADRIVE_REG18_DMALENGTH1      ((m_regs[0x18] & 0xff) >> 0)
+#define MEGADRIVE_REG19_DMALENGTH2      ((m_regs[0x19] & 0xff) >> 0)
+#define MEGADRIVE_REG1A_DMALENGTH3      ((m_regs[0x1a] & 0xff) >> 0)
+#define MEGADRIVE_REG1B_DMALENGTH4      ((m_regs[0x1b] & 0xff) >> 0)
 
-#define MEGADRIVE_REG15_DMASOURCE1      ((m_regs[0x15]&0xff)>>0)
-#define MEGADRIVE_REG16_DMASOURCE2      ((m_regs[0x16]&0xff)>>0)
+#define MEGADRIVE_REG1C_DMASOURCE1      ((m_regs[0x1c] & 0xff) >> 0)
+#define MEGADRIVE_REG1D_DMASOURCE2      ((m_regs[0x1d] & 0xff) >> 0)
+#define MEGADRIVE_REG1E_DMASOURCE3      ((m_regs[0x1e] & 0xff) >> 0)
+#define MEGADRIVE_REG1F_DMASOURCE4      ((m_regs[0x1f] & 0xff) >> 0)
 
-#define MEGADRIVE_REG17_DMASOURCE3      ((m_regs[0x17]&0xff)>>0)
-#define MEGADRIVE_REG17_DMATYPE         ((m_regs[0x17]&0xc0)>>6)
-#define MEGADRIVE_REG17_UNUSED          ((m_regs[0x17]&0x3f)>>0)
-
-static constexpr uint8_t line_315_5313_mode4[8] = {
+static constexpr u8 line_315_53134_mode4[8] = {
 			  26 /* VINT_HPOS */
 			, 26 /* VINT_FLAG_HPOS */
 			, 27 /* HINT_HPOS */
@@ -155,12 +147,53 @@ static constexpr uint8_t line_315_5313_mode4[8] = {
 
 #define MAX_HPOSITION 480
 
+enum {
+	PATTERN_A_PIX_MASK = 0x0000000000000fffULL,
+	PATTERN_A_PRI_MASK = 0x000000000000f000ULL,
+	PATTERN_B_PIX_MASK = 0x000000000fff0000ULL,
+	PATTERN_B_PRI_MASK = 0x00000000f0000000ULL,
+	PATTERN_C_PIX_MASK = 0x00000fff00000000ULL,
+	PATTERN_C_PRI_MASK = 0x0000f00000000000ULL,
+	PATTERN_D_PIX_MASK = 0x0fff000000000000ULL,
+	PATTERN_D_PRI_MASK = 0xf000000000000000ULL,
+	PATTERN_A_PIX_SHIFT = 0,
+	PATTERN_B_PIX_SHIFT = 16,
+	PATTERN_C_PIX_SHIFT = 32,
+	PATTERN_D_PIX_SHIFT = 48,
+	PATTERN_A_PRI_SHIFT = 12,
+	PATTERN_B_PRI_SHIFT = 28,
+	PATTERN_C_PRI_SHIFT = 44,
+	PATTERN_D_PRI_SHIFT = 60,
+	SPRITE_PIX_MASK = 0x0ffffffffULL,
+	SPRITE_PRI_MASK = 0xf00000000ULL,
+	SPRITE_PIX_SHIFT = 0,
+	SPRITE_PRI_SHIFT = 32,
+	RENDER_BG_FLAG = 0x100000000ULL,
+	RENDER_BG_FLAG_SHIFT = 32
+};
 
-DEFINE_DEVICE_TYPE(SEGA315_53134, sega315_53134_device, "sega315_53134", "Sega 315-53134 Megadrive VDP")
+static inline u32 argb(u32 d, u32 s, u8 alpha = 0xff)
+{
+	u32 leva = (((s >> 24) & 0xff) * alpha) / 0xff;
+	if (leva == 0)
+		return d;
 
-sega315_53134_device::sega315_53134_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	if (leva >= 0xff)
+		return s;
+
+	u32 outa = std::min(u32(0xff),(d >> 24) + (leva * (255 - (d >> 24)) / 255));
+
+	return ((((s & 0x0000ff) * leva + (d & 0x0000ff) * int(0xff - leva)) / 0xff)) |
+			((((s & 0x00ff00) * leva + (d & 0x00ff00) * int(0xff - leva)) / 0xff) & 0x00ff00) |
+			((((s & 0xff0000) * leva + (d & 0xff0000) * int(0xff - leva)) / 0xff) & 0xff0000) |
+			(outa << 24);
+}
+
+DEFINE_DEVICE_TYPE(SEGA315_53134, sega315_53134_device, "sega315_53134", "MATRIX 315-5313-4 Megadrive VDP")
+
+sega315_53134_device::sega315_53134_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	// mode 4 support, for SMS compatibility, is implemented in 315_5124.cpp
-	: sega315_5313_mode4_device(mconfig, SEGA315_53134, tag, owner, clock, SEGA315_5124_CRAM_SIZE, 0x00, 0x1f, 0, 0, line_315_5313_mode4)
+	: sega315_53134_mode4_device(mconfig, SEGA315_53134, tag, owner, clock, SEGA315_5124_CRAM_SIZE, 0x00, 0x1f, 0, 0, line_315_53134_mode4)
 	, m_render_bitmap(nullptr)
 	, m_render_line(nullptr)
 	, m_render_line_raw(nullptr)
@@ -203,7 +236,6 @@ sega315_53134_device::sega315_53134_device(const machine_config &mconfig, const 
 	, m_sprite_renderline(nullptr)
 	, m_highpri_renderline(nullptr)
 	, m_video_renderline(nullptr)
-	, m_palette_lookup(nullptr)
 	, m_space68k(nullptr)
 	, m_cpu68k(*this, finder_base::DUMMY_TAG)
 	, m_ext_palette(*this, finder_base::DUMMY_TAG)
@@ -219,9 +251,11 @@ sega315_53134_device::sega315_53134_device(const machine_config &mconfig, const 
 
 void sega315_53134_device::device_add_mconfig(machine_config &config)
 {
-	sega315_5313_mode4_device::device_add_mconfig(config);
+	sega315_53134_mode4_device::device_add_mconfig(config);
 
-	SEGAPSG(config.replace(), m_snsnd, DERIVED_CLOCK(1, 15)).add_route(ALL_OUTPUTS, *this, 0.5, AUTO_ALLOC_INPUT, 0);
+	GAMEGEAR(config.replace(), m_snsnd, DERIVED_CLOCK(1, 15));
+	m_snsnd->add_route(0, *this, 1.0, AUTO_ALLOC_INPUT, 0);
+	m_snsnd->add_route(1, *this, 1.0, AUTO_ALLOC_INPUT, 1);
 }
 
 TIMER_CALLBACK_MEMBER(sega315_53134_device::irq6_on_timer_callback)
@@ -246,24 +280,23 @@ void sega315_53134_device::device_start()
 	m_32x_interrupt_func.bind_relative_to(*owner());
 	m_32x_scanline_helper_func.bind_relative_to(*owner());
 
-	m_vram  = std::make_unique<uint16_t[]>(0x10000/2);
-	m_cram  = std::make_unique<uint16_t[]>(0x80/2);
-	m_vsram = std::make_unique<uint16_t[]>(0x80/2);
-	m_regs = std::make_unique<uint16_t[]>(0x40/2);
-	m_internal_sprite_attribute_table = std::make_unique<uint16_t[]>(0x800/2);
+	m_vram  = std::make_unique<u16[]>(0x100000 / 2);
+	m_cram  = std::make_unique<u16[]>(0x4000 / 2);
+	m_vsram = std::make_unique<u16[]>(0x100 / 2);
+	m_regs  = std::make_unique<u16[]>(0x40 / 2);
+	m_internal_sprite_attribute_table = std::make_unique<u16[]>(0x10000 / 2);
 
-	memset(m_vram.get(), 0x00, 0x10000);
-	memset(m_cram.get(), 0x00, 0x80);
-	memset(m_vsram.get(), 0x00, 0x80);
+	memset(m_vram.get(), 0x00, 0x100000);
+	memset(m_cram.get(), 0x00, 0x4000);
+	memset(m_vsram.get(), 0x00, 0x100);
 	memset(m_regs.get(), 0x00, 0x40);
-	memset(m_internal_sprite_attribute_table.get(), 0x00, 0x800);
+	memset(m_internal_sprite_attribute_table.get(), 0x00, 0x10000);
 
-
-	save_pointer(NAME(m_vram), 0x10000/2);
-	save_pointer(NAME(m_cram), 0x80/2);
-	save_pointer(NAME(m_vsram), 0x80/2);
-	save_pointer(NAME(m_regs), 0x40/2);
-	save_pointer(NAME(m_internal_sprite_attribute_table), 0x800/2);
+	save_pointer(NAME(m_vram), 0x100000 / 2);
+	save_pointer(NAME(m_cram), 0x4000 / 2);
+	save_pointer(NAME(m_vsram), 0x100 / 2);
+	save_pointer(NAME(m_regs), 0x40 / 2);
+	save_pointer(NAME(m_internal_sprite_attribute_table), 0x10000 / 2);
 
 	save_item(NAME(m_command_pending));
 	save_item(NAME(m_command_part1));
@@ -285,27 +318,22 @@ void sega315_53134_device::device_start()
 	save_item(NAME(m_vblank_flag));
 	save_item(NAME(m_total_scanlines));
 
-	m_sprite_renderline = std::make_unique<uint32_t[]>(1024);
-	m_highpri_renderline = std::make_unique<uint32_t[]>(320);
-	m_video_renderline = std::make_unique<uint32_t[]>(320);
-
-	m_palette_lookup = std::make_unique<uint16_t[]>(0x40);
-
-	memset(m_palette_lookup.get(),0x00,0x40*2);
+	m_sprite_renderline = std::make_unique<u64[]>(65536);
+	m_highpri_renderline = std::make_unique<u64[]>(320);
+	m_video_renderline = std::make_unique<u64[]>(320);
 
 	if (!m_use_alt_timing)
 		m_render_bitmap = std::make_unique<bitmap_rgb32>(320, 512); // allocate maximum sizes we're going to use, it's safer.
 	else
-		m_render_line = std::make_unique<uint32_t[]>(320);
+		m_render_line = std::make_unique<u32[]>(320);
 
-	m_render_line_raw = std::make_unique<uint16_t[]>(320);
+	m_render_line_raw = std::make_unique<u16[]>(320);
 
 	// FIXME: are these all needed? I'm pretty sure some of these (most?) are just helpers which don't need to be saved,
 	// but better safe than sorry...
-	save_pointer(NAME(m_sprite_renderline), 1024);
+	save_pointer(NAME(m_sprite_renderline), 65536);
 	save_pointer(NAME(m_highpri_renderline), 320);
 	save_pointer(NAME(m_video_renderline), 320);
-	save_pointer(NAME(m_palette_lookup), 0x40);
 	save_pointer(NAME(m_render_line_raw), 320);
 	if (m_use_alt_timing)
 		save_pointer(NAME(m_render_line), 320);
@@ -316,7 +344,7 @@ void sega315_53134_device::device_start()
 
 	m_space68k = &m_cpu68k->space();
 
-	sega315_5313_mode4_device::device_start();
+	sega315_53134_mode4_device::device_start();
 }
 
 void sega315_53134_device::device_reset()
@@ -336,94 +364,87 @@ void sega315_53134_device::device_reset()
 	m_irq4_pending = 0;
 	m_scanline_counter = 0;
 	m_vblank_flag = 0;
-	m_total_scanlines = 270;
+	m_total_scanlines = 262;
 
-	sega315_5313_mode4_device::device_reset();
+	sega315_53134_mode4_device::device_reset();
 }
 
 void sega315_53134_device::device_reset_old()
 {
 	// other stuff, are we sure we want to set some of these every reset?
 	// it's called from machine_reset
-	m_total_scanlines = 270;
-	m_visible_scanlines = 240;
-	m_irq6_scanline = 240;
-	m_z80irq_scanline = 240;
+	m_total_scanlines = 262;
+	m_visible_scanlines = 224;
+	m_irq6_scanline = 224;
+	m_z80irq_scanline = 226;
 }
 
-
-
-void sega315_53134_device::vdp_vram_write(uint16_t data)
+void sega315_53134_device::vdp_address_inc()
 {
-	uint16_t sprite_base_address = ((MEGADRIVE_REG05_SPRITE_ADDR&0x1f)<<11);
-	int spritetable_size = 0x800;
-	int lowlimit = sprite_base_address;
-	int highlimit = sprite_base_address+spritetable_size;
+	m_vdp_address += MEGADRIVE_REG0F_AUTO_INC;
+	m_vdp_address &= 0xfffff;
+}
 
-	if (m_vdp_address&1)
+void sega315_53134_device::vdp_vram_write(u16 data)
+{
+	const u32 sprite_base_address = ((MEGADRIVE_REG07_SPRITE_ADDR & 0xf) << 12);
+	const int spritetable_size = 0x10000;
+	const int lowlimit = sprite_base_address;
+	const int highlimit = sprite_base_address + spritetable_size;
+
+	if (m_vdp_address & 1)
 	{
-		data = ((data&0x00ff)<<8)|((data&0xff00)>>8);
+		data = ((data & 0x00ff) << 8) | ((data & 0xff00) >> 8);
 	}
 
-	MEGADRIV_VDP_VRAM(m_vdp_address>>1) = data;
+	MEGADRIV_VDP_VRAM(m_vdp_address >> 1) = data;
 
 	/* The VDP stores an Internal copy of any data written to the Sprite Attribute Table.
 	   This data is _NOT_ invalidated when the Sprite Base Address changes, thus allowing
 	   for some funky effects, as used by Castlevania Bloodlines Stage 6-3 */
-	if (m_vdp_address>=lowlimit && m_vdp_address<highlimit)
+	if ((m_vdp_address >= lowlimit && m_vdp_address < highlimit) && (!MEGADRIVE_REG07_FB_SPRITE))
 	{
-//      osd_printf_debug("spritebase is %04x-%04x vram address is %04x, write %04x\n",lowlimit, highlimit-1, m_vdp_address, data);
-		m_internal_sprite_attribute_table[(m_vdp_address&(spritetable_size-1))>>1] = data;
+//      osd_printf_debug("spritebase is %04x-%04x vram address is %04x, write %04x\n", lowlimit, highlimit - 1, m_vdp_address, data);
+		m_internal_sprite_attribute_table[(m_vdp_address & (spritetable_size - 1)) >> 1] = data;
 	}
 
-	m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-	m_vdp_address &= 0xffff;
+	vdp_address_inc();
 }
 
-void sega315_53134_device::vdp_vsram_write(uint16_t data)
+void sega315_53134_device::vdp_vsram_write(u16 data)
 {
-	m_vsram[(m_vdp_address&0x7e)>>1] = data;
+	m_vsram[(m_vdp_address & 0xfe) >> 1] = data;
 
-	//logerror("Wrote to VSRAM addr %04x data %04x\n",m_vdp_address&0xfffe,m_vsram[m_vdp_address>>1]);
+	//logerror("Wrote to VSRAM addr %04x data %04x\n", m_vdp_address & 0xfffe, m_vsram[m_vdp_address >> 1]);
 
-	m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-
-	m_vdp_address &=0xffff;
+	vdp_address_inc();
 }
 
-void sega315_53134_device::write_cram_value(int offset, int data)
+void sega315_53134_device::write_cram_value(int offset, u32 data)
 {
 	m_cram[offset] = data;
 
-	//logerror("Wrote to CRAM addr %04x data %04x\n",m_vdp_address&0xfffe,m_cram[m_vdp_address>>1]);
+	//logerror("Wrote to CRAM addr %04x data %04x\n", m_vdp_address & 0xfffe, m_cram[m_vdp_address >> 1]);
 	if (m_use_cram)
 	{
-		u32 col = ((m_cram[offset & ~1] & 0xff) << 16) | (m_cram[offset | 1] & 0xffff);
-		m_palette_lookup[offset] = col;
+		data = (m_cram[offset & ~1] << 16) | (m_cram[offset | 1]);
+		m_palette->set_pen_color(offset >> 1, rgb_t(data >> 24, data >> 16, data >> 8, data >> 0));
 		if (m_ext_palette != nullptr)
 		{
 			if (m_palwrite_base != -1)
 			{
-				m_ext_palette->set_pen_color(offset + m_palwrite_base, col);
-				m_ext_palette->set_pen_color(offset + m_palwrite_base + 0x1000, col);
-				m_ext_palette->set_pen_color(offset + m_palwrite_base + 0x2000, col);
+				m_ext_palette->set_pen_color(offset + m_palwrite_base, data);
 			}
 		}
 	}
 }
 
-void sega315_53134_device::vdp_cram_write(uint16_t data)
+void sega315_53134_device::vdp_cram_write(u16 data)
 {
-	int offset;
-	offset = (m_vdp_address&0x3ffe)>>1;
+	write_cram_value((m_vdp_address & 0x3ffe) >> 1, data);
 
-	write_cram_value(offset,data);
-
-	m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-
-	m_vdp_address &=0xffff;
+	vdp_address_inc();
 }
-
 
 void sega315_53134_device::data_port_w(int data)
 {
@@ -436,48 +457,46 @@ void sega315_53134_device::data_port_w(int data)
 	0100b : VSRAM read
 	0101b : VSRAM write
 	1000b : CRAM read
+	1100b : VRAM byte read (unhandled)
 	*/
-//  logerror("write to vdp data port %04x with code %04x, write address %04x\n",data, m_vdp_code, m_vdp_address );
+//  logerror("write to vdp data port %04x with code %04x, write address %04x\n",data, m_vdp_code, m_vdp_address);
 
 	if (m_vram_fill_pending)
 	{
-		int count;
+		m_vdp_address &= 0xfffff;
 
-		m_vdp_address&=0xffff;
-
-		if (m_vdp_address&1)
+		if (m_vdp_address & 1)
 		{
-			MEGADRIV_VDP_VRAM((m_vdp_address>>1))   = (MEGADRIV_VDP_VRAM((m_vdp_address>>1))&0xff00) | (data&0x00ff);
+			MEGADRIV_VDP_VRAM((m_vdp_address >> 1))   = (MEGADRIV_VDP_VRAM((m_vdp_address >> 1)) & 0xff00) | (data & 0x00ff);
 		}
 		else
 		{
-			MEGADRIV_VDP_VRAM((m_vdp_address>>1))   = (MEGADRIV_VDP_VRAM((m_vdp_address>>1))&0x00ff) | ((data&0x00ff)<<8);
+			MEGADRIV_VDP_VRAM((m_vdp_address >> 1))   = (MEGADRIV_VDP_VRAM((m_vdp_address >> 1)) & 0x00ff) | ((data & 0x00ff) << 8);
 		}
 
-
-		for (count=0;count<=m_vram_fill_length;count++) // <= for james pond 3
+		for (int count = 0; count <= m_vram_fill_length; count++) // <= for james pond 3
 		{
-			if (m_vdp_address&1)
+			if (m_vdp_address & 1)
 			{
-				MEGADRIV_VDP_VRAM((m_vdp_address>>1))   = (MEGADRIV_VDP_VRAM((m_vdp_address>>1))&0x00ff) | (data&0xff00);
+				MEGADRIV_VDP_VRAM((m_vdp_address >> 1))   = (MEGADRIV_VDP_VRAM((m_vdp_address >> 1)) & 0x00ff) | (data & 0xff00);
 			}
 			else
 			{
-				MEGADRIV_VDP_VRAM((m_vdp_address>>1))   = (MEGADRIV_VDP_VRAM((m_vdp_address>>1))&0xff00) | ((data&0xff00)>>8);
+				MEGADRIV_VDP_VRAM((m_vdp_address >> 1))   = (MEGADRIV_VDP_VRAM((m_vdp_address >> 1)) & 0xff00) | ((data & 0xff00) >> 8);
 			}
 
-			m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-			m_vdp_address&=0xffff;
-
+			vdp_address_inc();
 		}
 
-		m_regs[0x13] = 0;
-		m_regs[0x14] = 0;
+		m_regs[0x18] = 0;
+		m_regs[0x19] = 0;
+		m_regs[0x1a] = 0;
+		m_regs[0x1b] = 0;
 
-	//  m_regs[0x15] = (source>>1) & 0xff;
-	//  m_regs[0x16] = (source>>9) & 0xff;
-	//  m_regs[0x17] = (source>>17) & 0xff;
-
+	//  m_regs[0x1c] = (source >> 1) & 0xff;
+	//  m_regs[0x1d] = (source >> 9) & 0xff;
+	//  m_regs[0x1e] = (source >> 17) & 0xff;
+	//  m_regs[0x1f] = (source >> 25) & 0xff;
 
 	}
 	else
@@ -509,18 +528,15 @@ void sega315_53134_device::data_port_w(int data)
 				break;
 
 			default:
-				logerror("Attempting to WRITE to DATA PORT in #UNDEFINED# MODE %1x %04x\n",m_vdp_code&0xf, data);
+				logerror("Attempting to WRITE to DATA PORT in #UNDEFINED# MODE %1x %04x\n", m_vdp_code & 0xf, data);
 				break;
 		}
 	}
 
-
-
 }
 
 
-
-void sega315_53134_device::vdp_set_register(int regnum, uint8_t value)
+void sega315_53134_device::vdp_set_register(int regnum, u8 value)
 {
 	m_regs[regnum] = value;
 
@@ -530,7 +546,7 @@ void sega315_53134_device::vdp_set_register(int regnum, uint8_t value)
 
 	if (regnum == 0x00)
 	{
-	//osd_printf_debug("setting reg 0, irq enable is now %d\n",MEGADRIVE_REG0_IRQ4_ENABLE);
+	//osd_printf_debug("setting reg 0, irq enable is now %d\n", MEGADRIVE_REG0_IRQ4_ENABLE);
 
 		if (m_irq4_pending)
 		{
@@ -551,7 +567,7 @@ void sega315_53134_device::vdp_set_register(int regnum, uint8_t value)
 	{
 		if (m_irq6_pending)
 		{
-			if (MEGADRIVE_REG01_IRQ6_ENABLE )
+			if (MEGADRIVE_REG01_IRQ6_ENABLE)
 				m_lv6irqline_callback(true);
 			else
 				m_lv6irqline_callback(false);
@@ -564,25 +580,26 @@ void sega315_53134_device::vdp_set_register(int regnum, uint8_t value)
 
 	}
 
-
 //  if (regnum == 0x0a)
-//      osd_printf_debug("Set HINT Reload Register to %d on scanline %d\n",value, get_scanline_counter());
+//      osd_printf_debug("Set HINT Reload Register to %d on scanline %d\n", value, get_scanline_counter());
 
-//  osd_printf_debug("%s: Setting VDP Register #%02x to %02x\n",machine().describe_context().c_str(), regnum,value);
+//  osd_printf_debug("%s: Setting VDP Register #%02x to %02x\n", machine().describe_context().c_str(), regnum, value);
 }
 
 void sega315_53134_device::update_code_and_address(void)
 {
 	m_vdp_code = ((m_command_part1 & 0xc000) >> 14) |
+							((m_command_part2 & 0x1000) >> 6) |
 							((m_command_part2 & 0x00f0) >> 2);
 
 	m_vdp_address = ((m_command_part1 & 0x3fff) >> 0) |
-							((m_command_part2 & 0x0003) << 14);
+							((m_command_part2 & 0x0300) << 10) |
+							((m_command_part2 & 0x000f) << 14);
 }
 
 // if either SVP CPU or segaCD is present, there is a 'lag' we have to compensate for
 // hence, for segacd and svp we set m_dma_delay to the appropriate value at start
-inline uint16_t sega315_53134_device::vdp_get_word_from_68k_mem(uint32_t source)
+inline u16 sega315_53134_device::vdp_get_word_from_68k_mem(u32 source)
 {
 	// should we limit the valid areas here?
 	// how does this behave with the segacd etc?
@@ -590,15 +607,7 @@ inline uint16_t sega315_53134_device::vdp_get_word_from_68k_mem(uint32_t source)
 
 	//printf("vdp_get_word_from_68k_mem_default %08x\n", source);
 
-	if (source <= 0x7fffff)
-		return m_space68k->read_word(source - m_dma_delay);    // compensate DMA lag
-	else if ((source >= 0xe00000) && (source <= 0xffffff))
-		return m_space68k->read_word(source);
-	else
-	{
-		printf("DMA Read unmapped %06x\n",source);
-		return machine().rand();
-	}
+	return m_space68k->read_word(source);
 }
 
 /*  Table from Charles Macdonald
@@ -626,244 +635,174 @@ inline uint16_t sega315_53134_device::vdp_get_word_from_68k_mem(uint32_t source)
    as the 68k address bus isn't accessed */
 
 /* Wani Wani World, James Pond 3, Pirates Gold! */
-void sega315_53134_device::insta_vram_copy(uint32_t source, uint16_t length)
+void sega315_53134_device::insta_vram_copy(u32 source, u32 length)
 {
-	int x;
-
-	for (x=0;x<length;x++)
+	for (int x = 0; x < length; x++)
 	{
-		uint8_t source_byte;
+		u8 source_byte;
 
-		//osd_printf_debug("vram copy length %04x source %04x dest %04x\n",length, source, m_vdp_address );
-		if (source&1) source_byte = MEGADRIV_VDP_VRAM((source&0xffff)>>1)&0x00ff;
-		else  source_byte = (MEGADRIV_VDP_VRAM((source&0xffff)>>1)&0xff00)>>8;
+		//osd_printf_debug("vram copy length %04x source %04x dest %04x\n", length, source, m_vdp_address);
+		if (source & 1) source_byte = MEGADRIV_VDP_VRAM((source & 0xfffff) >> 1) & 0x00ff;
+		else  source_byte = (MEGADRIV_VDP_VRAM((source & 0xfffff) >> 1) & 0xff00) >> 8;
 
-		if (m_vdp_address&1)
+		if (m_vdp_address & 1)
 		{
-			MEGADRIV_VDP_VRAM((m_vdp_address&0xffff)>>1) = (MEGADRIV_VDP_VRAM((m_vdp_address&0xffff)>>1)&0xff00) | source_byte;
+			MEGADRIV_VDP_VRAM((m_vdp_address & 0xfffff) >> 1) = (MEGADRIV_VDP_VRAM((m_vdp_address & 0xfffff) >> 1) & 0xff00) | source_byte;
 		}
 		else
 		{
-			MEGADRIV_VDP_VRAM((m_vdp_address&0xffff)>>1) = (MEGADRIV_VDP_VRAM((m_vdp_address&0xffff)>>1)&0x00ff) | (source_byte<<8);
+			MEGADRIV_VDP_VRAM((m_vdp_address & 0xfffff) >> 1) = (MEGADRIV_VDP_VRAM((m_vdp_address & 0xfffff) >> 1) & 0x00ff) | (source_byte << 8);
 		}
 
 		source++;
-		m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-		m_vdp_address&=0xffff;
+		vdp_address_inc();
 	}
 }
 
 /* Instant, but we pause the 68k a bit */
-void sega315_53134_device::insta_68k_to_vram_dma(uint32_t source,int length)
+void sega315_53134_device::insta_68k_to_vram_dma(u32 source, u32 length)
 {
-	int count;
-
-	if (length==0x00) length = 0xffff;
+	if (length == 0x00) length = 0xfffff;
 
 	/* This is a hack until real DMA timings are implemented */
-	m_cpu68k->spin_until_time(attotime::from_nsec(length * 1000 / 3500));
+	m_cpu68k->spin_until_time(attotime::from_nsec(length * 10));
 
-	for (count = 0;count<(length>>1);count++)
+	for (int count = 0; count < (length >> 1); count++)
 	{
 		vdp_vram_write(vdp_get_word_from_68k_mem(source));
-		source+=2;
-		if (source>0xffffff) source = 0xe00000;
+		source += 2;
 	}
 
-	m_vdp_address&=0xffff;
+	m_vdp_address &= 0xfffff;
 
-	m_regs[0x13] = 0;
-	m_regs[0x14] = 0;
+	m_regs[0x18] = 0;
+	m_regs[0x19] = 0;
+	m_regs[0x1a] = 0;
+	m_regs[0x1b] = 0;
 
-	m_regs[0x15] = (source>>1) & 0xff;
-	m_regs[0x16] = (source>>9) & 0xff;
-	m_regs[0x17] = (source>>17) & 0xff;
+	m_regs[0x1c] = (source >> 1) & 0xff;
+	m_regs[0x1d] = (source >> 9) & 0xff;
+	m_regs[0x1e] = (source >> 17) & 0xff;
+	m_regs[0x1f] = (source >> 25) & 0xff;
 }
 
 
-void sega315_53134_device::insta_68k_to_cram_dma(uint32_t source,uint16_t length)
+void sega315_53134_device::insta_68k_to_cram_dma(u32 source, u32 length)
 {
-	int count;
+	if (length == 0x00) length = 0xffff;
 
-	if (length==0x00) length = 0xffff;
-
-	for (count = 0;count<(length>>1);count++)
+	for (int count = 0; count < (length >> 1); count++)
 	{
-		//if (m_vdp_address>=0x4000) return; // abandon
+		//if (m_vdp_address >= 0x4000) return; // abandon
 
-		write_cram_value((m_vdp_address&0x3ffe)>>1, vdp_get_word_from_68k_mem(source));
-		source+=2;
+		write_cram_value((m_vdp_address & 0x3ffe) >> 1, vdp_get_word_from_68k_mem(source));
+		source += 2;
 
-		if (source>0xffffff) source = 0xfe0000;
-
-		m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-		m_vdp_address&=0xffff;
+		vdp_address_inc();
 	}
 
-	m_regs[0x13] = 0;
-	m_regs[0x14] = 0;
+	m_regs[0x18] = 0;
+	m_regs[0x19] = 0;
+	m_regs[0x1a] = 0;
+	m_regs[0x1b] = 0;
 
-	m_regs[0x15] = (source>>1) & 0xff;
-	m_regs[0x16] = (source>>9) & 0xff;
-	m_regs[0x17] = (source>>17) & 0xff;
+	m_regs[0x1c] = (source >> 1) & 0xff;
+	m_regs[0x1d] = (source >> 9) & 0xff;
+	m_regs[0x1e] = (source >> 17) & 0xff;
+	m_regs[0x1f] = (source >> 25) & 0xff;
 
 }
 
-void sega315_53134_device::insta_68k_to_vsram_dma(uint32_t source,uint16_t length)
+void sega315_53134_device::insta_68k_to_vsram_dma(u32 source, u32 length)
 {
-	int count;
+	if (length == 0x00) length = 0xffff;
 
-	if (length==0x00) length = 0xffff;
-
-	for (count = 0;count<(length>>1);count++)
+	for (int count = 0; count < (length >> 1); count++)
 	{
-		if (m_vdp_address>=0x80) return; // abandon
+		if (m_vdp_address >= 0x100) return; // abandon
 
-		m_vsram[(m_vdp_address&0x7e)>>1] = vdp_get_word_from_68k_mem(source);
-		source+=2;
+		m_vsram[(m_vdp_address & 0xfe) >> 1] = vdp_get_word_from_68k_mem(source);
+		source += 2;
 
-		if (source>0xffffff) source = 0xfe0000;
-
-		m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-		m_vdp_address&=0xffff;
+		vdp_address_inc();
 	}
 
-	m_regs[0x13] = 0;
-	m_regs[0x14] = 0;
+	m_regs[0x18] = 0;
+	m_regs[0x19] = 0;
+	m_regs[0x1a] = 0;
+	m_regs[0x1b] = 0;
 
-	m_regs[0x15] = (source>>1) & 0xff;
-	m_regs[0x16] = (source>>9) & 0xff;
-	m_regs[0x17] = (source>>17) & 0xff;
+	m_regs[0x1c] = (source >> 1) & 0xff;
+	m_regs[0x1d] = (source >> 9) & 0xff;
+	m_regs[0x1e] = (source >> 17) & 0xff;
+	m_regs[0x1f] = (source >> 25) & 0xff;
 }
 
 /* This can be simplified quite a lot.. */
 void sega315_53134_device::handle_dma_bits()
 {
 #if 0
-	if (m_vdp_code&0x20)
-	{
-		uint32_t source;
-		uint16_t length;
-		source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8) | ((MEGADRIVE_REG17_DMASOURCE3&0xff)<<16))<<1;
-		length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8))<<1;
-		osd_printf_debug("%s 68k DMAtran set source %06x length %04x dest %04x enabled %01x code %02x %02x\n", machine().describe_context().c_str(), source, length, m_vdp_address,MEGADRIVE_REG01_DMA_ENABLE, m_vdp_code,MEGADRIVE_REG0F_AUTO_INC);
-	}
+	const u32 source = (MEGADRIVE_REG1C_DMASOURCE1 | (MEGADRIVE_REG1D_DMASOURCE2 << 8) | ((MEGADRIVE_REG1E_DMASOURCE3 & 0xff) << 16)) << 1;
+	const u32 length = (MEGADRIVE_REG18_DMALENGTH1 | (MEGADRIVE_REG19_DMALENGTH2 << 8)) << 1;
+	osd_printf_debug("%s 68k DMAtran set source %06x length %04x dest %04x enabled %01x code %02x %02x\n", machine().describe_context().c_str(), source, length, m_vdp_address, MEGADRIVE_REG01_DMA_ENABLE, m_vdp_code, MEGADRIVE_REG0F_AUTO_INC);
 #endif
-	if (m_vdp_code==0x20)
+	if (MEGADRIVE_REG17_DMATYPE == 0x0 || MEGADRIVE_REG17_DMATYPE == 0x1)
 	{
-		osd_printf_debug("DMA bit set 0x20 but invalid??\n");
-	}
-	else if (m_vdp_code==0x21 || m_vdp_code==0x31) /* 0x31 used by tecmo cup */
-	{
-		if (MEGADRIVE_REG17_DMATYPE==0x0 || MEGADRIVE_REG17_DMATYPE==0x1)
-		{
-			uint32_t source;
-			uint16_t length;
-			source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8) | ((MEGADRIVE_REG17_DMASOURCE3&0x7f)<<16))<<1;
-			length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8))<<1;
+		const u32 source = (MEGADRIVE_REG1C_DMASOURCE1 | (MEGADRIVE_REG1D_DMASOURCE2 << 8) | (MEGADRIVE_REG1E_DMASOURCE3 << 16) | (MEGADRIVE_REG1F_DMASOURCE4 << 24)) << 1;
+		const u32 length = (MEGADRIVE_REG18_DMALENGTH1 | (MEGADRIVE_REG19_DMALENGTH2 << 8) | (MEGADRIVE_REG1A_DMALENGTH3 << 16) | (MEGADRIVE_REG1B_DMALENGTH4 << 24)) << 1;
 
+		if (CODE_VRAM_WRITE())
+		{
 			/* The 68k is frozen during this transfer, it should be safe to throw a few cycles away and do 'instant' DMA because the 68k can't detect it being in progress (can the z80?) */
-			//osd_printf_debug("68k->VRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address,MEGADRIVE_REG01_DMA_ENABLE);
-			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_vram_dma(source,length);
-
+			//osd_printf_debug("68k->VRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address, MEGADRIVE_REG01_DMA_ENABLE);
+			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_vram_dma(source, length);
 		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x2)
+		else if (CODE_CRAM_WRITE())
 		{
-			//osd_printf_debug("vram fill length %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
+			/* The 68k is frozen during this transfer, it should be safe to throw a few cycles away and do 'instant' DMA because the 68k can't detect it being in progress (can the z80?) */
+			//osd_printf_debug("68k->CRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address, MEGADRIVE_REG01_DMA_ENABLE);
+			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_cram_dma(source, length);
+		}
+		else if (CODE_VSRAM_WRITE())
+		{
+			/* The 68k is frozen during this transfer, it should be safe to throw a few cycles away and do 'instant' DMA because the 68k can't detect it being in progress (can the z80?) */
+			//osd_printf_debug("68k->VSRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address, MEGADRIVE_REG01_DMA_ENABLE);
+			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_vsram_dma(source, length);
+		}
+		else
+		{
+			osd_printf_debug("setting vram 68k->vram (INVALID?) mode length registers are %02x %02x %02x %02x other regs! %02x %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG18_DMALENGTH1, MEGADRIVE_REG19_DMALENGTH2, MEGADRIVE_REG1A_DMALENGTH3, MEGADRIVE_REG1B_DMALENGTH4, MEGADRIVE_REG1C_DMASOURCE1, MEGADRIVE_REG1D_DMASOURCE2, MEGADRIVE_REG1E_DMASOURCE3, MEGADRIVE_REG1F_DMASOURCE4, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
+		}
+	}
+	else if (MEGADRIVE_REG17_DMATYPE == 0x2)
+	{
+		if (CODE_VRAM_WRITE() || CODE_CRAM_WRITE() || CODE_VSRAM_WRITE()) // only effects when code is write
+		{
+			//osd_printf_debug("vram fill length %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG18_DMALENGTH1, MEGADRIVE_REG19_DMALENGTH2, MEGADRIVE_REG1A_DMALENGTH3, MEGADRIVE_REG1B_DMALENGTH4, MEGADRIVE_REG1C_DMASOURCE1, MEGADRIVE_REG1D_DMASOURCE2, MEGADRIVE_REG1E_DMASOURCE3, MEGADRIVE_REG1F_DMASOURCE4, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
 			if (MEGADRIVE_REG01_DMA_ENABLE)
 			{
 				m_vram_fill_pending = 1;
-				m_vram_fill_length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8));
+				m_vram_fill_length = (MEGADRIVE_REG18_DMALENGTH1 | (MEGADRIVE_REG19_DMALENGTH2 << 8) | (MEGADRIVE_REG1A_DMALENGTH3 << 8) | (MEGADRIVE_REG1B_DMALENGTH4 << 8));
 			}
 		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x3)
+		else
 		{
-			uint32_t source;
-			uint16_t length;
-			source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8)); // source (byte offset)
-			length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8)); // length in bytes
-			//osd_printf_debug("setting vram copy mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
+			osd_printf_debug("setting vram fill (INVALID?) mode length registers are %02x %02x %02x %02x other regs! %02x %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG18_DMALENGTH1, MEGADRIVE_REG19_DMALENGTH2, MEGADRIVE_REG1A_DMALENGTH3, MEGADRIVE_REG1B_DMALENGTH4, MEGADRIVE_REG1C_DMASOURCE1, MEGADRIVE_REG1D_DMASOURCE2, MEGADRIVE_REG1E_DMASOURCE3, MEGADRIVE_REG1F_DMASOURCE4, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
+		}
+	}
+	else if (MEGADRIVE_REG17_DMATYPE == 0x3)
+	{
+		if (CODE_VRAM_COPY() || CODE_VRAM_WRITE()) // 0x21 can be affects?
+		{
+			const u32 source = (MEGADRIVE_REG1C_DMASOURCE1 | (MEGADRIVE_REG1D_DMASOURCE2 << 8) | (MEGADRIVE_REG1E_DMASOURCE3 << 16) | (MEGADRIVE_REG1F_DMASOURCE4 << 24)); // source (byte offset)
+			const u32 length = (MEGADRIVE_REG18_DMALENGTH1 | (MEGADRIVE_REG19_DMALENGTH2 << 8) | (MEGADRIVE_REG1A_DMALENGTH3 << 16) | (MEGADRIVE_REG1B_DMALENGTH4 << 24)); // length in bytes
+			//osd_printf_debug("setting vram copy mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG18_DMALENGTH1, MEGADRIVE_REG19_DMALENGTH2, MEGADRIVE_REG1A_DMALENGTH3, MEGADRIVE_REG1B_DMALENGTH4, MEGADRIVE_REG1C_DMASOURCE1, MEGADRIVE_REG1D_DMASOURCE2, MEGADRIVE_REG1E_DMASOURCE3, MEGADRIVE_REG1F_DMASOURCE4, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
 
 			if (MEGADRIVE_REG01_DMA_ENABLE) insta_vram_copy(source, length);
 		}
-	}
-	else if (m_vdp_code==0x23)
-	{
-		if (MEGADRIVE_REG17_DMATYPE==0x0 || MEGADRIVE_REG17_DMATYPE==0x1)
+		else
 		{
-			uint32_t source;
-			uint16_t length;
-			source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8) | ((MEGADRIVE_REG17_DMASOURCE3&0x7f)<<16))<<1;
-			length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8))<<1;
-
-			/* The 68k is frozen during this transfer, it should be safe to throw a few cycles away and do 'instant' DMA because the 68k can't detect it being in progress (can the z80?) */
-			//osd_printf_debug("68k->CRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address,MEGADRIVE_REG01_DMA_ENABLE);
-			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_cram_dma(source,length);
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x2)
-		{
-			//osd_printf_debug("vram fill length %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-			if (MEGADRIVE_REG01_DMA_ENABLE)
-			{
-				m_vram_fill_pending = 1;
-				m_vram_fill_length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8));
-			}
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x3)
-		{
-			osd_printf_debug("setting vram copy (INVALID?) mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-		}
-	}
-	else if (m_vdp_code==0x25)
-	{
-		if (MEGADRIVE_REG17_DMATYPE==0x0 || MEGADRIVE_REG17_DMATYPE==0x1)
-		{
-			uint32_t source;
-			uint16_t length;
-			source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8) | ((MEGADRIVE_REG17_DMASOURCE3&0x7f)<<16))<<1;
-			length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8))<<1;
-
-			/* The 68k is frozen during this transfer, it should be safe to throw a few cycles away and do 'instant' DMA because the 68k can't detect it being in progress (can the z80?) */
-			//osd_printf_debug("68k->VSRAM DMA transfer source %06x length %04x dest %04x enabled %01x\n", source, length, m_vdp_address,MEGADRIVE_REG01_DMA_ENABLE);
-			if (MEGADRIVE_REG01_DMA_ENABLE) insta_68k_to_vsram_dma(source,length);
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x2)
-		{
-			//osd_printf_debug("vram fill length %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-			if (MEGADRIVE_REG01_DMA_ENABLE)
-			{
-				m_vram_fill_pending = 1;
-				m_vram_fill_length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8));
-			}
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x3)
-		{
-			osd_printf_debug("setting vram copy (INVALID?) mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-		}
-	}
-	else if (m_vdp_code==0x30)
-	{
-		if (MEGADRIVE_REG17_DMATYPE==0x0)
-		{
-			osd_printf_debug("setting vram 68k->vram (INVALID?) mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x1)
-		{
-			osd_printf_debug("setting vram 68k->vram (INVALID?) mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x2)
-		{
-			osd_printf_debug("setting vram fill (INVALID?) mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-		}
-		else if (MEGADRIVE_REG17_DMATYPE==0x3)
-		{
-			uint32_t source;
-			uint16_t length;
-			source = (MEGADRIVE_REG15_DMASOURCE1 | (MEGADRIVE_REG16_DMASOURCE2<<8)); // source (byte offset)
-			length = (MEGADRIVE_REG13_DMALENGTH1 | (MEGADRIVE_REG14_DMALENGTH2<<8)); // length in bytes
-			//osd_printf_debug("setting vram copy mode length registers are %02x %02x other regs! %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG13_DMALENGTH1, MEGADRIVE_REG14_DMALENGTH2, MEGADRIVE_REG15_DMASOURCE1, MEGADRIVE_REG16_DMASOURCE2, MEGADRIVE_REG17_DMASOURCE3, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
-
-			if (MEGADRIVE_REG01_DMA_ENABLE) insta_vram_copy(source, length);
+			osd_printf_debug("setting vram copy (INVALID?) mode length registers are %02x %02x %02x %02x other regs! %02x %02x %02x %02x(Mode Bits %02x) Enable %02x\n", MEGADRIVE_REG18_DMALENGTH1, MEGADRIVE_REG19_DMALENGTH2, MEGADRIVE_REG1A_DMALENGTH3, MEGADRIVE_REG1B_DMALENGTH4, MEGADRIVE_REG1C_DMASOURCE1, MEGADRIVE_REG1D_DMASOURCE2, MEGADRIVE_REG1E_DMASOURCE3, MEGADRIVE_REG1F_DMASOURCE4, MEGADRIVE_REG17_DMATYPE, MEGADRIVE_REG01_DMA_ENABLE);
 		}
 	}
 }
@@ -880,19 +819,28 @@ void sega315_53134_device::ctrl_port_w(int data)
 		m_command_part2 = data;
 
 		update_code_and_address();
-		handle_dma_bits();
+		if (CODE_DMA())
+			handle_dma_bits();
+		if (m_vdp_code & 0x40)
+		{
+			const u32 sprite_base_address = ((MEGADRIVE_REG07_SPRITE_ADDR & 0xf) << 12);
+			const int spritetable_size = 0x10000;
+			for (int i = 0; i < 0x10000 / 2; i++)
+			{
+				m_internal_sprite_attribute_table[(i & (spritetable_size - 1)) >> 1] = MEGADRIV_VDP_VRAM((sprite_base_address >> 1) + i);
+			}
+		}
 
-		//logerror("VDP Write Part 2 setting Code %02x Address %04x\n",m_vdp_code, m_vdp_address);
-
+		//logerror("VDP Write Part 2 setting Code %02x Address %04x\n", m_vdp_code, m_vdp_address);
 	}
 	else
 	{
 		if ((data & 0xc000) == 0x8000)
 		{   /* Register Setting Command */
-			int regnum = (data & 0x3f00) >> 8;
-			int value  = (data & 0x00ff);
+			const int regnum = (data & 0x3f00) >> 8;
+			const int value  = (data & 0x00ff);
 
-			if (regnum &0x20) osd_printf_debug("reg error\n");
+			if (regnum & 0x20) osd_printf_debug("reg error\n");
 
 			vdp_set_register(regnum & 0x1f, value);
 			m_vdp_code = 0;
@@ -903,34 +851,33 @@ void sega315_53134_device::ctrl_port_w(int data)
 			m_command_pending = 1;
 			m_command_part1 = data;
 			update_code_and_address();
-			//logerror("VDP Write Part 1 setting Code %02x Address %04x\n",m_vdp_code, m_vdp_address);
+			//logerror("VDP Write Part 1 setting Code %02x Address %04x\n", m_vdp_code, m_vdp_address);
 		}
-
 	}
 }
 
-WRITE16_MEMBER( sega315_53134_device::vdp_w )
+void sega315_53134_device::vdp_w(offs_t offset, u16 data, u16 mem_mask)
 {
-	switch (offset<<1)
+	switch (offset << 1)
 	{
 		case 0x00:
 		case 0x02:
 			if (!ACCESSING_BITS_8_15)
 			{
-				data = (data&0x00ff) | data<<8;
-			//  osd_printf_debug("8-bit write VDP data port access, offset %04x data %04x mem_mask %04x\n",offset,data,mem_mask);
+				data = (data & 0x00ff) | data << 8;
+			//  osd_printf_debug("8-bit write VDP data port access, offset %04x data %04x mem_mask %04x\n", offset, data, mem_mask);
 			}
 			else if (!ACCESSING_BITS_0_7)
 			{
-				data = (data&0xff00) | data>>8;
-			//  osd_printf_debug("8-bit write VDP data port access, offset %04x data %04x mem_mask %04x\n",offset,data,mem_mask);
+				data = (data & 0xff00) | data >> 8;
+			//  osd_printf_debug("8-bit write VDP data port access, offset %04x data %04x mem_mask %04x\n", offset, data, mem_mask);
 			}
 			data_port_w(data);
 			break;
 
 		case 0x04:
 		case 0x06:
-			if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit write VDP control port access, offset %04x data %04x mem_mask %04x\n",offset,data,mem_mask);
+			if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit write VDP control port access, offset %04x data %04x mem_mask %04x\n", offset, data, mem_mask);
 			ctrl_port_w(data);
 			break;
 
@@ -949,7 +896,7 @@ WRITE16_MEMBER( sega315_53134_device::vdp_w )
 			// accessed by either segapsg_device or sn76496_device
 			if (ACCESSING_BITS_0_7)
 				psg_w(data & 0xff);
-			//if (ACCESSING_BITS_8_15) psg_w((data>>8) & 0xff);
+			//if (ACCESSING_BITS_8_15) psg_w((data >> 8) & 0xff);
 			break;
 		}
 
@@ -958,70 +905,75 @@ WRITE16_MEMBER( sega315_53134_device::vdp_w )
 	}
 }
 
-uint16_t sega315_53134_device::vdp_vram_r(void)
+u16 sega315_53134_device::vdp_vram_r(void)
 {
-	return MEGADRIV_VDP_VRAM((m_vdp_address&0xfffe)>>1);
+	return MEGADRIV_VDP_VRAM((m_vdp_address & 0x3fffe) >> 1);
 }
 
-uint16_t sega315_53134_device::vdp_vsram_r(void)
+u16 sega315_53134_device::vdp_vsram_r(void)
 {
-	return m_vsram[(m_vdp_address&0x7e)>>1];
+	return m_vsram[(m_vdp_address & 0xfe) >> 1];
 }
 
-uint16_t sega315_53134_device::vdp_cram_r(void)
+u16 sega315_53134_device::vdp_cram_r(void)
 {
-	return m_cram[(m_vdp_address&0x7e)>>1];
+	return m_cram[(m_vdp_address & 0x3ffe) >> 1];
 }
 
-uint16_t sega315_53134_device::data_port_r()
+u16 sega315_53134_device::data_port_r()
 {
-	uint16_t retdata=0;
+	u16 retdata = 0;
 
 	//return machine().rand();
 
-	m_command_pending = 0;
+	if (!machine().side_effects_disabled())
+		m_command_pending = 0;
 
 	switch (m_vdp_code & 0x000f)
 	{
 		case 0x0000:
 			retdata = vdp_vram_r();
-			m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-			m_vdp_address&=0xffff;
+			if (!machine().side_effects_disabled())
+				vdp_address_inc();
 			break;
 
 		case 0x0001:
-			logerror("Attempting to READ from DATA PORT in VRAM WRITE MODE\n");
+			if (!machine().side_effects_disabled())
+				logerror("Attempting to READ from DATA PORT in VRAM WRITE MODE\n");
 			retdata = machine().rand();
 			break;
 
 		case 0x0003:
-			logerror("Attempting to READ from DATA PORT in CRAM WRITE MODE\n");
+			if (!machine().side_effects_disabled())
+				logerror("Attempting to READ from DATA PORT in CRAM WRITE MODE\n");
 			retdata = machine().rand();
 			break;
 
 		case 0x0004:
 			retdata = vdp_vsram_r();
-			m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-			m_vdp_address&=0xffff;
+			if (!machine().side_effects_disabled())
+				vdp_address_inc();
 			break;
 
 		case 0x0005:
-			logerror("Attempting to READ from DATA PORT in VSRAM WRITE MODE\n");
+			if (!machine().side_effects_disabled())
+				logerror("Attempting to READ from DATA PORT in VSRAM WRITE MODE\n");
 			break;
 
 		case 0x0008:
 			retdata = vdp_cram_r();
-			m_vdp_address+=MEGADRIVE_REG0F_AUTO_INC;
-			m_vdp_address&=0xffff;
+			if (!machine().side_effects_disabled())
+				vdp_address_inc();
 			break;
 
 		default:
-			logerror("Attempting to READ from DATA PORT in #UNDEFINED# MODE\n");
+			if (!machine().side_effects_disabled())
+				logerror("Attempting to READ from DATA PORT in #UNDEFINED# MODE\n");
 			retdata = machine().rand();
 			break;
 	}
 
-//  osd_printf_debug("vdp_data_port_r %04x %04x %04x\n",m_vdp_code, m_vdp_address, retdata);
+//  osd_printf_debug("vdp_data_port_r %04x %04x %04x\n", m_vdp_code, m_vdp_address, retdata);
 
 //  logerror("Read VDP Data Port\n");
 	return retdata;
@@ -1090,7 +1042,7 @@ PAL, 256x224
 
 
 
-uint16_t sega315_53134_device::ctrl_port_r()
+u16 sega315_53134_device::ctrl_port_r()
 {
 	/* Battletoads is very fussy about the vblank flag
 	   it wants it to be 1. in scanline 224 */
@@ -1104,21 +1056,21 @@ uint16_t sega315_53134_device::ctrl_port_r()
 
 	/* Megalo Mania also fussy - cares about pending flag*/
 
-	int sprite_overflow = 0;
-	int odd_frame = m_imode_odd_frame^1;
+	const int sprite_overflow = 0;
+	const int odd_frame = m_imode_odd_frame^1;
 	int hblank_flag = 0;
-	int dma_active = 0;
+	const int dma_active = 0;
 	int vblank = m_vblank_flag;
-	int fifo_empty = 1;
-	int fifo_full = 0;
+	const int fifo_empty = 1;
+	const int fifo_full = 0;
 
-	uint16_t hpos = get_hposition();
+	const u16 hpos = get_hposition();
 
-	if (hpos>400) hblank_flag = 1;
-	if (hpos>460) hblank_flag = 0;
+	if (hpos > 400) hblank_flag = 1;
+	if (hpos > 460) hblank_flag = 0;
 
 	/* extra case */
-	if (MEGADRIVE_REG01_DISP_ENABLE==0) vblank = 1;
+	if (MEGADRIVE_REG01_DISP_ENABLE == 0) vblank = 1;
 
 /*
 
@@ -1144,22 +1096,22 @@ uint16_t sega315_53134_device::ctrl_port_r()
  d0  - PAL mode flag
 */
 
-	return (1<<13) | // ALWAYS 1
-			(1<<12) | // ALWAYS 1
-			(1<<10) | // ALWAYS 1
-			(fifo_empty<<9 ) | // FIFO EMPTY
-			(fifo_full<<8 ) | // FIFO FULL
+	return (1 << 13) | // ALWAYS 1
+			(1 << 12) | // ALWAYS 1
+			(1 << 10) | // ALWAYS 1
+			(fifo_empty << 9) | // FIFO EMPTY
+			(fifo_full << 8) | // FIFO FULL
 			(m_irq6_pending << 7) | // exmutants has a tight loop checking this ..
 			(sprite_overflow << 6) |
 			(m_sprite_collision << 5) |
 			(odd_frame << 4) |
 			(vblank << 3) |
 			(hblank_flag << 2) |
-			(dma_active << 1 ) |
+			(dma_active << 1) |
 			(m_vdp_pal << 0); // PAL MODE FLAG checked by striker for region prot..
 }
 
-static const uint8_t vc_ntsc_224[] =
+static const u8 vc_ntsc_224[] =
 {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,    0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,    0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
@@ -1180,7 +1132,7 @@ static const uint8_t vc_ntsc_224[] =
 	0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
 };
 
-static const uint8_t vc_ntsc_240[] =
+static const u8 vc_ntsc_240[] =
 {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
@@ -1201,7 +1153,7 @@ static const uint8_t vc_ntsc_240[] =
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05
 };
 
-static const uint8_t vc_pal_224[] =
+static const u8 vc_pal_224[] =
 {
 	0x00, 0x01, 0x02,    0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 	0x10, 0x11, 0x12,    0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
@@ -1225,7 +1177,7 @@ static const uint8_t vc_pal_224[] =
 	0xf7, 0xf8, 0xf9,    0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
 };
 
-static const uint8_t vc_pal_240[] =
+static const u8 vc_pal_240[] =
 {
 	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,    0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,    0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
@@ -1250,25 +1202,24 @@ static const uint8_t vc_pal_240[] =
 };
 
 
-uint16_t sega315_53134_device::get_hposition()
+u16 sega315_53134_device::get_hposition()
 {
-	uint16_t value4;
+	u16 value4;
 
-	if (!m_use_alt_timing)
+	if ((!m_use_alt_timing) && (get_framerate() > 0.0))
 	{
 		attotime time_elapsed_since_megadriv_scanline_timer;
 
 		time_elapsed_since_megadriv_scanline_timer = m_megadriv_scanline_timer->time_elapsed();
 
-		if (time_elapsed_since_megadriv_scanline_timer.attoseconds() < (ATTOSECONDS_PER_SECOND/m_framerate /m_total_scanlines))
+		if (time_elapsed_since_megadriv_scanline_timer.attoseconds() < (ATTOSECONDS_PER_SECOND/get_framerate() /double(m_total_scanlines)))
 		{
-			value4 = (uint16_t)(MAX_HPOSITION*((double)(time_elapsed_since_megadriv_scanline_timer.attoseconds()) / (double)(ATTOSECONDS_PER_SECOND/m_framerate /m_total_scanlines)));
+			value4 = (u16)(MAX_HPOSITION * ((double)(time_elapsed_since_megadriv_scanline_timer.attoseconds()) / (double)(ATTOSECONDS_PER_SECOND/get_framerate() /double(m_total_scanlines))));
 		}
 		else /* in some cases (probably due to rounding errors) we get some stupid results (the odd huge value where the time elapsed is much higher than the scanline time??!).. hopefully by clamping the result to the maximum we limit errors */
 		{
 			value4 = MAX_HPOSITION;
 		}
-
 	}
 	else
 	{
@@ -1287,53 +1238,86 @@ int sega315_53134_device::get_scanline_counter()
 }
 
 
-READ16_MEMBER( sega315_53134_device::vdp_r )
+u16 sega315_53134_device::megadriv_read_hv_counters()
 {
-	uint16_t retvalue = 0;
+	/* Bubble and Squeek wants vcount=0xe0 */
+	/* Dracula is very sensitive to this */
+	/* Marvel Land is sensitive to this */
 
-	switch (offset<<1)
+	int vpos = get_scanline_counter();
+	u16 hpos = get_hposition();
+
+//  if (hpos > 424) vpos++; // fixes dracula, breaks road rash
+	if (hpos > 460) vpos++; // when does vpos increase.. also on sms, check game gear manual..
+
+	/* shouldn't happen.. */
+	if (vpos < 0)
+	{
+		vpos = m_total_scanlines;
+		osd_printf_debug("negative vpos?!\n");
+	}
+
+	if (MEGADRIVE_REG01_240_LINE)
+	{
+		assert(vpos % m_total_scanlines < (m_vdp_pal ? sizeof(vc_pal_240) : sizeof(vc_ntsc_240)));
+		vpos = m_vdp_pal ? vc_pal_240[vpos % m_total_scanlines] : vc_ntsc_240[vpos % m_total_scanlines];
+	}
+	else
+	{
+		assert(vpos % m_total_scanlines < (m_vdp_pal ? sizeof(vc_pal_224) : sizeof(vc_ntsc_224)));
+		vpos = m_vdp_pal ? vc_pal_224[vpos % m_total_scanlines] : vc_ntsc_224[vpos % m_total_scanlines];
+	}
+
+	if (hpos > 0xf7) hpos -= 0x49;
+
+	return ((vpos & 0xff) << 8) | (hpos & 0xff);
+}
+
+u16 sega315_53134_device::vdp_r(offs_t offset, u16 mem_mask)
+{
+	u16 retvalue = 0;
+
+	switch (offset << 1)
 	{
 		case 0x00:
 		case 0x02:
-			if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read data port access, offset %04x mem_mask %04x\n",offset,mem_mask);
+			if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7))
+			{
+				if (!machine().side_effects_disabled())
+					osd_printf_debug("8-bit VDP read data port access, offset %04x mem_mask %04x\n", offset, mem_mask);
+			}
 			retvalue = data_port_r();
 			break;
 
 		case 0x04:
 		case 0x06:
-		//  if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read control port access, offset %04x mem_mask %04x\n",offset,mem_mask);
+		//  if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read control port access, offset %04x mem_mask %04x\n", offset, mem_mask);
 			retvalue = ctrl_port_r();
 		//  retvalue = machine().rand();
-		//  logerror("%s: Read Control Port at scanline %d hpos %d (return %04x)\n",machine().describe_context(),get_scanline_counter(), get_hposition(),retvalue);
+		//  logerror("%s: Read Control Port at scanline %d hpos %d (return %04x)\n", machine().describe_context(), get_scanline_counter(), get_hposition(), retvalue);
 			break;
 
 		case 0x08:
 		case 0x0a:
-		//  if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read HV counter port access, offset %04x mem_mask %04x\n",offset,mem_mask);
-			retvalue = get_scanline_counter();
-		//  retvalue = machine().rand();
-		//  osd_printf_debug("%s: Read HV counters at scanline %d hpos %d (return %04x)\n",machine().describe_context().c_str(),get_scanline_counter(), get_hposition(),retvalue);
-			break;
-
 		case 0x0c:
 		case 0x0e:
-		//  if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read HV counter port access, offset %04x mem_mask %04x\n",offset,mem_mask);
-			retvalue = get_hposition();
+		//  if ((!ACCESSING_BITS_8_15) || (!ACCESSING_BITS_0_7)) osd_printf_debug("8-bit VDP read HV counter port access, offset %04x mem_mask %04x\n", offset, mem_mask);
+			retvalue = megadriv_read_hv_counters();
 		//  retvalue = machine().rand();
-		//  osd_printf_debug("%s: Read HV counters at scanline %d hpos %d (return %04x)\n",machine().describe_context().c_str(),get_scanline_counter(), get_hposition(),retvalue);
+		//  osd_printf_debug("%s: Read HV counters at scanline %d hpos %d (return %04x)\n", machine().describe_context().c_str(), get_scanline_counter(), get_hposition(), retvalue);
 			break;
 
 		case 0x10:
 		case 0x12:
 		case 0x14:
 		case 0x16:
-			logerror("Attempting to read PSG!\n");
+			if (!machine().side_effects_disabled())
+				logerror("Attempting to read PSG!\n");
 			retvalue = 0;
 			break;
 	}
 	return retvalue;
 }
-
 
 
 // line length = 342
@@ -1376,239 +1360,415 @@ READ16_MEMBER( sega315_53134_device::vdp_r )
 
 void sega315_53134_device::render_spriteline_to_spritebuffer(int scanline)
 {
-	int screenwidth;
-	int maxsprites=0;
-	int maxpixels=0;
-	uint16_t base_address=0;
+	int maxsprites = 0;
+	int maxpixels = 0;
+	u32 base_address = (MEGADRIVE_REG07_SPRITE_ADDR & 0xf) << 12;
 
+	const int screenwidth = MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1);
 
-
-	screenwidth = MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1);
-
-	switch (screenwidth&3)
+	switch (screenwidth & 3)
 	{
-		case 0: maxsprites = 109350; maxpixels = 405; base_address = (MEGADRIVE_REG05_SPRITE_ADDR&0x1f)<<11; break;
-		case 1: maxsprites = 109350; maxpixels = 405; base_address = (MEGADRIVE_REG05_SPRITE_ADDR&0x1f)<<11; break;
-		case 2: maxsprites = 121500; maxpixels = 450; base_address = (MEGADRIVE_REG05_SPRITE_ADDR&0x1f)<<11; break;
-		case 3: maxsprites = 121500; maxpixels = 450; base_address = (MEGADRIVE_REG05_SPRITE_ADDR&0x1f)<<11; break;
+		case 0: maxsprites = clock(); maxpixels = 405 * 8; break;
+		case 1: maxsprites = clock(); maxpixels = 405 * 8; break;
+		case 2: maxsprites = clock(); maxpixels = 450 * 8; break;
+		case 3: maxsprites = clock(); maxpixels = 450 * 8; break;
 	}
 
-
 	/* Clear our Render Buffer */
-	memset(m_sprite_renderline.get(), 0, 1024*4);
-
+	memset(m_sprite_renderline.get(), 0, 65536 * 8);
 
 	{
-		int spritenum;
-		int ypos,xpos,addr;
+		int ypos, xpos, addr, yzoom, xzoom, ydelta, xdelta, frac;
 		int drawypos;
 		int /*drawwidth,*/ drawheight;
-		int spritemask = 0;
-		uint32_t height,width,link,xflip,yflip,colour,pri;
+		u16 height, width, link, xflip, yflip, colour, pri, format, visible;
 
 		/* Get Sprite Attribs */
-		spritenum = 0;
+		int spritenum = 0;
 
-		//if (scanline==40) osd_printf_debug("spritelist start base %04x\n",base_address);
+		//if (scanline == 40) osd_printf_debug("spritelist start base %04x\n", base_address);
 
 		do
 		{
-			//uint16_t value1,value2,value3,value4;
+			if (m_internal_sprite_attribute_table[(spritenum * 8) + 0x0] & 0x8000)
+				return;
 
-			//value1 = m_vram[((base_address>>1)+spritenum*4)+0x0];
-			//value2 = m_vram[((base_address>>1)+spritenum*4)+0x1];
-			//value3 = m_vram[((base_address>>1)+spritenum*4)+0x2];
-			//value4 = m_vram[((base_address>>1)+spritenum*4)+0x3];
+			//u16 value1, value2, value3, value4;
 
-			ypos  = (m_internal_sprite_attribute_table[(spritenum*4)+0x0] & 0x01ff)>>0; /* 0x03ff? */ // puyo puyo requires 0x1ff mask, not 0x3ff, see speech bubble corners
-			height= (m_internal_sprite_attribute_table[(spritenum*4)+0x0] & 0xfc00)>>10;
-			link  = (m_internal_sprite_attribute_table[(spritenum*4)+0x2] & 0xff00)>>0;
-			xpos  = (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x1) & 0x01ff)>>0; /* 0x03ff? */ // pirates gold has a sprite with co-ord 0x200...
-			width = (m_internal_sprite_attribute_table[(spritenum*4)+0x1] & 0xfc00)>>10;
+			//value1 = m_vram[((base_address >> 1) + spritenum * 8) + 0x0];
+			//value2 = m_vram[((base_address >> 1) + spritenum * 8) + 0x1];
+			//value3 = m_vram[((base_address >> 1) + spritenum * 8) + 0x2];
+			//value4 = m_vram[((base_address >> 1) + spritenum * 8) + 0x3];
 
-			if(m_imode == 3)
+			if (MEGADRIVE_REG07_FB_SPRITE)
 			{
-				ypos  = (m_internal_sprite_attribute_table[(spritenum*4)+0x0] & 0x03ff)>>0; /* 0x3ff requried in interlace mode (sonic 2 2 player) */
-				drawypos = ypos - 256;
-				drawheight = (height+1)*16;
+				link  =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x0] & 0x0fff) >> 0;
+				height= ((m_internal_sprite_attribute_table[(spritenum * 8) + 0x1] & 0x003f) >> 0) + 1;
+				width = ((m_internal_sprite_attribute_table[(spritenum * 8) + 0x1] & 0x3f00) >> 8) + 1;
+				ypos  =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x2] & 0x7fff) >> 0; /* 0x03ff? */ // puyo puyo requires 0xffff mask, not 0x3ff, see speech bubble corners
+				xpos  =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x3] & 0xffff) >> 0; /* 0x03ff? */ // pirates gold has a sprite with co-ord 0x200...
+				yzoom =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x4] & ((m_imode == 3) ? 0x7fff : 0x3fff));
+				xzoom =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x5] & 0x7fff);
 			}
 			else
 			{
-				ypos  = (m_internal_sprite_attribute_table[(spritenum*4)+0x0] & 0x01ff)>>0; /* 0x03ff? */ // puyo puyo requires 0x1ff mask, not 0x3ff, see speech bubble corners
-				drawypos = ypos - 128;
-				drawheight = (height+1)*8;
+				link  =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x0] & 0x0fff) >> 0;
+				height= ((m_internal_sprite_attribute_table[(spritenum * 8) + 0x1] & 0x003f) >> 0) + 1;
+				width = ((m_internal_sprite_attribute_table[(spritenum * 8) + 0x1] & 0x3f00) >> 8) + 1;
+				ypos  =  (m_internal_sprite_attribute_table[(spritenum * 8) + 0x2] & 0x7fff) >> 0; /* 0x03ff? */ // puyo puyo requires 0xffff mask, not 0x3ff, see speech bubble corners
+				xpos  =  (MEGADRIV_VDP_VRAM(((base_address >> 1) + spritenum * 8) + 0x3) & 0xffff) >> 0; /* 0x03ff? */ // pirates gold has a sprite with co-ord 0x200...
+				yzoom =  (MEGADRIV_VDP_VRAM(((base_address >> 1) + spritenum * 8) + 0x4) & ((m_imode == 3) ? 0x7fff : 0x3fff));
+				xzoom =  (MEGADRIV_VDP_VRAM(((base_address >> 1) + spritenum * 8) + 0x5) & 0x7fff);
 			}
 
-			maxsprites -= 8 + ((width * height) * 32);
+			maxsprites -= 16 + (32 * width * height);
 			if (!maxsprites)
 				return;
 
-			//if (scanline==40) osd_printf_debug("xpos %04x ypos %04x\n",xpos,ypos);
-
-			if ((drawypos<=scanline) && ((drawypos+drawheight)>scanline))
+			if (yzoom && xzoom)
 			{
-				addr  = (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x3) & 0x07ff)>>0;
-				xflip = (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x3) & 0x0800)>>11;
-				yflip = (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x3) & 0x1000)>>12;
-				pri   = (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x3) & 0x8000)>>15;
-				colour= (MEGADRIV_VDP_VRAM(((base_address>>1)+spritenum*4)+0x2) & 0x00ff)>>0;
-
-				if(m_imode == 3)
+				if (m_imode == 3)
 				{
-					addr<<=1;
-					addr &=0x7ff;
+					ypos  = (m_internal_sprite_attribute_table[(spritenum * 8) + 0x2] & 0xffff) >> 0; /* 0x3ff requried in interlace mode (sonic 2 2 player) */
+					drawypos = ypos;
+					drawheight = height * 16;
+				}
+				else
+				{
+					ypos  = (m_internal_sprite_attribute_table[(spritenum * 8) + 0x2] & 0x7fff) >> 0; /* 0x03ff? */ // puyo puyo requires 0xffff mask, not 0x3ff, see speech bubble corners
+					drawypos = ypos;
+					drawheight = height * 8;
 				}
 
-				//drawwidth = (width+1)*8;
-				if (pri==1) pri = 0x80000000;
-				else pri = 0x40000000;
+				int full_sprite_screen_height = (yzoom << 16);
+				int full_sprite_screen_height_unscaled = (drawheight);
 
-				/* todo: fix me, I'm sure this isn't right but sprite 0 + other sprite seem to do something..
-				   maybe spritemask|=2 should be set for anything < 0x40 ?*/
-				if (xpos==0x00) spritemask|=1;
+				ydelta = full_sprite_screen_height / full_sprite_screen_height_unscaled;
 
-				//if (xpos==0x01) spritemask|=2;
-				//if (xpos==0x04) spritemask|=2;  // sonic 2 title screen
-				//if (xpos==0x08) spritemask|=2;  // rocket night adventures
-				//if (xpos==0x10) spritemask|=2;  // mercs l1 boss
-				//if (xpos==0x0a) spritemask|=2;  // legend of galahad
-				//if (xpos==0x21) spritemask|=2;  // shadow of the beast?
-				if ((xpos>0) && (xpos<0x40)) spritemask|=2;
+				drawheight = full_sprite_screen_height >> 16;
+				//if (scanline == 40) osd_printf_debug("xpos %04x ypos %04x\n", xpos, ypos);
 
-				if (spritemask==0x3)
-					return;
-				/* end todo: */
-
+				if ((drawypos <= scanline) && ((drawypos + drawheight) > scanline))
 				{
-					//int xdraw;
-					int xtile;
-					int yline = scanline - drawypos;
-
-					for (xtile=0;xtile<width+1;xtile++)
+					int formshift = 2;
+					u32 sprite_dat;
+					if (MEGADRIVE_REG07_FB_SPRITE)
 					{
-						int dat;
+						sprite_dat = (m_internal_sprite_attribute_table[(spritenum * 8) + 0x6] << 16) | m_internal_sprite_attribute_table[(spritenum * 8) + 0x7];
+					}
+					else
+					{
+						sprite_dat = (MEGADRIV_VDP_VRAM(((base_address >> 1) + spritenum * 8) + 0x6) << 16) | MEGADRIV_VDP_VRAM(((base_address >> 1) + spritenum * 8) + 0x7);
+					}
+					xflip  = (sprite_dat & 0x80000000) >> 31;
+					yflip  = (sprite_dat & 0x40000000) >> 30;
+					format = (sprite_dat & 0x20000000) >> 29;
+					visible= (sprite_dat & 0x10000000) >> 28;
+					pri    = (sprite_dat & 0x0f000000) >> 24;
+					colour = (sprite_dat & 0x00ff0000) >> 16;
+					addr   = (sprite_dat & 0x00007fff) >> 0;
 
-						if (!xflip)
+					if (format & 1)
+					{
+						formshift <<= 1;
+						addr <<= 1;
+						addr &= 0x00007fff;
+					}
+
+					if (m_imode == 3)
+					{
+						addr <<= 1;
+						addr &= 0x00007fff;
+					}
+
+					int drawwidth = width * 8;
+
+					int full_sprite_screen_width = (xzoom << 16);
+					int full_sprite_screen_width_unscaled = (drawwidth);
+
+					xdelta = full_sprite_screen_width / full_sprite_screen_width_unscaled;
+
+					if (visible)
+					{
+						//int xdraw;
+						const int yline = scanline - drawypos;
+						const int srcline = (yline << 16) / ydelta;
+
+						const int gfxshift = 2 << formshift;
+						const int gfxbase = (8 - 1) * gfxshift;
+						const int gfxmask = (1 << gfxshift) - 1;
+						int loopcount = 0;
+						int xxx = xpos;
+						for (int xtile = 0; xtile < width;)
 						{
-							uint16_t base_addr;
-							int xxx;
-							uint32_t gfxdata;
-							int loopcount;
-
-							if(m_imode == 3)
+							if (!xflip)
 							{
-								if (!yflip) base_addr = (addr<<4)+(xtile*((height+1)*(2*16)))+(yline*2);
-								else base_addr = (addr<<4)+(xtile*((height+1)*(2*16)))+((((height+1)*16)-yline-1)*2);
+								u32 base_addr;
+
+								if (m_imode == 3)
+								{
+									if (!yflip)
+										base_addr = (addr << 4) + (xtile * (height * (formshift * 16))) + (srcline * formshift);
+									else
+										base_addr = (addr << 4) + (xtile * (height * (formshift * 16))) + (((height * 16) - srcline - 1) * formshift);
+								}
+								else
+								{
+									if (!yflip)
+										base_addr = (addr << 4) + (xtile * (height * (formshift * 8))) + (srcline * formshift);
+									else
+										base_addr = (addr << 4) + (xtile * (height * (formshift * 8))) + (((height * 8) - srcline - 1) * formshift);
+								}
+
+								u64 gfxdata;
+								if (format & 1)
+								{
+									gfxdata = MEGADRIV_VDP_VRAM(base_addr + 3) |
+												(MEGADRIV_VDP_VRAM(base_addr + 2) << 16) |
+												(MEGADRIV_VDP_VRAM(base_addr + 1) << 32) |
+												(MEGADRIV_VDP_VRAM(base_addr + 0) << 48);
+								}
+								else
+								{
+									gfxdata = MEGADRIV_VDP_VRAM(base_addr + 1) | (MEGADRIV_VDP_VRAM(base_addr + 0) << 16);
+								}
+
+								while (loopcount < 8)
+								{
+									const int dat = (gfxdata >> (gfxbase - (gfxshift * loopcount)) & gfxmask);
+									const u32 pix = m_palette->pen((dat + (colour << 4)) & 0xfff);
+									if (pix)
+									{
+										if (((m_sprite_renderline[xxx] & SPRITE_PRI_MASK) >> SPRITE_PRI_SHIFT) <= pri)
+										{
+											m_sprite_renderline[xxx] = argb(m_sprite_renderline[xxx], pix) | (pri << SPRITE_PRI_SHIFT);
+										}
+										if (m_sprite_renderline[xxx] & SPRITE_PIX_MASK)
+										{
+											m_sprite_collision = 1;
+										}
+									}
+									xxx++; xxx &= 0xffff;
+									frac += xdelta;
+									loopcount += frac >> 16;
+									frac &= 0xffff;
+									if ((!MEGADRIVE_REG07_FB_SPRITE) && (--maxpixels == 0x00)) return;
+								}
+								xtile += loopcount >> 3;
+								loopcount &= 7;
 							}
 							else
 							{
-								if (!yflip) base_addr = (addr<<4)+(xtile*((height+1)*(2*8)))+(yline*2);
-								else base_addr = (addr<<4)+(xtile*((height+1)*(2*8)))+((((height+1)*8)-yline-1)*2);
+								u32 base_addr;
+
+								if (m_imode == 3)
+								{
+									if (!yflip)
+										base_addr = (addr << 4) + (((width - xtile - 1)) * (height * (formshift * 16))) + (srcline * formshift);
+									else
+										base_addr = (addr << 4) + (((width - xtile - 1)) * (height * (formshift * 16))) + (((height * 16) - srcline - 1) * formshift);
+								}
+								else
+								{
+									if (!yflip)
+										base_addr = (addr << 4) + (((width - xtile - 1)) * (height * (formshift * 8))) + (srcline * formshift);
+									else
+										base_addr = (addr << 4) + (((width - xtile - 1)) * (height * (formshift * 8))) + (((height * 8) - srcline - 1) * formshift);
+								}
+
+								u64 gfxdata;
+								if (format & 1)
+								{
+									gfxdata = MEGADRIV_VDP_VRAM(base_addr + 3) |
+												(MEGADRIV_VDP_VRAM(base_addr + 2) << 16) |
+												(MEGADRIV_VDP_VRAM(base_addr + 1) << 32) |
+												(MEGADRIV_VDP_VRAM(base_addr + 0) << 48);
+								}
+								else
+								{
+									gfxdata = MEGADRIV_VDP_VRAM(base_addr + 1) | (MEGADRIV_VDP_VRAM(base_addr + 0) << 16);
+								}
+
+								while (loopcount < 8)
+								{
+									const int dat = (gfxdata >> (gfxshift * loopcount) & gfxmask);
+									const u32 pix = m_palette->pen((dat + (colour << 4)) & 0xfff);
+									if (pix)
+									{
+										if (((m_sprite_renderline[xxx] & SPRITE_PRI_MASK) >> SPRITE_PRI_SHIFT) <= pri)
+										{
+											m_sprite_renderline[xxx] = argb(m_sprite_renderline[xxx], pix) | (pri << SPRITE_PRI_SHIFT);
+										}
+										if (m_sprite_renderline[xxx] & SPRITE_PIX_MASK)
+										{
+											m_sprite_collision = 1;
+										}
+									}
+									xxx++; xxx &= 0xffff;
+									frac += xdelta;
+									loopcount += frac >> 16;
+									frac &= 0xffff;
+									if ((!MEGADRIVE_REG07_FB_SPRITE) && (--maxpixels == 0x00)) return;
+								}
+								xtile += loopcount >> 3;
+								loopcount &= 7;
 							}
-
-							xxx = (xpos+xtile*8)&0x1ff;
-
-							gfxdata = MEGADRIV_VDP_VRAM(base_addr+1) | (MEGADRIV_VDP_VRAM(base_addr+0)<<16);
-
-							for(loopcount=0;loopcount<8;loopcount++)
-							{
-								dat = (gfxdata & 0xf0000000)>>28; gfxdata <<=4;
-								if (dat) { if (!m_sprite_renderline[xxx]) { m_sprite_renderline[xxx] = dat | (colour<<4)| pri; } else { m_sprite_collision = 1; } }
-								xxx++;xxx&=0x1ff;
-								if (--maxpixels == 0x00) return;
-							}
-
-						}
-						else
-						{
-							uint16_t base_addr;
-							int xxx;
-							uint32_t gfxdata;
-
-							int loopcount;
-
-							if(m_imode == 3)
-							{
-								if (!yflip) base_addr = (addr<<4)+(((width-xtile))*((height+1)*(2*16)))+(yline*2);
-								else base_addr =      (addr<<4)+(((width-xtile))*((height+1)*(2*16)))+((((height+1)*16)-yline-1)*2);
-
-							}
-							else
-							{
-								if (!yflip) base_addr = (addr<<4)+(((width-xtile))*((height+1)*(2*8)))+(yline*2);
-								else base_addr =        (addr<<4)+(((width-xtile))*((height+1)*(2*8)))+((((height+1)*8)-yline-1)*2);
-							}
-
-							xxx = (xpos+xtile*8)&0x1ff;
-
-							gfxdata = MEGADRIV_VDP_VRAM(base_addr+1) | (MEGADRIV_VDP_VRAM(base_addr)<<16);
-
-							for(loopcount=0;loopcount<8;loopcount++)
-							{
-								dat = (gfxdata & 0x0000000f)>>0; gfxdata >>=4;
-								if (dat) { if (!m_sprite_renderline[xxx]) { m_sprite_renderline[xxx] = dat | (colour<<4)| pri; } else { m_sprite_collision = 1; } }
-								xxx++;xxx&=0x1ff;
-								if (--maxpixels == 0x00) return;
-							}
-
 						}
 					}
 				}
 			}
+			if (m_internal_sprite_attribute_table[(spritenum * 8) + 0x0] & 0x4000)
+				spritenum = link;
+			else
+				spritenum++;
 
-			spritenum = link;
+			if (spritenum > 0x10000 / 2 / 8)
+				return;
 		}
-		while ((maxsprites>=0) && (link!=0));
+		while ((maxsprites >= 0) && (link != 0));
 
+	}
+}
 
+void sega315_53134_device::get_vcolumn_tilebase(int &vcolumn, int &tile_base, u16 base, int vscroll, int scanline, int vsize, int hsize, int hcolumn)
+{
+	if (m_imode == 3)
+	{
+		vcolumn = (vscroll + scanline) & ((vsize * 16) - 1);
+		tile_base = (base >> 1) + ((((vcolumn >> 4) * hsize) + hcolumn) * 2);
+	}
+	else
+	{
+		vcolumn = (vscroll + scanline) & ((vsize * 8) - 1);
+		tile_base = (base >> 1) + ((((vcolumn >> 3) * hsize) + hcolumn) * 2);
+	}
+	tile_base &= 0x7ffff;
+}
+
+void sega315_53134_device::get_window_tilebase(int &tile_base, u16 base, int vcolumn, int window_hsize, int hcolumn)
+{
+	if (m_imode == 3)
+		tile_base = (base >> 1) + ((((vcolumn >> 4) * window_hsize) + hcolumn) * 2);
+	else
+		tile_base = (base >> 1) + ((((vcolumn >> 3) * window_hsize) + hcolumn) * 2);
+
+	tile_base &= 0x7ffff;
+}
+
+void sega315_53134_device::get_nametable(u16 tile_base, nametable_t &tile, int vcolumn)
+{
+	int step = 2;
+	const u32 tile_dat = (MEGADRIV_VDP_VRAM(tile_base + 0) << 16) | MEGADRIV_VDP_VRAM(tile_base + 1);
+	tile.xflip = (tile_dat & 0x80000000);
+	tile.yflip = (tile_dat & 0x40000000);
+	tile.format =(tile_dat & 0x20000000) >> 29;
+	tile.visible=(tile_dat & 0x10000000) >> 28;
+	tile.pri =   (tile_dat & 0x0f000000) >> 24;
+	tile.colour =(tile_dat & 0x00ff0000) >> 16;
+	tile.addr =  (tile_dat & 0x00007fff) << 4;
+
+	if (tile.format & 1)
+	{
+		tile.addr <<= 1;
+		tile.addr &= 0x7ffff;
+		step <<= 1;
+	}
+
+	if (m_imode == 3)
+	{
+		tile.addr <<= 1;
+		tile.addr &= 0x7ffff;
+
+		if (!tile.yflip) tile.addr += (vcolumn & 0xf) * step;
+		else tile.addr += ((0xf - vcolumn) & 0xf) * step;
+	}
+	else
+	{
+		if (!tile.yflip) tile.addr += (vcolumn & 7) * step;
+		else tile.addr += ((7 - vcolumn) & 7) * step;
+	}
+}
+
+inline void sega315_53134_device::draw_tile(nametable_t tile, int start, int end, int &dpos, u64 pixshift)
+{
+	if (!tile.visible)
+		return;
+
+	int shiftval = 4;
+	u64 gfxdata;
+	if (tile.format & 1)
+	{
+		shiftval <<= 1;
+		gfxdata = (MEGADRIV_VDP_VRAM(tile.addr + 0) << 48) |
+					(MEGADRIV_VDP_VRAM(tile.addr + 1) << 32) |
+					(MEGADRIV_VDP_VRAM(tile.addr + 2) << 16) |
+					MEGADRIV_VDP_VRAM(tile.addr + 3);
+	}
+	else
+	{
+		gfxdata = (MEGADRIV_VDP_VRAM(tile.addr + 0) << 16) | MEGADRIV_VDP_VRAM(tile.addr + 1);
+	}
+
+	const int base = shiftval * (8 - 1);
+	const int mask = (1 << shiftval) - 1;
+	if (!tile.xflip)
+	{
+		/* 8 pixels */
+		for (int shift = start; shift < end; shift++)
+		{
+			const int dat = (gfxdata >> (base - (shift * shiftval))) & mask;
+			const u32 pix = ((dat + (tile.colour << 4)) & 0xfff) | (tile.pri << 12);
+			m_highpri_renderline[dpos] = (pix << pixshift) | m_highpri_renderline[dpos] & ~(0xffff << pixshift);
+			dpos++;
+		}
+	}
+	else
+	{
+		for (int shift = start; shift < end; shift++)
+		{
+			const int dat = (gfxdata >> (shift * shiftval)) & mask;
+			const u32 pix = ((dat + (tile.colour << 4)) & 0xfff) | (tile.pri << 12);
+			m_highpri_renderline[dpos] = (pix << pixshift) | m_highpri_renderline[dpos] & ~(0xffff << pixshift);
+			dpos++;
+		}
 	}
 }
 
 /* Clean up this function (!) */
 void sega315_53134_device::render_videoline_to_videobuffer(int scanline)
 {
-	uint16_t base_a;
-	uint16_t base_w=0;
-	uint16_t base_b;
+	u32 base_w = 0;
 
-	uint16_t size;
-	uint16_t hsize = 64;
-	uint16_t vsize = 64;
-	uint16_t window_right;
-//  uint16_t window_hpos;
-	uint16_t window_down;
-//  uint16_t window_vpos;
-	uint16_t hscroll_base;
-//  uint8_t  vscroll_mode;
-//  uint8_t  hscroll_mode;
+	u16 hsize = 64;
+	u16 vsize = 64;
 	int window_firstline;
 	int window_lastline;
 	int window_firstcol;
 	int window_lastcol;
-	int screenwidth;
 	int numcolumns = 0;
 	int hscroll_a = 0;
 	int hscroll_b = 0;
-	int x;
-	int window_hsize=0;
-	int window_vsize=0;
-	int window_is_bugged;
+	int hscroll_c = 0;
+	int hscroll_d = 0;
+	int window_hsize = 0;
+	int window_vsize = 0;
 	int non_window_firstcol;
 	int non_window_lastcol;
-	int screenheight = 240;
+	const int screenheight = MEGADRIVE_REG01_240_LINE ? 240 : 224;
+	struct nametable_t tile;
 
 	/* Clear our Render Buffer */
-	for (x=0;x<320;x++)
+	for (int x = 0; x < 320; x++)
 	{
-		m_video_renderline[x]=(MEGADRIVE_REG06_BGCOLOUR << 8) | MEGADRIVE_REG07_BGCOLOUR | 0x20000; // mark as BG
+		m_video_renderline[x] = m_palette->pen((MEGADRIVE_REG09_BGCOLOUR << 8) | MEGADRIVE_REG08_BGCOLOUR) | RENDER_BG_FLAG; // mark as BG
 	}
 
-	memset(m_highpri_renderline.get(), 0, 320*4);
+	memset(m_highpri_renderline.get(), 0, 320 * 8);
 
 	/* is this line enabled? */
 	if (!MEGADRIVE_REG01_DISP_ENABLE)
 	{
-		//osd_printf_debug("line disabled %d\n",scanline);
+		//osd_printf_debug("line disabled %d\n", scanline);
 		return;
 	}
 
@@ -1618,38 +1778,37 @@ void sega315_53134_device::render_videoline_to_videobuffer(int scanline)
 		return;
 	}
 
+	const u32 base_a = MEGADRIVE_REG02_PATTERN_ADDR_A << 12;
+	const u32 base_b = MEGADRIVE_REG03_PATTERN_ADDR_B << 12;
+	const u32 base_c = MEGADRIVE_REG04_PATTERN_ADDR_C << 12;
+	const u32 base_d = MEGADRIVE_REG05_PATTERN_ADDR_D << 12;
+	const u16 size   = MEGADRIVE_REG10_HSCROLL_SIZE | (MEGADRIVE_REG10_VSCROLL_SIZE << 4);
+	const u16 window_right = MEGADRIVE_REG11_WINDOW_RIGHT;
+//  const u16 window_hpos = MEGADRIVE_REG11_WINDOW_HPOS;
+	const u16 window_down = MEGADRIVE_REG12_WINDOW_DOWN;
+//  const u16 window_vpos = MEGADRIVE_REG12_WINDOW_VPOS;
 
-
-	base_a = MEGADRIVE_REG02_PATTERN_ADDR_A << 14;
-
-	base_b = MEGADRIVE_REG04_PATTERN_ADDR_B << 14;
-	size  = MEGADRIVE_REG10_HSCROLL_SIZE | (MEGADRIVE_REG10_VSCROLL_SIZE<<4);
-	window_right = MEGADRIVE_REG11_WINDOW_RIGHT;
-//  window_hpos = MEGADRIVE_REG11_WINDOW_HPOS;
-	window_down = MEGADRIVE_REG12_WINDOW_DOWN;
-//  window_vpos = MEGADRIVE_REG12_WINDOW_VPOS;
-
-	screenwidth = MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1);
+	const int screenwidth = MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1);
 
 	switch (screenwidth)
 	{
-		case 0: numcolumns = 32; window_hsize = 32; window_vsize = 32; base_w = (MEGADRIVE_REG03_PATTERN_ADDR_W&0x7) << 13; break;
-		case 1: numcolumns = 32; window_hsize = 32; window_vsize = 32; base_w = (MEGADRIVE_REG03_PATTERN_ADDR_W&0x7) << 13; break;
-		case 2: numcolumns = 40; window_hsize = 64; window_vsize = 32; base_w = (MEGADRIVE_REG03_PATTERN_ADDR_W&0x7) << 13; break;
-		case 3: numcolumns = 40; window_hsize = 64; window_vsize = 32; base_w = (MEGADRIVE_REG03_PATTERN_ADDR_W&0x7) << 13; break; // talespin cares about base mask, used for status bar
+		case 0: numcolumns = 32; window_hsize = 32; window_vsize = 32; base_w = (MEGADRIVE_REG06_PATTERN_ADDR_W & 0xff) << 12; break;
+		case 1: numcolumns = 32; window_hsize = 32; window_vsize = 32; base_w = (MEGADRIVE_REG06_PATTERN_ADDR_W & 0xff) << 12; break;
+		case 2: numcolumns = 40; window_hsize = 64; window_vsize = 32; base_w = (MEGADRIVE_REG06_PATTERN_ADDR_W & 0xfe) << 12; break;
+		case 3: numcolumns = 40; window_hsize = 64; window_vsize = 32; base_w = (MEGADRIVE_REG06_PATTERN_ADDR_W & 0xfe) << 12; break; // talespin cares about base mask, used for status bar
 	}
 
-	//osd_printf_debug("screenwidth %d\n",screenwidth);
+	//osd_printf_debug("screenwidth %d\n", screenwidth);
 
-	//base_w = machine().rand()&0xff;
+	//base_w = machine().rand() & 0xff;
 
 	/* Calculate Exactly where we're going to draw the Window, and if the Window Bug applies */
-	window_is_bugged = 0;
+	int window_is_bugged = 0;
 	if (window_right)
 	{
-		window_firstcol = MEGADRIVE_REG11_WINDOW_HPOS*16;
-		window_lastcol = numcolumns*8;
-		if (window_firstcol>window_lastcol) window_firstcol = window_lastcol;
+		window_firstcol = MEGADRIVE_REG11_WINDOW_HPOS * 16;
+		window_lastcol = numcolumns * 8;
+		if (window_firstcol > window_lastcol) window_firstcol = window_lastcol;
 
 		non_window_firstcol = 0;
 		non_window_lastcol = window_firstcol;
@@ -1657,340 +1816,315 @@ void sega315_53134_device::render_videoline_to_videobuffer(int scanline)
 	else
 	{
 		window_firstcol = 0;
-		window_lastcol = MEGADRIVE_REG11_WINDOW_HPOS*16;
-		if (window_lastcol>numcolumns*8) window_lastcol = numcolumns*8;
+		window_lastcol = MEGADRIVE_REG11_WINDOW_HPOS * 16;
+		if (window_lastcol > numcolumns * 8) window_lastcol = numcolumns * 8;
 
 		non_window_firstcol = window_lastcol;
-		non_window_lastcol = numcolumns*8;
+		non_window_lastcol = numcolumns * 8;
 
-		if (window_lastcol!=0) window_is_bugged=1;
+		if (window_lastcol != 0) window_is_bugged = 1;
 	}
 
 	if (window_down)
 	{
-		window_firstline = MEGADRIVE_REG12_WINDOW_VPOS*8;
+		window_firstline = MEGADRIVE_REG12_WINDOW_VPOS * 8;
 		window_lastline = screenheight; // 240 in PAL?
-		if (window_firstline>screenheight) window_firstline = screenheight;
+		if (window_firstline > screenheight) window_firstline = screenheight;
 	}
 	else
 	{
 		window_firstline = 0;
-		window_lastline = MEGADRIVE_REG12_WINDOW_VPOS*8;
-		if (window_lastline>screenheight) window_lastline = screenheight;
+		window_lastline = MEGADRIVE_REG12_WINDOW_VPOS * 8;
+		if (window_lastline > screenheight) window_lastline = screenheight;
 	}
 
 	/* if we're on a window scanline between window_firstline and window_lastline the window is the full width of the screen */
-	if (scanline>=window_firstline && scanline < window_lastline)
+	if (scanline >= window_firstline && scanline < window_lastline)
 	{
-		window_firstcol = 0; window_lastcol = numcolumns*8; // window is full-width of the screen
-		non_window_firstcol = 0; non_window_lastcol=0; // disable non-window
+		window_firstcol = 0; window_lastcol = numcolumns * 8; // window is full-width of the screen
+		non_window_firstcol = 0; non_window_lastcol = 0; // disable non-window
 	}
 
-
-//    vscroll_mode = MEGADRIVE_REG0B_VSCROLL_MODE;
-//    hscroll_mode = MEGADRIVE_REG0B_HSCROLL_MODE;
-	hscroll_base = MEGADRIVE_REG0D_HSCROLL_ADDR<<10;
+//  const u8  vscroll_mode = MEGADRIVE_REG0B_VSCROLL_MODE;
+//  const u8  hscroll_mode = MEGADRIVE_REG0B_HSCROLL_MODE;
+	const u32 hscroll_base = MEGADRIVE_REG0D_HSCROLL_ADDR << 12;
 
 	switch (size)
 	{
-		case 0x00: hsize = 32; vsize = 32; break;
-		case 0x01: hsize = 64; vsize = 32; break;
-		case 0x02: hsize = 64; vsize = 1; /* osd_printf_debug("Invalid HSize! %02x\n",size);*/ break;
-		case 0x03: hsize = 128;vsize = 32; break;
+		case 0x00: hsize = 32;  vsize = 32; break;
+		case 0x01: hsize = 64;  vsize = 32; break;
+		case 0x02: hsize = 64;  vsize = 1; /* osd_printf_debug("Invalid HSize! %02x\n", size);*/ break;
+		case 0x03: hsize = 128; vsize = 32; break;
 
-		case 0x10: hsize = 32; vsize = 64; break;
-		case 0x11: hsize = 64; vsize = 64; break;
-		case 0x12: hsize = 64; vsize = 1; /*osd_printf_debug("Invalid HSize! %02x\n",size);*/ break;
-		case 0x13: hsize = 128;vsize = 32;/*osd_printf_debug("Invalid Total Size! %02x\n",size);*/break;
+		case 0x10: hsize = 32;  vsize = 64; break;
+		case 0x11: hsize = 64;  vsize = 64; break;
+		case 0x12: hsize = 64;  vsize = 1; /*osd_printf_debug("Invalid HSize! %02x\n", size);*/ break;
+		case 0x13: hsize = 128; vsize = 32;/*osd_printf_debug("Invalid Total Size! %02x\n", size);*/break;
 
-		case 0x20: hsize = 32; vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
-		case 0x21: hsize = 64; vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
-		case 0x22: hsize = 64; vsize = 1; /*osd_printf_debug("Invalid HSize & Invalid VSize!\n");*/ break;
-		case 0x23: hsize = 128;vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
+		case 0x20: hsize = 32;  vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
+		case 0x21: hsize = 64;  vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
+		case 0x22: hsize = 64;  vsize = 1; /*osd_printf_debug("Invalid HSize & Invalid VSize!\n");*/ break;
+		case 0x23: hsize = 128; vsize = 64; osd_printf_debug("Invalid VSize!\n"); break;
 
-		case 0x30: hsize = 32; vsize = 128; break;
-		case 0x31: hsize = 64; vsize = 64; /*osd_printf_debug("Invalid Total Size! %02x\n",size);*/break; // super skidmarks attempts this..
-		case 0x32: hsize = 64; vsize = 1; /*osd_printf_debug("Invalid HSize & Invalid Total Size!\n");*/ break;
-		case 0x33: hsize = 128;vsize = 128; osd_printf_debug("Invalid Total Size! %02x\n",size);break;
+		case 0x30: hsize = 32;  vsize = 128; break;
+		case 0x31: hsize = 64;  vsize = 64; /*osd_printf_debug("Invalid Total Size! %02x\n", size);*/break; // super skidmarks attempts this..
+		case 0x32: hsize = 64;  vsize = 1; /*osd_printf_debug("Invalid HSize & Invalid Total Size!\n");*/ break;
+		case 0x33: hsize = 128; vsize = 128; osd_printf_debug("Invalid Total Size! %02x\n", size); break;
 	}
 
 	switch (MEGADRIVE_REG0B_HSCROLL_MODE)
 	{
 		case 0x00: // Full Screen Scroll
-			hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0);
-			hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1);
+			hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0);
+			hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1);
+			hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2);
+			hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3);
 			break;
 
 		case 0x01: // 'Broken' Line Scroll
-			if(m_imode == 3)
+			if (m_imode == 3)
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+((scanline>>1)&7)*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+((scanline>>1)&7)*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + ((scanline >> 1) & 7) * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + ((scanline >> 1) & 7) * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + ((scanline >> 1) & 7) * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + ((scanline >> 1) & 7) * 4);
 			}
 			else
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+(scanline&7)*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+(scanline&7)*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + (scanline & 7) * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + (scanline & 7) * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + (scanline & 7) * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + (scanline & 7) * 4);
 			}
 			break;
 
 		case 0x02: // Cell Scroll
-			if(m_imode == 3)
+			if (m_imode == 3)
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+((scanline>>1)&~7)*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+((scanline>>1)&~7)*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + ((scanline >> 1) & ~7) * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + ((scanline >> 1) & ~7) * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + ((scanline >> 1) & ~7) * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + ((scanline >> 1) & ~7) * 4);
 			}
 			else
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+(scanline&~7)*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+(scanline&~7)*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + (scanline & ~7) * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + (scanline & ~7) * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + (scanline & ~7) * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + (scanline & ~7) * 4);
 			}
 			break;
 
 		case 0x03: // Full Line Scroll
-			if(m_imode == 3)
+			if (m_imode == 3)
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+(scanline>>1)*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+(scanline>>1)*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + (scanline >> 1) * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + (scanline >> 1) * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + (scanline >> 1) * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + (scanline >> 1) * 4);
 			}
 			else
 			{
-				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base>>1)+0+scanline*2);
-				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base>>1)+1+scanline*2);
+				hscroll_a = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 0 + scanline * 4);
+				hscroll_b = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 1 + scanline * 4);
+				hscroll_c = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 2 + scanline * 4);
+				hscroll_d = MEGADRIV_VDP_VRAM((hscroll_base >> 1) + 3 + scanline * 4);
 			}
 			break;
 	}
 
-	/* Low Priority B Tiles */
+	int vscroll;
+	/* Low Priority C Tiles */
 	{
-		int column;
-		int vscroll;
-
-		for (column=0;column<numcolumns/2;column++)
+		for (int column = 0; column < numcolumns / 2; column++)
 		{   /* 20x 16x1 blocks */
 			int vcolumn;
-			int dpos;
 
 			/* Get V Scroll Value for this block */
 
-			dpos = column*16;
+			int dpos = column * 16;
 
 			{
 				/* hscroll is not divisible by 8, this segment will contain 3 tiles, 1 partial, 1 whole, 1 partial */
-				int hscroll_part = 8-(hscroll_b%8);
-				int hcolumn;
+				const int hscroll_part = 8 - (hscroll_d & 7);
 				int tile_base;
-				u32 tile_dat;
-				int tile_addr;
-				int tile_xflip;
-				int tile_yflip;
-				int tile_colour;
-				int tile_pri;
-				int dat;
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					if (hscroll_b&0xf) vscroll = m_vsram[((column-1)*2+1)&0x3f];
-					else vscroll = m_vsram[((column)*2+1)&0x3f];
+					if (hscroll_d & 0xf) vscroll = m_vsram[((column - 1) * 4 + 3) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 3) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[3];
+				}
+
+				int hcolumn = ((column * 2 - 1) - (hscroll_d >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_d, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, hscroll_part, 8, dpos, PATTERN_D_PIX_SHIFT);
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					if (hscroll_d & 0xf) vscroll = m_vsram[((column - 1) * 4 + 3) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 3) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[3];
+				}
+
+				hcolumn = ((column * 2) - (hscroll_d >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_d, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, 8, dpos, PATTERN_D_PIX_SHIFT);
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					vscroll = m_vsram[(column * 4 + 3) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[3];
+				}
+
+				hcolumn = ((column * 2 + 1) - (hscroll_d >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_d, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, hscroll_part, dpos, PATTERN_D_PIX_SHIFT);
+			}
+		}
+		/* END */
+	}
+	/* Low Priority C Tiles */
+	{
+		for (int column = 0; column < numcolumns / 2; column++)
+		{   /* 20x 16x1 blocks */
+			int vcolumn;
+
+			/* Get V Scroll Value for this block */
+
+			int dpos = column * 16;
+
+			{
+				/* hscroll is not divisible by 8, this segment will contain 3 tiles, 1 partial, 1 whole, 1 partial */
+				const int hscroll_part = 8 - (hscroll_c & 7);
+				int tile_base;
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					if (hscroll_c & 0xf) vscroll = m_vsram[((column - 1) * 4 + 2) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 2) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[2];
+				}
+
+				int hcolumn = ((column * 2 - 1) - (hscroll_c >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_c, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, hscroll_part, 8, dpos, PATTERN_C_PIX_SHIFT);
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					if (hscroll_c & 0xf) vscroll = m_vsram[((column - 1) * 4 + 2) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 2) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[2];
+				}
+
+				hcolumn = ((column * 2) - (hscroll_c >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_c, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, 8, dpos, PATTERN_C_PIX_SHIFT);
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					vscroll = m_vsram[(column * 4 + 2) & 0x7f];
+				}
+				else
+				{
+					vscroll = m_vsram[2];
+				}
+
+				hcolumn = ((column * 2 + 1) - (hscroll_c >> 3)) & (hsize - 1);
+
+				get_vcolumn_tilebase(vcolumn, tile_base, base_c, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, hscroll_part, dpos, PATTERN_C_PIX_SHIFT);
+			}
+		}
+		/* END */
+	}
+	/* Low Priority B Tiles */
+	{
+		for (int column = 0; column < numcolumns / 2; column++)
+		{   /* 20x 16x1 blocks */
+			int vcolumn;
+
+			/* Get V Scroll Value for this block */
+
+			int dpos = column * 16;
+
+			{
+				/* hscroll is not divisible by 8, this segment will contain 3 tiles, 1 partial, 1 whole, 1 partial */
+				const int hscroll_part = 8 - (hscroll_b & 7);
+				int tile_base;
+
+				if (MEGADRIVE_REG0B_VSCROLL_MODE)
+				{
+					if (hscroll_b & 0xf) vscroll = m_vsram[((column - 1) * 4 + 1) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 1) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[1];
 				}
 
-				hcolumn = ((column*2-1)-(hscroll_b>>3))&(hsize-1);
+				int hcolumn = ((column * 2 - 1) - (hscroll_b >> 3)) & (hsize - 1);
 
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-
-
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x00000800);
-				tile_yflip = (tile_dat&0x00001000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x00008000)>>15;
-				tile_addr = ((tile_dat&0x000007ff)<<4);
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=hscroll_part;shift<8;shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=hscroll_part;shift<8;shift++)
-					{
-						dat = (gfxdata>>(shift*4) )&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_b, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, hscroll_part, 8, dpos, PATTERN_B_PIX_SHIFT);
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					if (hscroll_b&0xf) vscroll = m_vsram[((column-1)*2+1)&0x3f];
-					else vscroll = m_vsram[((column)*2+1)&0x3f];
+					if (hscroll_b & 0xf) vscroll = m_vsram[((column - 1) * 4 + 1) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 1) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[1];
 				}
 
-				hcolumn = ((column*2)-(hscroll_b>>3))&(hsize-1);
+				hcolumn = ((column * 2) - (hscroll_b >> 3)) & (hsize - 1);
 
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x0800);
-				tile_yflip = (tile_dat&0x1000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x8000)>>15;
-				tile_addr = ((tile_dat&0x07ff)<<4);
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=0;shift<8;shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=0;shift<8;shift++)
-					{
-						dat = (gfxdata>>(shift*4))&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_b, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, 8, dpos, PATTERN_B_PIX_SHIFT);
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					vscroll = m_vsram[((column)*2+1)&0x3f];
+					vscroll = m_vsram[(column * 4 + 1) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[1];
 				}
 
-				hcolumn = ((column*2+1)-(hscroll_b>>3))&(hsize-1);
+				hcolumn = ((column * 2 + 1) - (hscroll_b >> 3)) & (hsize - 1);
 
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-					tile_base = (base_b>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x0800);
-				tile_yflip = (tile_dat&0x1000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x8000)>>15;
-				tile_addr = ((tile_dat&0x07ff)<<4);
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=0;shift<(hscroll_part);shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=0;shift<(hscroll_part);shift++)
-					{
-						dat = (gfxdata>>(shift*4) )&0x000f;  if (!tile_pri) { if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4); }  else m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_b, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, hscroll_part, dpos, PATTERN_B_PIX_SHIFT);
 			}
 		}
 		/* END */
@@ -1998,600 +2132,144 @@ void sega315_53134_device::render_videoline_to_videobuffer(int scanline)
 	/* Low Priority A Tiles + Window(!) */
 
 	{
-		int column;
-		int vscroll;
-
-		for (column=window_firstcol/16;column<window_lastcol/16;column++)
+		for (int column = window_firstcol / 16; column < window_lastcol / 16; column++)
 		{
-			int vcolumn;
-			int dpos;
-
-			int hcolumn;
 			int tile_base;
-			u32 tile_dat;
-			int tile_addr;
-			int tile_xflip;
-			int tile_yflip;
-			int tile_colour;
-			int tile_pri;
-			int dat;
 
-			vcolumn = scanline&((window_vsize*8)-1);
-			dpos = column*16;
-			hcolumn = (column*2)&(window_hsize-1);
+			const int vcolumn = scanline & ((window_vsize * 8) - 1);
+			int dpos = column * 16;
+			int hcolumn = (column * 2) & (window_hsize - 1);
 
-			if(m_imode == 3)
-			{
-				tile_base = (base_w>>1)+((((vcolumn>>4)*window_hsize)+hcolumn)<<1);
-			}
-			else
-			{
-				tile_base = (base_w>>1)+((((vcolumn>>3)*window_hsize)+hcolumn)<<1);
-			}
+			get_window_tilebase(tile_base, base_w, vcolumn, window_hsize, hcolumn);
+			get_nametable(tile_base, tile, vcolumn);
+			draw_tile(tile, 0, 8, dpos, PATTERN_A_PIX_SHIFT);
 
-			tile_base &=0x7fff;
-			tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-			tile_xflip = (tile_dat&0x0800);
-			tile_yflip = (tile_dat&0x1000);
-			tile_colour =(tile_dat&0x00ff0000)>>16;
-			tile_pri = (tile_dat&0x8000)>>15;
-			tile_addr = ((tile_dat&0x07ff)<<4);
+			hcolumn = (column * 2 + 1) & (window_hsize - 1);
 
-			if(m_imode == 3)
-			{
-				tile_addr <<=1;
-				tile_addr &=0x7fff;
-			}
-
-			if(m_imode == 3)
-			{
-				if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-				else tile_addr+=((0xf-vcolumn)&0xf)*2;
-			}
-			else
-			{
-				if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-				else tile_addr+=((7-vcolumn)&7)*2;
-			}
-
-			if (!tile_xflip)
-			{
-				/* 8 pixels */
-				uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-				int shift;
-
-				for (shift=0;shift<8;shift++)
-				{
-					dat = (gfxdata>>(28-(shift*4)))&0x000f;
-					if (!tile_pri)
-					{
-						if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-					}
-					else
-					{
-						if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-					}
-					dpos++;
-				}
-			}
-			else
-			{
-				uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-				int shift;
-				for (shift=0;shift<8;shift++)
-				{
-					dat = (gfxdata>>(shift*4) )&0x000f;
-					if (!tile_pri)
-					{
-						if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-					}
-					else
-					{
-						if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-					}
-					dpos++;
-
-				}
-			}
-
-
-			hcolumn = (column*2+1)&(window_hsize-1);
-			if(m_imode == 3)
-			{
-				tile_base = (base_w>>1)+((((vcolumn>>4)*window_hsize)+hcolumn)<<1);
-			}
-			else
-			{
-				tile_base = (base_w>>1)+((((vcolumn>>3)*window_hsize)+hcolumn)<<1);
-			}
-			tile_base &=0x7fff;
-			tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-			tile_xflip = (tile_dat&0x0800);
-			tile_yflip = (tile_dat&0x1000);
-			tile_colour =(tile_dat&0x00ff0000)>>16;
-			tile_pri = (tile_dat&0x8000)>>15;
-			tile_addr = ((tile_dat&0x07ff)<<4);
-
-			if(m_imode == 3)
-			{
-				tile_addr <<=1;
-				tile_addr &=0x7fff;
-			}
-
-			if(m_imode == 3)
-			{
-				if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-				else tile_addr+=((0xf-vcolumn)&0xf)*2;
-			}
-			else
-			{
-				if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-				else tile_addr+=((7-vcolumn)&7)*2;
-			}
-
-			if (!tile_xflip)
-			{
-				/* 8 pixels */
-				uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-				int shift;
-
-				for (shift=0;shift<8;shift++)
-				{
-					dat = (gfxdata>>(28-(shift*4)))&0x000f;
-					if (!tile_pri)
-					{
-						if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-					}
-					else
-					{
-						if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-					}
-					dpos++;
-				}
-			}
-			else
-			{
-				uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-				int shift;
-				for (shift=0;shift<8;shift++)
-				{
-					dat = (gfxdata>>(shift*4) )&0x000f;
-					if (!tile_pri)
-					{
-						if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-					}
-					else
-					{
-						if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-						else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-					}
-					dpos++;
-				}
-			}
+			get_window_tilebase(tile_base, base_w, vcolumn, window_hsize, hcolumn);
+			get_nametable(tile_base, tile, vcolumn);
+			draw_tile(tile, 0, 8, dpos, PATTERN_A_PIX_SHIFT);
 		}
 
 		/* Non Window Part */
 
-		for (column=non_window_firstcol/16;column<non_window_lastcol/16;column++)
+		for (int column = non_window_firstcol / 16; column < non_window_lastcol / 16; column++)
 		{   /* 20x 16x1 blocks */
 		//  int xx;
 			int vcolumn;
-			int dpos;
 
-			dpos = column*16;
+			int dpos = column * 16;
 
 			{   /* hscroll is not divisible by 8, this segment will contain 3 tiles, 1 partial, 1 whole, 1 partial */
-				int hscroll_part = 8-(hscroll_a%8);
+				const int hscroll_part = 8 - (hscroll_a & 7);
 				int hcolumn;
 				int tile_base;
-				u32 tile_dat;
-				int tile_addr;
-				int tile_xflip;
-				int tile_yflip;
-				int tile_colour;
-				int tile_pri;
-				int dat;
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					if (hscroll_a&0xf) vscroll = m_vsram[((column-1)*2+0)&0x3f];
-					else vscroll = m_vsram[((column)*2+0)&0x3f];
+					if (hscroll_a & 0xf) vscroll = m_vsram[((column - 1) * 4 + 0) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 0) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[0];
 				}
 
+				if ((!window_is_bugged) || ((hscroll_a & 0xf) == 0) || (column > non_window_firstcol / 16)) hcolumn = ((column * 2 - 1) - (hscroll_a >> 3)) & (hsize - 1);
+				else hcolumn = ((column * 2 + 1) - (hscroll_a >> 3)) & (hsize - 1);
 
-				if ((!window_is_bugged) || ((hscroll_a&0xf)==0) || (column>non_window_firstcol/16)) hcolumn = ((column*2-1)-(hscroll_a>>3))&(hsize-1);
-				else hcolumn = ((column*2+1)-(hscroll_a>>3))&(hsize-1);
-
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-				}
-
-				if(m_imode == 3)
-				{
-					tile_base = (base_a>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-				}
-				else
-				{
-					tile_base = (base_a>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-
-
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x0800);
-				tile_yflip = (tile_dat&0x1000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x8000)>>15;
-				tile_addr = ((tile_dat&0x07ff)<<4);
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=hscroll_part;shift<8;shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=hscroll_part;shift<8;shift++)
-					{
-						dat = (gfxdata>>(shift*4) )&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_a, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, hscroll_part, 8, dpos, PATTERN_A_PIX_SHIFT);
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					if (hscroll_a&0xf) vscroll = m_vsram[((column-1)*2+0)&0x3f];
-					else vscroll = m_vsram[((column)*2+0)&0x3f];
+					if (hscroll_a & 0xf) vscroll = m_vsram[((column - 1) * 4 + 0) & 0x7f];
+					else vscroll = m_vsram[(column * 4 + 0) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[0];
 				}
 
-				if ((!window_is_bugged) || ((hscroll_a&0xf)==0) || (column>non_window_firstcol/16)) hcolumn = ((column*2)-(hscroll_a>>3))&(hsize-1); // not affected by bug?
+				if ((!window_is_bugged) || ((hscroll_a & 0xf) == 0) || (column > non_window_firstcol / 16)) hcolumn = ((column * 2) - (hscroll_a >> 3)) & (hsize - 1); // not affected by bug?
 				else
 				{
-					if ((hscroll_a&0xf)<8) hcolumn = ((column*2)-(hscroll_a>>3))&(hsize-1);
-					else hcolumn = ((column*2+2)-(hscroll_a>>3))&(hsize-1);
+					if ((hscroll_a & 0xf) < 8) hcolumn = ((column * 2) - (hscroll_a >> 3)) & (hsize - 1);
+					else hcolumn = ((column * 2 + 2) - (hscroll_a >> 3)) & (hsize - 1);
 				}
 
-
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-					tile_base = (base_a>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-					tile_base = (base_a>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x0800);
-				tile_yflip = (tile_dat&0x1000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x8000)>>15;
-				tile_addr = ((tile_dat&0x07ff)<<4);
-
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=0;shift<8;shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=0;shift<8;shift++)
-					{
-						dat = (gfxdata>>(shift*4) )&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_a, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, 8, dpos, PATTERN_A_PIX_SHIFT);
 
 				if (MEGADRIVE_REG0B_VSCROLL_MODE)
 				{
-					vscroll = m_vsram[((column)*2+0)&0x3f];
+					vscroll = m_vsram[(column * 4 + 0) & 0x7f];
 				}
 				else
 				{
 					vscroll = m_vsram[0];
 				}
 
-				if ((!window_is_bugged) || ((hscroll_a&0xf)==0) || (column>non_window_firstcol/16)) hcolumn = ((column*2+1)-(hscroll_a>>3))&(hsize-1);
-				else hcolumn = ((column*2+1)-(hscroll_a>>3))&(hsize-1);
+				if ((!window_is_bugged) || ((hscroll_a & 0xf) == 0) || (column > non_window_firstcol / 16)) hcolumn = ((column * 2 + 1) - (hscroll_a >> 3)) & (hsize - 1);
+				else hcolumn = ((column * 2 + 1) - (hscroll_a >> 3)) & (hsize - 1);
 
-				if(m_imode == 3)
-				{
-					vcolumn = (vscroll + scanline)&((vsize*16)-1);
-					tile_base = (base_a>>1)+((((vcolumn>>4)*hsize)+hcolumn)<<1);
-				}
-				else
-				{
-					vcolumn = (vscroll + scanline)&((vsize*8)-1);
-					tile_base = (base_a>>1)+((((vcolumn>>3)*hsize)+hcolumn)<<1);
-				}
-				tile_base &=0x7fff;
-				tile_dat = (MEGADRIV_VDP_VRAM(tile_base ^ 0) << 16) | MEGADRIV_VDP_VRAM(tile_base ^ 1);
-				tile_xflip = (tile_dat&0x0800);
-				tile_yflip = (tile_dat&0x1000);
-				tile_colour =(tile_dat&0x00ff0000)>>16;
-				tile_pri = (tile_dat&0x8000)>>15;
-				tile_addr = ((tile_dat&0x07ff)<<4);
-
-				if(m_imode == 3)
-				{
-					tile_addr <<=1;
-					tile_addr &=0x7fff;
-				}
-
-				if(m_imode == 3)
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&0xf)*2;
-					else tile_addr+=((0xf-vcolumn)&0xf)*2;
-				}
-				else
-				{
-					if (!tile_yflip) tile_addr+=(vcolumn&7)*2;
-					else tile_addr+=((7-vcolumn)&7)*2;
-				}
-
-				if (!tile_xflip)
-				{
-					/* 8 pixels */
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-
-					for (shift=0;shift<(hscroll_part);shift++)
-					{
-						dat = (gfxdata>>(28-(shift*4)))&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
-				else
-				{
-					uint32_t gfxdata = (MEGADRIV_VDP_VRAM(tile_addr+0)<<16)|MEGADRIV_VDP_VRAM(tile_addr+1);
-					int shift;
-					for (shift=0;shift<(hscroll_part);shift++)
-					{
-						dat = (gfxdata>>(shift*4) )&0x000f;
-						if (!tile_pri)
-						{
-							if(dat) m_video_renderline[dpos] = dat | (tile_colour<<4);
-						}
-						else
-						{
-							if (dat) m_highpri_renderline[dpos]  = dat | (tile_colour<<4) | 0x80000000;
-							else m_highpri_renderline[dpos] = m_highpri_renderline[dpos]|0x80000000;
-						}
-						dpos++;
-					}
-				}
+				get_vcolumn_tilebase(vcolumn, tile_base, base_a, vscroll, scanline, vsize, hsize, hcolumn);
+				get_nametable(tile_base, tile, vcolumn);
+				draw_tile(tile, 0, hscroll_part, dpos, PATTERN_A_PIX_SHIFT);
 			}
 		}
 	}
 		/* END */
 
-/* MEGADRIVE_REG0C_SHADOW_HIGLIGHT */
-		/* Low Priority Sprites */
-		for (x=0;x<320;x++)
+	/* Mix Tiles */
+	for (int x = 0; x < 320; x++)
+	{
+		u64 dat;
+		for (int i = 0; i < 16; i++)
 		{
-			if (!MEGADRIVE_REG0C_SHADOW_HIGLIGHT)
+			dat = m_highpri_renderline[x];
+			if (((dat & PATTERN_D_PRI_MASK) >> PATTERN_D_PRI_SHIFT) == i)
 			{
-				if (m_sprite_renderline[x+128] & 0x40000000)
-				{
-					m_video_renderline[x] = m_sprite_renderline[x+128]&0x3f;
-					m_video_renderline[x] |= 0x10000; // mark as sprite pixel
-				}
+				const u32 pix = m_palette->pen((dat & PATTERN_D_PIX_MASK) >> PATTERN_D_PIX_SHIFT);
+				if (pix)
+					m_video_renderline[x] = argb(m_video_renderline[x], pix);
 			}
-			else
-			{   /* Special Shadow / Highlight processing */
-
-				if (m_sprite_renderline[x+128] & 0x40000000)
-				{
-					uint8_t spritedata;
-					spritedata = m_sprite_renderline[x+128]&0x3f;
-
-					if ((spritedata==0x0e) || (spritedata==0x1e) || (spritedata==0x2e))
-					{
-						/* BUG in sprite chip, these colours are always normal intensity */
-						m_video_renderline[x] = spritedata | 0x4000;
-						m_video_renderline[x] |= 0x10000; // mark as sprite pixel
-					}
-					else if (spritedata==0x3e)
-					{
-						/* Everything below this is half colour, mark with 0x8000 to mark highlight' */
-						m_video_renderline[x] = m_video_renderline[x]|0x8000; // spiderwebs..
-					}
-					else if (spritedata==0x3f)
-					{
-						/* This is a Shadow operator, but everything below is already low pri, no effect */
-						m_video_renderline[x] = m_video_renderline[x]|0x2000;
-
-					}
-					else
-					{
-						m_video_renderline[x] = spritedata;
-						m_video_renderline[x] |= 0x10000; // mark as sprite pixel
-					}
-
-				}
+			if (((dat & PATTERN_C_PRI_MASK) >> PATTERN_C_PRI_SHIFT) == i)
+			{
+				const u32 pix = m_palette->pen((dat & PATTERN_C_PIX_MASK) >> PATTERN_C_PIX_SHIFT);
+				if (pix)
+					m_video_renderline[x] = argb(m_video_renderline[x], pix);
+			}
+			if (((dat & PATTERN_B_PRI_MASK) >> PATTERN_B_PRI_SHIFT) == i)
+			{
+				const u32 pix = m_palette->pen((dat & PATTERN_B_PIX_MASK) >> PATTERN_B_PIX_SHIFT);
+				if (pix)
+					m_video_renderline[x] = argb(m_video_renderline[x], pix);
+			}
+			if (((dat & PATTERN_A_PRI_MASK) >> PATTERN_A_PRI_SHIFT) == i)
+			{
+				const u32 pix = m_palette->pen((dat & PATTERN_A_PIX_MASK) >> PATTERN_A_PIX_SHIFT);
+				if (pix)
+					m_video_renderline[x] = argb(m_video_renderline[x], pix);
+			}
+			dat = m_sprite_renderline[x];
+			if (((dat & SPRITE_PRI_MASK) >> SPRITE_PRI_SHIFT) == i)
+			{
+				const u32 pix = dat & 0xffffffff;
+				if (pix)
+					m_video_renderline[x] = argb(m_video_renderline[x], pix);
 			}
 		}
-		/* High Priority A+B Tiles */
-		for (x=0;x<320;x++)
-		{
-			if (!MEGADRIVE_REG0C_SHADOW_HIGLIGHT)
-			{
-				/* Normal Processing */
-				int dat;
-				dat = m_highpri_renderline[x];
-
-				if (dat&0x80000000)
-				{
-						if (dat&0x0f) m_video_renderline[x] = m_highpri_renderline[x]&0xffff;
-				}
-			}
-			else
-			{
-				/* Shadow / Highlight Mode */
-				int dat;
-				dat = m_highpri_renderline[x];
-
-				if (dat&0x80000000)
-				{
-						if (dat&0x0f) m_video_renderline[x] = (m_highpri_renderline[x]&0xfff) | 0x4000;
-						else m_video_renderline[x] = m_video_renderline[x] | 0x4000; // set 'normal'
-				}
-			}
-		}
-
-		/* High Priority Sprites */
-		for (x=0;x<320;x++)
-		{
-			if (!MEGADRIVE_REG0C_SHADOW_HIGLIGHT)
-			{
-				/* Normal */
-				if (m_sprite_renderline[x+128] & 0x80000000)
-				{
-					m_video_renderline[x] = m_sprite_renderline[x+128]&0x3f;
-					m_video_renderline[x] |= 0x10000; // mark as sprite pixel
-				}
-			}
-			else
-			{
-				if (m_sprite_renderline[x+128] & 0x80000000)
-				{
-					uint8_t spritedata;
-					spritedata = m_sprite_renderline[x+128]&0x3f;
-
-					if (spritedata==0x3e)
-					{
-						/* set flag 0x8000 to indicate highlight */
-						m_video_renderline[x] = m_video_renderline[x]|0x8000;
-					}
-					else if (spritedata==0x3f)
-					{
-						/* This is a Shadow operator set shadow bit */
-						m_video_renderline[x] = m_video_renderline[x]|0x2000;
-					}
-					else
-					{
-						m_video_renderline[x] = spritedata | 0x4000;
-						m_video_renderline[x] |= 0x10000; // mark as sprite pixel
-					}
-				}
-			}
-		}
+	}
 }
 
 
 /* This converts our render buffer to real screen colours */
 void sega315_53134_device::render_videobuffer_to_screenbuffer(int scanline)
 {
-	uint32_t *lineptr;
+	u32 *lineptr;
 
 	if (!m_use_alt_timing)
 	{
@@ -2599,80 +2277,14 @@ void sega315_53134_device::render_videobuffer_to_screenbuffer(int scanline)
 			return;
 
 		lineptr = &m_render_bitmap->pix32(scanline);
-
 	}
 	else
 		lineptr = m_render_line.get();
 
 	for (int x = 0; x < 320; x++)
 	{
-		uint32_t dat = m_video_renderline[x];
-		uint16_t clut = m_palette_lookup[(dat & 0xfff)];
-		if (!MEGADRIVE_REG0_SPECIAL_PAL) // 3 bit color mode, correct?
-			clut &= 0x111;
-
-		if (!(dat & 0x20000))
-			m_render_line_raw[x] = 0x8000;
-		else
-			m_render_line_raw[x] = 0x0000;
-
-
-		if (!MEGADRIVE_REG0C_SHADOW_HIGLIGHT)
-		{
-			if (dat & 0x10000)
-			{
-				lineptr[x] = m_palette->pen(clut);
-				m_render_line_raw[x] |= (dat & 0xfff) | 0x2000;
-			}
-			else
-			{
-				lineptr[x] = m_palette->pen(clut);
-				m_render_line_raw[x] |= (dat & 0xfff) | 0x1000;
-			}
-
-		}
-		else
-		{
-			/* Verify my handling.. I'm not sure all cases are correct */
-			switch (dat & 0x1e000)
-			{
-				case 0x00000: // low priority, no shadow sprite, no highlight = shadow
-				case 0x02000: // low priority, shadow sprite, no highlight = shadow
-				case 0x06000: // normal pri,   shadow sprite, no highlight = shadow?
-				case 0x10000: // (sprite) low priority, no shadow sprite, no highlight = shadow
-				case 0x12000: // (sprite) low priority, shadow sprite, no highlight = shadow
-				case 0x16000: // (sprite) normal pri,   shadow sprite, no highlight = shadow?
-					lineptr[x] = m_palette->pen(0x1000 | clut);
-					m_render_line_raw[x] |= (dat & 0xfff) | 0x0000;
-					break;
-
-				case 0x4000: // normal pri, no shadow sprite, no highlight = normal;
-				case 0x8000: // low pri, highlight sprite = normal;
-					lineptr[x] = m_palette->pen(clut);
-					m_render_line_raw[x] |= (dat & 0xfff) | 0x1000;
-					break;
-
-				case 0x14000: // (sprite) normal pri, no shadow sprite, no highlight = normal;
-				case 0x18000: // (sprite) low pri, highlight sprite = normal;
-					lineptr[x] = m_palette->pen(clut);
-					m_render_line_raw[x] |= (dat & 0xfff) | 0x2000;
-					break;
-
-				case 0x0c000: // normal pri, highlight set = highlight?
-				case 0x1c000: // (sprite) normal pri, highlight set = highlight?
-					lineptr[x] = m_palette->pen(0x2000 | clut);
-					m_render_line_raw[x] |= (dat & 0xfff) | 0x3000;
-					break;
-
-				case 0x0a000: // shadow set, highlight set - not possible
-				case 0x0e000: // shadow set, highlight set, normal set, not possible
-				case 0x1a000: // (sprite)shadow set, highlight set - not possible
-				case 0x1e000: // (sprite)shadow set, highlight set, normal set, not possible
-				default:
-					lineptr[x] = m_render_line_raw[x] |= (machine().rand() & 0xfff);
-					break;
-			}
-		}
+		const u32 dat = m_video_renderline[x] & 0xffffffff;
+		lineptr[x] = dat;
 	}
 
 	if (!m_32x_scanline_helper_func.isnull())
@@ -2680,17 +2292,17 @@ void sega315_53134_device::render_videobuffer_to_screenbuffer(int scanline)
 	if (!m_32x_scanline_func.isnull())
 	{
 		for (int x = 0; x < 320; x++)
-			m_32x_scanline_func(x, m_video_renderline[x] & 0x20000, lineptr[x]);
+			m_32x_scanline_func(x, (m_video_renderline[x] & RENDER_BG_FLAG) >> RENDER_BG_FLAG_SHIFT, lineptr[x]);
 	}
 }
 
 TIMER_CALLBACK_MEMBER(sega315_53134_device::render_scanline)
 {
-	int scanline = get_scanline_counter();
+	const int scanline = get_scanline_counter();
 
 	if (scanline >= 0 && scanline < m_visible_scanlines)
 	{
-		//if (MEGADRIVE_REG01_DMA_ENABLE==0) osd_printf_debug("off\n");
+		//if (MEGADRIVE_REG01_DMA_ENABLE == 0) osd_printf_debug("off\n");
 		render_spriteline_to_spritebuffer(get_scanline_counter());
 		render_videoline_to_videobuffer(scanline);
 		render_videobuffer_to_screenbuffer(scanline);
@@ -2709,47 +2321,46 @@ void sega315_53134_device::vdp_handle_scanline_callback(int scanline)
 	if (get_scanline_counter() != (m_total_scanlines - 1))
 	{
 		if (!m_use_alt_timing) m_scanline_counter++;
-//      osd_printf_debug("scanline %d\n",get_scanline_counter());
+//      osd_printf_debug("scanline %d\n", get_scanline_counter());
 		m_render_timer->adjust(attotime::from_usec(1));
 
 		if (get_scanline_counter() == m_irq6_scanline)
 		{
-		//  osd_printf_debug("x %d",get_scanline_counter());
+		//  osd_printf_debug("x %d", get_scanline_counter());
 			m_irq6_on_timer->adjust(attotime::from_usec(6));
 			m_irq6_pending = 1;
 			m_vblank_flag = 1;
 
 		}
 
-	//  if (get_scanline_counter()==0) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
+	//  if (get_scanline_counter() == 0) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 		// m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 
 		if (get_scanline_counter()<=224)
 		{
 			m_irq4counter--;
 
-			if (m_irq4counter==-1)
+			if (m_irq4counter== - 1)
 			{
-				if (m_imode == 3) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE*2;
-				else m_irq4counter=MEGADRIVE_REG0A_HINT_VALUE;
+				if (m_imode == 3) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE * 2;
+				else m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 
 				m_irq4_pending = 1;
 
 				if (MEGADRIVE_REG0_IRQ4_ENABLE)
 				{
 					m_irq4_on_timer->adjust(attotime::from_usec(1));
-					//osd_printf_debug("irq4 on scanline %d reload %d\n",get_scanline_counter(),MEGADRIVE_REG0A_HINT_VALUE);
+					//osd_printf_debug("irq4 on scanline %d reload %d\n", get_scanline_counter(), MEGADRIVE_REG0A_HINT_VALUE);
 				}
 			}
 		}
 		else
 		{
-			if (m_imode == 3) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE*2;
-			else m_irq4counter=MEGADRIVE_REG0A_HINT_VALUE;
+			if (m_imode == 3) m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE * 2;
+			else m_irq4counter = MEGADRIVE_REG0A_HINT_VALUE;
 		}
 
-		//if (get_scanline_counter()==0) irq4_on_timer->adjust(attotime::from_usec(2));
-
+		//if (get_scanline_counter() == 0) irq4_on_timer->adjust(attotime::from_usec(2));
 
 		if (get_scanline_counter() == m_z80irq_scanline)
 		{
@@ -2779,17 +2390,28 @@ void sega315_53134_device::vdp_handle_eof()
 	m_vblank_flag = 0;
 	//m_irq6_pending = 0; /* NO! (breaks warlock) */
 
-	/* Set it to -1 here, so it becomes 0 when the first timer kicks in */
+	/* Set it to  - 1 here, so it becomes 0 when the first timer kicks in */
 	if (!m_use_alt_timing) m_scanline_counter = -1;
-	m_sprite_collision=0;//? when to reset this ..
+	m_sprite_collision = 0;//? when to reset this ..
 	m_imode = MEGADRIVE_REG0C_INTERLEAVE; // can't change mid-frame..
-	m_imode_odd_frame^=1;
+	m_imode_odd_frame ^= 1;
 //      m_genesis_snd_z80->set_input_line(0, CLEAR_LINE); // if the z80 interrupt hasn't happened by now, clear it..
 
-	m_total_scanlines = m_base_total_scanlines;
-	m_visible_scanlines = 240;
-	m_irq6_scanline = 240;
-	m_z80irq_scanline = 240;
+	if (MEGADRIVE_REG01_240_LINE)
+	{
+		/* this is invalid in PAL! */
+		m_total_scanlines = m_base_total_scanlines;
+		m_visible_scanlines = 240;
+		m_irq6_scanline = 240;
+		m_z80irq_scanline = 240;
+	}
+	else
+	{
+		m_total_scanlines = m_base_total_scanlines;
+		m_visible_scanlines = 224;
+		m_irq6_scanline = 224;
+		m_z80irq_scanline = 224;
+	}
 
 	if (m_imode == 3)
 	{
@@ -2799,14 +2421,13 @@ void sega315_53134_device::vdp_handle_eof()
 		m_z80irq_scanline <<= 1;
 	}
 
-
 	switch (MEGADRIVE_REG0C_RS0 | (MEGADRIVE_REG0C_RS1 << 1))
 	{
 			/* note, add 240 mode + init new timings! */
-		case 0:scr_width = 256;break;
-		case 1:scr_width = 256;break;
-		case 2:scr_width = 320;break;
-		case 3:scr_width = 320;break;
+		case 0: scr_width = 256; break;
+		case 1: scr_width = 256; break;
+		case 2: scr_width = 320; break;
+		case 3: scr_width = 320; break;
 	}
 //      osd_printf_debug("my mode %02x", m_regs[0x0c]);
 
@@ -2817,14 +2438,14 @@ void sega315_53134_device::vdp_handle_eof()
 
 
 // called at the start of each scanline
-TIMER_DEVICE_CALLBACK_MEMBER( sega315_53134_device::megadriv_scanline_timer_callback )
+TIMER_DEVICE_CALLBACK_MEMBER(sega315_53134_device::megadriv_scanline_timer_callback)
 {
 	if (!m_use_alt_timing)
 	{
 		machine().scheduler().synchronize();
 		vdp_handle_scanline_callback(param);
 
-		m_megadriv_scanline_timer->adjust(attotime::from_hz(get_framerate()) / m_total_scanlines);
+		m_megadriv_scanline_timer->adjust(attotime::from_hz(get_framerate()) / double(m_total_scanlines));
 	}
 	else
 	{
@@ -2832,22 +2453,21 @@ TIMER_DEVICE_CALLBACK_MEMBER( sega315_53134_device::megadriv_scanline_timer_call
 	}
 }
 
-TIMER_DEVICE_CALLBACK_MEMBER( sega315_53134_device::megadriv_scanline_timer_callback_alt_timing )
+TIMER_DEVICE_CALLBACK_MEMBER(sega315_53134_device::megadriv_scanline_timer_callback_alt_timing)
 {
 	if (m_use_alt_timing)
 	{
-		if (param==0)
+		if (param == 0)
 		{
 			//printf("where are we? %d %d\n", screen().vpos(), screen().hpos());
 			vdp_handle_eof();
 			//vdp_clear_bitmap();
 		}
 
-
 		vdp_handle_scanline_callback(param);
 
-		int vpos = screen().vpos();
+		const int vpos = screen().vpos();
 		if (vpos > 0)
-			screen().update_partial(vpos-1);
+			screen().update_partial(vpos - 1);
 	}
 }

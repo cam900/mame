@@ -269,4 +269,17 @@ private:
 	void sega315_5313_palette(palette_device &palette) const;
 };
 
+class sega315_53134_mode4_device : public sega315_5313_mode4_device
+{
+protected:
+	sega315_53134_mode4_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, u8 cram_size, u8 palette_offset, u8 reg_num_mask, int max_sprite_zoom_hcount, int max_sprite_zoom_vcount, const u8 *line_timing);
+
+	virtual void device_add_mconfig(machine_config &config) override;
+
+	virtual void update_palette() override;
+
+private:
+	void sega315_53134_palette(palette_device &palette) const;
+};
+
 #endif // MAME_VIDEO_315_5124_H

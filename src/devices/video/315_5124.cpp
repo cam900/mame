@@ -185,6 +185,24 @@ void sega315_5313_mode4_device::sega315_5313_palette(palette_device &palette) co
 }
 
 
+void sega315_53134_mode4_device::sega315_53134_palette(palette_device &palette) const
+{
+	for (int i = 0; i < 4096; i++)
+	{
+		palette.set_pen_color(i, 0, 0, 0); // normal
+	}
+	// seperated SMS compatible mode color (reference : http://www.sega-16.com/forum/showthread.php?30530-SMS-VDP-output-levels)
+	static const u8 sms_level[4] = {0,99,162,255};
+	for (int i = 0; i < 64; i++)
+	{
+		const u8 r = (i & 0x0003) >> 0;
+		const u8 g = (i & 0x000c) >> 2;
+		const u8 b = (i & 0x0030) >> 4;
+		palette.set_pen_color(i + 4096, sms_level[r], sms_level[g], sms_level[b]); // normal
+	}
+}
+
+
 // default address map
 void sega315_5124_device::sega315_5124(address_map &map)
 {
@@ -237,6 +255,11 @@ sega315_5246_device::sega315_5246_device(const machine_config &mconfig, device_t
 // Embedded mode 4 support of the 315-5313 VDP (see 315_5313.cpp), used by Sega Genesis/Mega Drive
 sega315_5313_mode4_device::sega315_5313_mode4_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, u8 cram_size, u8 palette_offset, u8 reg_num_mask, int max_sprite_zoom_hcount, int max_sprite_zoom_vcount, const u8 *line_timing)
 	: sega315_5246_device(mconfig, type, tag, owner, clock, cram_size, palette_offset, reg_num_mask, max_sprite_zoom_hcount, max_sprite_zoom_vcount, line_timing)
+{
+}
+
+sega315_53134_mode4_device::sega315_53134_mode4_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, u8 cram_size, u8 palette_offset, u8 reg_num_mask, int max_sprite_zoom_hcount, int max_sprite_zoom_vcount, const u8 *line_timing)
+	: sega315_5313_mode4_device(mconfig, type, tag, owner, clock, cram_size, palette_offset, reg_num_mask, max_sprite_zoom_hcount, max_sprite_zoom_vcount, line_timing)
 {
 }
 
@@ -2050,4 +2073,16 @@ void sega315_5313_mode4_device::device_add_mconfig(machine_config &config)
 
 	m_palette->set_entries((512 * 3) + 64);
 	m_palette->set_init(FUNC(sega315_5313_mode4_device::sega315_5313_palette));
+}
+
+//-------------------------------------------------
+//  device_add_mconfig - add machine configuration
+//-------------------------------------------------
+
+void sega315_53134_mode4_device::device_add_mconfig(machine_config &config)
+{
+	sega315_5246_device::device_add_mconfig(config);
+
+	m_palette->set_entries(4096 + 64);
+	m_palette->set_init(FUNC(sega315_53134_mode4_device::sega315_53134_palette));
 }
