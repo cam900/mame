@@ -13,28 +13,35 @@ Sound emulation by Philip Bennett
 
 SCSI code by ElSemi
 
-To-Do/Issues:
+Known Issues:
 
-Street Fighter 3 2nd Impact uses flipped tilemaps during flashing, emulate this.
+Tilemap Global X/Y flip not emulated
+    Street Fighter 3 2nd Impact uses Y-flipped tilemaps during flashing.
+    Warzard uses X-flipped tilemaps during special effects.
+
+Whole screen flip not emulated
+
+Miscellaneous TO-DOs:
 
 DMA ack IRQ10 generation:
     Character and Palette DMAs speed is unknown, needs to be measured.
 
 Alpha Blending Effects
-    These are actually palette manipulation effects, not true blending.  How the values are used is
-    not currently 100% understood.  They are incorrect if you use player 2 in Warzard
+    These are actually palette manipulation effects, not true blending.
+    Verify them, current emulation might not be 100% accurate.
 
-Linezoom
-    Is it used in games? May be enabled in jojo/jojoba dev.menu BG test (P2 btn4)
+Tilemap Linezoom
+    Seems unused in games. May be enabled in jojo/jojoba dev.menu BG test (P2 btn4)
 
 Palette DMA effects
     Verify them, they might not be 100% accurate at the moment
 
 Verify Full Screen Zoom on real hardware
-    Which is which, x & y registers, how far can it zoom etc.
+    How far can it zoom etc.
 
 Verify CRT registers
-    Only SFIII2 changes them, for widescreen mode.  What other modes are possible?
+    Actual Pixel clock for H Start and H Blank registers is unknown. It is not known which is base pixel clock
+    and how it affected by register 40C0080 bits.
 
 Sprite positioning glitches
     Some sprites are still in the wrong places, seems the placement of zooming sprites is imperfect
@@ -42,8 +49,7 @@ Sprite positioning glitches
     the same occurs in the sf games.  doesn't look like the origin is correct when zooming in all cases.
 
 Gaps in Sprite Zooming
-    probably caused by use of drawgfx instead of processing as a single large sprite, but could also be due to the
-    positioning of each part of the sprite.  Warzard is confirmed to have gaps during some cut-scenes on real hardware.
+    Warzard is confirmed to have gaps during some cut-scenes on real hardware.
 
 ---
 
@@ -472,17 +478,18 @@ Hardware registers info
 		04-1F					Global Scrolls 1-7
 		20		xxxx xxxx xxxx xxxx Tilemap 0 Scroll X
 		22		xxxx xxxx xxxx xxxx Tilemap 0 Scroll Y
-		24		xxxx xxxx xxxx xxxx Tilemap 0 ??
+		24		---- -a98 76-- ---- Tilemap 0 ?? always 0
+				---- ---- ---4 3210 Tilemap 0 Width (in tiles)
 		26		f--- ---- ---- ---- Tilemap 0 Enable
 				-e-- ---- ---- ---- Tilemap 0 Line Scroll Enable
-				--dc ---- ---- ---- Tilemap 0 Line Zoom Enable? (seems unused in games, but might be enabled in jojo dev.menu BG test)
-				---- b--- ---- ---- Tilemap 0 ? Flip X (Warzard demo fights during special moves)
+				--d- ---- ---- ---- Tilemap 0 Line Zoom Enable (seems unused in games, but might be enabled in jojo dev.menu BG test)
+				---c ---- ---- ---- Tilemap 0 ?? set together with Zoom
+				---- b--- ---- ---- Tilemap 0 Flip X (not implemented, Warzard demo fights during special moves)
 				---- -a-- ---- ---- Tilemap 0 Flip Y (not implemented, Capcom logos background during sfiii2 flashing)
+				---- --98 7654 3210	Tilemap 0 ?? always 0
 		28		-edc ba98 ---- ---- Tilemap 0 Line Scroll and Zoom Base address (1st word is scroll, 2nd word is zoom)
 				---- ---- -654 3210 Tilemap 0 Tiles Base address
-		2A		unused ? always 0
-		2C		unused ? always 0
-		2E		unused ? always 0
+		2A-2F	unused
 		30-5F					Tilemaps 1-3
 												Values: 384		495 "wide"
 		60		xxxx xxxx xxxx xxxx	H Sync end*			42		35
@@ -758,20 +765,17 @@ inline void cps3_state::cps3_drawgfxzoom(bitmap_rgb32 &dest_bmp,const rectangle 
 								if (c != transparent_color)
 								{
 									/* blending isn't 100% understood */
+									// is it really ORed or bits should be replaced same as in Seta/SSV hardware ?
 									if (gfx->granularity() == 64)
 									{
 										// OK for sfiii2 spotlight
-										if (c & 0x01) dest[x] |= 0x2000;
-										if (c & 0x02) dest[x] |= 0x4000;
-										if (c & 0x04) dest[x] |= 0x8000;
-										if (c & 0x08) dest[x] |= 0x10000;
-										if (c & 0xf0) dest[x] |= machine().rand(); // ?? not used?
+										dest[x] |= (c & 0xf) << 13;
+										//if (c & 0xf0) dest[x] = machine().rand(); // ?? not used?
 									}
 									else
 									{
 										// OK for jojo intro, and warzard swords, and various shadows in sf games
-										if (c & 0x01) dest[x] |= 0x8000;
-										if (color & 0x100) dest[x] |= 0x10000;
+										dest[x] |= ((c & 1) << 15) | ((color & 1) << 16);
 									}
 								}
 								x_index += dx;
@@ -964,6 +968,7 @@ void cps3_state::set_mame_colours(int colournum, u16 data, u32 fadeval)
 		data = (data & 0x8000) | (r << 0) | (g << 5) | (b << 10);
 	}
 
+	colournum &= 0x1ffff;
 	m_colourram[colournum] = data;
 
 	m_mame_colours[colournum] = rgb_t(pal5bit(r), pal5bit(g), pal5bit(b));
@@ -975,7 +980,11 @@ void cps3_state::set_mame_colours(int colournum, u16 data, u32 fadeval)
 void cps3_state::video_start()
 {
 	m_char_ram = make_unique_clear<u32[]>(0x800000/4);
+	m_mame_colours = make_unique_clear<u32[]>(0x20000);
 	m_ss_ram = make_unique_clear<u8[]>(0x8000);
+	m_spritelist = make_unique_clear<u32[]>(0x80000/4);
+
+	m_spritelist[0] = 0x80000000;
 
 	/* create the char set (gfx will then be updated dynamically from RAM) */
 	m_gfxdecode->set_gfx(0, std::make_unique<gfx_element>(m_palette, cps3_tiles8x8_layout, &m_ss_ram[0x4000], 0, m_palette->entries() / 16, 0));
@@ -983,8 +992,6 @@ void cps3_state::video_start()
 	/* create the char set (gfx will then be updated dynamically from RAM) */
 	m_gfxdecode->set_gfx(1, std::make_unique<gfx_element>(m_palette, cps3_tiles16x16_layout, (u8 *)m_char_ram.get(), 0, m_palette->entries() / 64, 0));
 	m_gfxdecode->gfx(1)->set_granularity(64);
-
-	m_mame_colours = make_unique_clear<u32[]>(0x80000/2);
 
 	m_screenwidth = 384;
 
@@ -996,14 +1003,15 @@ void cps3_state::video_start()
 
 	m_renderbuffer_bitmap.fill(0x3f, m_renderbuffer_clip);
 
-	save_item(NAME(m_ppu_gscroll));
-	save_item(NAME(m_ss_hscroll));
-	save_item(NAME(m_ss_vscroll));
-	save_item(NAME(m_ss_pal_base));
-
 	save_pointer(NAME(m_char_ram), 0x800000/4);
-	save_pointer(NAME(m_mame_colours), 0x80000/2);
+	save_pointer(NAME(m_mame_colours), 0x20000);
 	save_pointer(NAME(m_ss_ram), 0x8000);
+	save_pointer(NAME(m_spritelist), 0x80000/4);
+}
+
+static inline int to_s10(int data)
+{
+	return (data & 0x1ff) - (data & 0x200);
 }
 
 // the 0x400 bit in the tilemap regs is "draw it upside-down"  (bios tilemap during flashing, otherwise capcom logo is flipped)
@@ -1060,11 +1068,11 @@ void cps3_state::draw_tilemapsprite_line(int tmnum, int drawline, bitmap_rgb32 &
 	for (int x = cliprect.left() / 16; x < (cliprect.right() / 16) + 2; x++)
 	{
 		u32 const dat = m_spriteram[mapbase + ((tileline & 63) * 64) + ((x + scrollx / 16) & 63)];
-		u32 const tileno = (dat & 0xffff0000) >> 17;
-		u32 const colour = (dat & 0x000001ff) >> 0;
-		bool const bpp = (dat & 0x0000200) >> 9;
-		bool const yflip = (dat & 0x00000800) >> 11;
+		u32 const tileno = (dat & 0xfffe0000) >> 17;
 		bool const xflip = (dat & 0x00001000) >> 12;
+		bool const yflip = (dat & 0x00000800) >> 11;
+		bool const bpp =   (dat & 0x00000200) >> 9;
+		u32 const colour = (dat & 0x000001ff) >> 0;
 
 		if (!bpp) m_gfxdecode->gfx(1)->set_granularity(256);
 		else m_gfxdecode->gfx(1)->set_granularity(64);
@@ -1108,17 +1116,12 @@ void cps3_state::draw_fg_layer(screen_device &screen, bitmap_rgb32 &bitmap, cons
 
 u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
-	attoseconds_t period = screen.frame_period().attoseconds();
-	rectangle visarea = screen.visible_area();
-
-	int bg_drawn[4] = { 0, 0, 0, 0 };
-
-	/* registers are normally 002a006f 01ef01c6
-	        widescreen mode = 00230076 026501c6
-	    only SFIII2 uses widescreen, I don't know exactly which register controls it */
 	int width = ((m_ppu_crtc_zoom[1] & 0xffff0000) >> 16) - (m_ppu_crtc_zoom[0] & 0xffff);
 	if (width > 0 && m_screenwidth != width)
 	{
+		attoseconds_t period = screen.frame_period().attoseconds();
+		rectangle visarea = screen.visible_area();
+
 		int height = ((m_ppu_crtc_zoom[5] & 0xffff0000) >> 16) - (m_ppu_crtc_zoom[4] & 0xffff);
 		visarea.set(0, width - 1, 0, height - 1);
 		screen.configure(width, height, visarea, period);
@@ -1150,53 +1153,53 @@ u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 	//logerror("Spritelist start:\n");
 	for (int i = 0x00000 / 4; i < 0x2000 / 4; i += 4)
 	{
-		int const xpos = (m_spriteram[i + 1] & 0x03ff0000) >> 16;
-		int const ypos = m_spriteram[i + 1] & 0x000003ff;
-		u8 const gscroll = (m_spriteram[i + 0] & 0x70000000) >> 28;
-		u32 const length = (m_spriteram[i + 0] & 0x01ff0000) >> 16; // how many entries in the sprite table
-		u32 start = (m_spriteram[i + 0] & 0x00007ff0) >> 4;
+		if (m_spritelist[i + 0] & 0x80000000)
+			break;
 
-		bool const whichbpp = (m_spriteram[i + 2] & 0x40000000) >> 30; // not 100% sure if this is right, jojo title / characters
-		bool const whichpal = (m_spriteram[i + 2] & 0x20000000) >> 29;
-		u8 const global_xflip = (m_spriteram[i + 2] & 0x10000000) >> 28;
-		u8 const global_yflip = (m_spriteram[i + 2] & 0x08000000) >> 27;
-		bool const global_alpha = (m_spriteram[i + 2] & 0x04000000) >> 26; // alpha / shadow? set on sfiii2 shadows, and big black image in jojo intro
-		bool const global_bpp = (m_spriteram[i + 2] & 0x02000000) >> 25;
-		u32 const global_pal = (m_spriteram[i + 2] & 0x01ff0000) >> 16;
+		u8 const gscroll = (m_spritelist[i + 0] & 0x70000000) >> 28;
+		u32 const length = (m_spritelist[i + 0] & 0x01ff0000) >> 16; // how many entries in the sprite table
+		u32 start =        (m_spritelist[i + 0] & 0x00007ff0) >> 4;
+		
+		int const xpos =   (m_spritelist[i + 1] & 0x03ff0000) >> 16;
+		int const ypos =    m_spritelist[i + 1] & 0x000003ff;
+
+		bool const whichbpp =     (m_spritelist[i + 2] & 0x40000000) >> 30; // not 100% sure if this is right, jojo title / characters
+		bool const whichpal =     (m_spritelist[i + 2] & 0x20000000) >> 29;
+		u8 const global_xflip =   (m_spritelist[i + 2] & 0x10000000) >> 28;
+		u8 const global_yflip =   (m_spritelist[i + 2] & 0x08000000) >> 27;
+		bool const global_alpha = (m_spritelist[i + 2] & 0x04000000) >> 26; // alpha / shadow? set on sfiii2 shadows, and big black image in jojo intro
+		bool const global_bpp =   (m_spritelist[i + 2] & 0x02000000) >> 25;
+		u32 const global_pal =    (m_spritelist[i + 2] & 0x01ff0000) >> 16;
+		//int const tilemapnum =  (m_spritelist[i + 2] & 0x00000030) >> 4; // jojo and jojoba only
 
 		int const gscrollx = (m_ppu_gscroll[gscroll] & 0x03ff0000) >> 16;
 		int const gscrolly = (m_ppu_gscroll[gscroll] & 0x000003ff) >> 0;
 		start = (start * 0x100) >> 2;
 
-		if ((m_spriteram[i + 0] & 0xf0000000) == 0x80000000)
-			break;
-
 		for (int j = 0; j < (length) * 4; j += 4)
 		{
-			u32 const value1 = (m_spriteram[start + j + 0]);
-			u32 const value2 = (m_spriteram[start + j + 1]);
-			u32 const value3 = (m_spriteram[start + j + 2]);
+			u32 const value1 = (m_spritelist[start + j + 0]);
+			u32 const value2 = (m_spritelist[start + j + 1]);
+			u32 const value3 = (m_spritelist[start + j + 2]);
 
-			//u8* srcdata = (u8*)m_char_ram;
-			//u32 sourceoffset = (value1 >>14) & 0x7fffff;
+			static const int tilestable[4] = { 8,1,2,4 };
 
 			u32 const tileno = (value1 & 0xfffe0000) >> 17;
+			u8 flipx =         (value1 & 0x00001000) >> 12;
+			u8 flipy =         (value1 & 0x00000800) >> 11;
+			bool const alpha = (value1 & 0x00000400) >> 10; //? this one is used for alpha effects on warzard
+			bool const bpp =   (value1 & 0x00000200) >> 9;
+			u32 const pal =    (value1 & 0x000001ff);
 
 			int xpos2 = (value2 & 0x03ff0000) >> 16;
 			int ypos2 = (value2 & 0x000003ff) >> 0;
-			u8 flipx = (value1 & 0x00001000) >> 12;
-			u8 flipy = (value1 & 0x00000800) >> 11;
-			bool const alpha = (value1 & 0x00000400) >> 10; //? this one is used for alpha effects on warzard
-			bool const bpp = (value1 & 0x00000200) >> 9;
-			u32 const pal = (value1 & 0x000001ff);
 
 			/* these are the sizes to actually draw */
 			u32 const ysizedraw2 = ((value3 & 0x7f000000) >> 24) + 1;
 			u32 const xsizedraw2 = ((value3 & 0x007f0000) >> 16) + 1;
-
-			static const int tilestable[4] = { 8,1,2,4 };
-			s8 ysize2 = ((value3 & 0x0000000c) >> 2);
-			s8 xsize2 = ((value3 & 0x00000003) >> 0);
+			//u8 unk =             ((value3 & 0x00000300) >> 8); // 3 - sprites, 0 - tilemaps, enable X/Y zooms ?
+			s8 ysize2 =            ((value3 & 0x0000000c) >> 2);
+			s8 xsize2 =            ((value3 & 0x00000003) >> 0);
 
 			if (ysize2 == 0)
 			{
@@ -1211,14 +1214,13 @@ u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 				/* Urgh, the startline / endline seem to be direct screen co-ordinates regardless of fullscreen zoom
 				    which probably means the fullscreen zoom is applied when rendering everything, not aftewards */
 
-				if (bg_drawn[tilemapnum] == 0)
+				for (int yy = 0; yy < ysizedraw2; yy++)
 				{
-					for (int uu = m_renderbuffer_clip.top(); uu <= m_renderbuffer_clip.bottom(); uu++)
-					{
-						draw_tilemapsprite_line(tilemapnum, uu, m_renderbuffer_bitmap, m_renderbuffer_clip);
-					}
+					int cury_pos = to_s10(yy - (to_s10(ypos2) + to_s10(gscrolly)) - 19); // OK for sfiii Alex's stage, but not sure if hardware realy works this way
+
+					if (cury_pos >= m_renderbuffer_clip.top() && cury_pos <= m_renderbuffer_clip.bottom())
+						draw_tilemapsprite_line(tilemapnum, cury_pos, m_renderbuffer_bitmap, m_renderbuffer_clip);
 				}
-				bg_drawn[tilemapnum] = 1;
 			}
 			else
 			{
@@ -1252,6 +1254,14 @@ u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 
 				if (flipy) ypos2 -= (ysize2 * yinc) >> 16;
 
+				/* use the palette value from the main list or the sublists? */
+				int actualpal = whichpal ? global_pal : pal;
+
+				/* use the bpp value from the main list or the sublists? */
+				m_gfxdecode->gfx(1)->set_granularity((whichbpp ? global_bpp : bpp) ? 64 : 256);
+
+				int trans = (global_alpha || alpha) ? CPS3_TRANSPARENCY_PEN_INDEX_BLEND : CPS3_TRANSPARENCY_PEN_INDEX;
+
 				int count = 0;
 				for (int xx = 0; xx < xsize2 + 1; xx++)
 				{
@@ -1268,7 +1278,6 @@ u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 					for (int yy = 0; yy < ysize2 + 1; yy++)
 					{
 						int current_ypos;
-						int actualpal;
 
 						if (flipy) current_ypos = (ypos + ypos2 + ((yy * yinc) >> 16));
 						else current_ypos = (ypos + ypos2 - ((yy * yinc) >> 16));
@@ -1282,32 +1291,7 @@ u32 cps3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 
 						//if ( (whichbpp) && (m_screen->frame_number() & 1)) continue;
 
-						/* use the palette value from the main list or the sublists? */
-						if (whichpal)
-						{
-							actualpal = global_pal;
-						}
-						else
-						{
-							actualpal = pal;
-						}
-
-						/* use the bpp value from the main list or the sublists? */
-						if (whichbpp)
-						{
-							if (!global_bpp) m_gfxdecode->gfx(1)->set_granularity(256);
-							else m_gfxdecode->gfx(1)->set_granularity(64);
-						}
-						else
-						{
-							if (!bpp) m_gfxdecode->gfx(1)->set_granularity(256);
-							else m_gfxdecode->gfx(1)->set_granularity(64);
-						}
-
-						int realtileno = tileno + count;
-						int trans = (global_alpha || alpha) ? CPS3_TRANSPARENCY_PEN_INDEX_BLEND : CPS3_TRANSPARENCY_PEN_INDEX;
-
-						cps3_drawgfxzoom(m_renderbuffer_bitmap, m_renderbuffer_clip, m_gfxdecode->gfx(1), realtileno, actualpal, 0 ^ flipx, 0 ^ flipy, current_xpos, current_ypos, trans, 0, xscale, yscale);
+						cps3_drawgfxzoom(m_renderbuffer_bitmap, m_renderbuffer_clip, m_gfxdecode->gfx(1), tileno + count, actualpal, 0 ^ flipx, 0 ^ flipy, current_xpos, current_ypos, trans, 0, xscale, yscale);
 						count++;
 					}
 				}
@@ -1423,6 +1407,27 @@ WRITE32_MEMBER(cps3_state::cram_data_w)
 	data = little_endianize_int32(data);
 	COMBINE_DATA(&m_char_ram[fulloffset]);
 	m_gfxdecode->gfx(1)->mark_dirty(fulloffset/0x40);
+}
+
+WRITE16_MEMBER(cps3_state::spritedma_w)
+{
+	u16 prev = m_spritelist_dma;
+	COMBINE_DATA(&m_spritelist_dma);
+
+	// display list caching (into PPU on-chip RAM ?)
+	if ((m_spritelist_dma & 8) && !(prev & 8)) // 0->1
+	{
+		for (int i = 0; i < 0x2000/4; i += 4)
+		{
+			std::copy(&m_spriteram[i], &m_spriteram[i + 4], &m_spritelist[i]); // copy main list record
+			u32 dat = m_spriteram[i];
+			if (dat & 0x80000000)
+				break;
+			u32 offs =   (dat & 0x00007fff) << 2;
+			u32 length = (dat & 0x01ff0000) >> 16;
+			std::copy(&m_spriteram[offs], &m_spriteram[offs + length*4], &m_spritelist[offs]); // copy sublist
+		}
+	}
 }
 
 /* FLASH ROM ACCESS */
@@ -1797,6 +1802,8 @@ WRITE8_MEMBER(cps3_state::ssregs_w)
 	case 0x12:
 		m_ss_pal_base = data;
 		break;
+	case 0x14:
+		break;
 	default:
 		logerror("SS regs write %02X data %02X\n", offset, data);
 		break;
@@ -2149,7 +2156,7 @@ void cps3_state::cps3_map(address_map &map)
 	map(0x040c0040, 0x040c004b).writeonly().share("tmap40_regs");
 	map(0x040c0050, 0x040c005b).writeonly().share("tmap50_regs");
 	map(0x040c0060, 0x040c007f).writeonly().share("ppu_crtc_zoom");
-	map(0x040c0080, 0x040c0083).nopw().umask32(0x0000ffff); // sprite-related, triggered after sprite list upload
+	map(0x040c0080, 0x040c0083).w(FUNC(cps3_state::spritedma_w)).umask32(0x0000ffff);
 	map(0x040c0084, 0x040c0087).w(FUNC(cps3_state::cram_bank_w));
 	map(0x040c0088, 0x040c008b).w(FUNC(cps3_state::cram_gfxflash_bank_w));
 	map(0x040c0094, 0x040c009b).w(FUNC(cps3_state::characterdma_w));
@@ -2276,8 +2283,8 @@ TIMER_DEVICE_CALLBACK_MEMBER(cps3_state::dma_interrupt)
 
 void cps3_state::machine_start()
 {
-	m_eeprom = std::make_unique<u32[]>(0x400/4);
-	subdevice<nvram_device>("eeprom")->set_base(m_eeprom.get(), 0x400);
+	m_eeprom = std::make_unique<u32[]>(0x80/4);
+	subdevice<nvram_device>("eeprom")->set_base(m_eeprom.get(), 0x80);
 
 	save_item(NAME(m_cram_gfxflash_bank));
 	save_item(NAME(m_cram_bank));
@@ -2291,14 +2298,22 @@ void cps3_state::machine_start()
 	save_item(NAME(m_chardma_source));
 	save_item(NAME(m_chardma_other));
 	save_item(NAME(m_current_table_address));
+	save_item(NAME(m_dma_status));
+	save_item(NAME(m_ppu_gscroll));
+	save_item(NAME(m_ss_hscroll));
+	save_item(NAME(m_ss_vscroll));
+	save_item(NAME(m_ss_pal_base));
+	save_item(NAME(m_spritelist_dma));
 
-	save_pointer(NAME(m_eeprom), 0x400/4);
+	save_pointer(NAME(m_eeprom), 0x80/4);
 }
 
 
 void cps3_state::machine_reset()
 {
 	m_current_table_address = -1;
+	m_dma_status = 0;
+	m_spritelist_dma = 0;
 
 	// copy data from flashroms back into user regions + decrypt into regions we execute/draw from.
 	copy_from_nvram();
@@ -2309,6 +2324,8 @@ void cps3_state::device_post_load()
 {
 	// copy data from flashroms back into user regions + decrypt into regions we execute/draw from.
 	copy_from_nvram();
+	m_gfxdecode->gfx(0)->mark_all_dirty();
+	m_gfxdecode->gfx(1)->mark_all_dirty();
 }
 
 
@@ -2502,18 +2519,15 @@ void cps3_state::cps3(machine_config &config)
 
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_raw(XTAL(60'000'000)/8, 486, 0, 384, 259, 0, 224);
+	screen.set_raw(XTAL(42'954'545)/5, (454+1)*6/5, 0, 384, 262+1, 0, 224); // H Total counter uses XTAL/6 clock
 	screen.set_screen_update(FUNC(cps3_state::screen_update));
 	screen.screen_vblank().set(FUNC(cps3_state::vbl_interrupt));
 /*
     Measured clocks:
-        V = 59.5992Hz
-        H = 15.4335kHz
-        H/V = 258.955 ~ 259 lines
-
-    Possible video clocks:
-        60MHz       / 15.4335kHz = 3887.647 / 8 = 485.956 ~ 486 -> likely
-         42.9545MHz / 15.4445kHz = 2781.217 / 6 = 463.536 -> unlikely
+        Video DAC = 8.602MHz (384 wide mode) ~ 42.9545MHz / 5
+        H = 15.73315kHz
+        V = 59.8Hz
+        H/V ~ 263 lines
 */
 
 	TIMER(config, m_dma_timer).configure_generic(FUNC(cps3_state::dma_interrupt));
@@ -3859,15 +3873,17 @@ ROM_END
 
 *****************************************************************************************/
 
+#define GAME_FLAGS (MACHINE_SUPPORTS_SAVE)
+
 /* Red Earth / Warzard */
 
 // 961121
-GAME( 1996, redearth,    0,        redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Red Earth (Euro 961121)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1996, warzard,     redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Warzard (Japan 961121)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1996, redearth,    0,        redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Red Earth (Euro 961121)", GAME_FLAGS )
+GAME( 1996, warzard,     redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Warzard (Japan 961121)", GAME_FLAGS )
 
 // 961023
-GAME( 1996, redearthr1,  redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Red Earth (Euro 961023)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1996, warzardr1,   redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Warzard (Japan 961023)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1996, redearthr1,  redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Red Earth (Euro 961023)", GAME_FLAGS )
+GAME( 1996, warzardr1,   redearth, redearth, cps3_re,   cps3_state, init_redearth, ROT0, "Capcom", "Warzard (Japan 961023)", GAME_FLAGS )
 
 /* Street Fighter III: New Generation */
 
@@ -3878,13 +3894,13 @@ GAME( 1996, warzardr1,   redearth, redearth, cps3_re,   cps3_state, init_redeart
 // not dumped
 
 // 970204
-GAME( 1997, sfiii,       0,        sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Euro 970204)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiiu,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (USA 970204)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiia,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiij,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Japan 970204)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiih,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Hispanic 970204)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiin,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204, NO CD, bios set 1)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1997, sfiiina,     sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204, NO CD, bios set 2)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1997, sfiii,       0,        sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Euro 970204)", GAME_FLAGS )
+GAME( 1997, sfiiiu,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (USA 970204)", GAME_FLAGS )
+GAME( 1997, sfiiia,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204)", GAME_FLAGS )
+GAME( 1997, sfiiij,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Japan 970204)", GAME_FLAGS )
+GAME( 1997, sfiiih,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Hispanic 970204)", GAME_FLAGS )
+GAME( 1997, sfiiin,      sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204, NO CD, bios set 1)", GAME_FLAGS )
+GAME( 1997, sfiiina,     sfiii,    sfiii,    cps3,      cps3_state, init_sfiii,    ROT0, "Capcom", "Street Fighter III: New Generation (Asia 970204, NO CD, bios set 2)", GAME_FLAGS )
 
 /* Street Fighter III 2nd Impact: Giant Attack */
 
@@ -3892,65 +3908,65 @@ GAME( 1997, sfiiina,     sfiii,    sfiii,    cps3,      cps3_state, init_sfiii, 
 // not dumped
 
 // 970930
-GAMEL(1997, sfiii2,      0,        sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (USA 970930)", MACHINE_IMPERFECT_GRAPHICS, layout_sfiii2 ) // layout is for widescreen support
-GAMEL(1997, sfiii2j,     sfiii2,   sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (Japan 970930)", MACHINE_IMPERFECT_GRAPHICS, layout_sfiii2 )
-GAMEL(1997, sfiii2n,     sfiii2,   sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (Asia 970930, NO CD)", MACHINE_IMPERFECT_GRAPHICS, layout_sfiii2 )
+GAMEL(1997, sfiii2,      0,        sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (USA 970930)", GAME_FLAGS, layout_sfiii2 ) // layout is for widescreen support
+GAMEL(1997, sfiii2j,     sfiii2,   sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (Japan 970930)", GAME_FLAGS, layout_sfiii2 )
+GAMEL(1997, sfiii2n,     sfiii2,   sfiii2,   cps3,      cps3_state, init_sfiii2,   ROT0, "Capcom", "Street Fighter III 2nd Impact: Giant Attack (Asia 970930, NO CD)", GAME_FLAGS, layout_sfiii2 )
 
 /* JoJo's Venture / JoJo no Kimyou na Bouken */
 
 // 990128
-GAME( 1998, jojo,        0,        jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 990128)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojoj,       jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 990128)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojon,       jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 990128, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1998, jojo,        0,        jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 990128)", GAME_FLAGS )
+GAME( 1998, jojoj,       jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 990128)", GAME_FLAGS )
+GAME( 1998, jojon,       jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 990128, NO CD)", GAME_FLAGS )
 
 // 990108
-GAME( 1998, jojor1,      jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 990108)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojojr1,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 990108)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojonr1,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 990108, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1998, jojor1,      jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 990108)", GAME_FLAGS )
+GAME( 1998, jojojr1,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 990108)", GAME_FLAGS )
+GAME( 1998, jojonr1,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 990108, NO CD)", GAME_FLAGS )
 
 // 981202
-GAME( 1998, jojor2,      jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 981202)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojojr2,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 981202)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1998, jojonr2,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 981202, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1998, jojor2,      jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (USA 981202)", GAME_FLAGS )
+GAME( 1998, jojojr2,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo no Kimyou na Bouken (Japan 981202)", GAME_FLAGS )
+GAME( 1998, jojonr2,     jojo,     jojo,     cps3_jojo, cps3_state, init_jojo,     ROT0, "Capcom", "JoJo's Venture (Asia 981202, NO CD)", GAME_FLAGS )
 
 /* Street Fighter III 3rd Strike: Fight for the Future */
 
 // 990608
-GAME( 1999, sfiii3,      0,        sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Euro 990608)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3u,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (USA 990608)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3j,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990608)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3n,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990608, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, sfiii3,      0,        sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Euro 990608)", GAME_FLAGS )
+GAME( 1999, sfiii3u,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (USA 990608)", GAME_FLAGS )
+GAME( 1999, sfiii3j,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990608)", GAME_FLAGS )
+GAME( 1999, sfiii3n,     sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990608, NO CD)", GAME_FLAGS )
 
 // 990512
-GAME( 1999, sfiii3r1,    sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Euro 990512)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3ur1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (USA 990512)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3jr1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990512)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, sfiii3nr1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990512, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, sfiii3r1,    sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Euro 990512)", GAME_FLAGS )
+GAME( 1999, sfiii3ur1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (USA 990512)", GAME_FLAGS )
+GAME( 1999, sfiii3jr1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990512)", GAME_FLAGS )
+GAME( 1999, sfiii3nr1,   sfiii3,   sfiii3,   cps3,      cps3_state, init_sfiii3,   ROT0, "Capcom", "Street Fighter III 3rd Strike: Fight for the Future (Japan 990512, NO CD)", GAME_FLAGS )
 
 /* JoJo's Bizarre Adventure / JoJo no Kimyou na Bouken: Mirai e no Isan */
 
 // 990927
-GAME( 1999, jojoba,      0,        jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, jojoban,     jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, jojobane,    jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo's Bizarre Adventure (Euro 990927, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, jojoba,      0,        jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927)", GAME_FLAGS )
+GAME( 1999, jojoban,     jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990927, NO CD)", GAME_FLAGS )
+GAME( 1999, jojobane,    jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo's Bizarre Adventure (Euro 990927, NO CD)", GAME_FLAGS )
 
 // 990913
-GAME( 1999, jojobar1,    jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, jojobanr1,   jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, jojobaner1,  jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo's Bizarre Adventure (Euro 990913, NO CD)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, jojobar1,    jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913)", GAME_FLAGS )
+GAME( 1999, jojobanr1,   jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo no Kimyou na Bouken: Mirai e no Isan (Japan 990913, NO CD)", GAME_FLAGS )
+GAME( 1999, jojobaner1,  jojoba,   jojoba,   cps3_jojo, cps3_state, init_jojoba,   ROT0, "Capcom", "JoJo's Bizarre Adventure (Euro 990913, NO CD)", GAME_FLAGS )
 
 // bootlegs, hold START1 during bootup to change games
 
 // newest revision, fixes some issues with Warzard decryption.
-GAME( 1999, cps3boot,    0,        sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (V4)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, cps3boota,   cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (V5)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, cps3boot,    0,        sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (V4)", GAME_FLAGS )
+GAME( 1999, cps3boota,   cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (V5)", GAME_FLAGS )
 
-GAME( 1999, cps3booto,   cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (older)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, cps3bootao,  cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (older)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, cps3booto,   cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (older)", GAME_FLAGS )
+GAME( 1999, cps3bootao,  cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (older)", GAME_FLAGS )
 // this doesn't play 2nd Impact despite it being listed.  2nd Impact uses separate data/code encryption and can't be decrypted cleanly for a standard SH2.  Selecting it just flashes in a copy of 3rd Strike with the 2nd Impact loading screen
-GAME( 1999, cps3booto2,  cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (oldest) (New Generation, 3rd Strike, JoJo's Venture, JoJo's Bizarre Adventure and Red Earth only)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, cps3booto2,  cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "CPS3 Multi-game bootleg for HD6417095 type SH2 (oldest) (New Generation, 3rd Strike, JoJo's Venture, JoJo's Bizarre Adventure and Red Earth only)", GAME_FLAGS )
 // this does not play Red Earth or the 2 Jojo games.  New Generation and 3rd Strike have been heavily modified to work with the separate code/data encryption a dead cart / 2nd Impact cart has.  Selecting the other games will give an 'invalid CD' message.
-GAME( 1999, cps3bootao2, cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (oldest) (New Generation, 2nd Impact and 3rd Strike only)", MACHINE_IMPERFECT_GRAPHICS )
+GAME( 1999, cps3bootao2, cps3boot, sfiii3,   cps3,      cps3_state, init_sfiii2,   ROT0, "bootleg", "CPS3 Multi-game bootleg for dead security cart (oldest) (New Generation, 2nd Impact and 3rd Strike only)", GAME_FLAGS )
 // these are test bootleg CDs for running 2nd Impact on a standard SH2
-GAME( 1999, cps3bs32,    cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "Street Fighter III 2nd Impact: Giant Attack (USA 970930, bootleg for HD6417095 type SH2, V3)", MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1999, cps3bs32a,   cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "Street Fighter III 2nd Impact: Giant Attack (USA 970930, bootleg for HD6417095 type SH2, older)", MACHINE_IMPERFECT_GRAPHICS ) // older / buggier hack
+GAME( 1999, cps3bs32,    cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "Street Fighter III 2nd Impact: Giant Attack (USA 970930, bootleg for HD6417095 type SH2, V3)", GAME_FLAGS )
+GAME( 1999, cps3bs32a,   cps3boot, sfiii3,   cps3,      cps3_state, init_cps3boot, ROT0, "bootleg", "Street Fighter III 2nd Impact: Giant Attack (USA 970930, bootleg for HD6417095 type SH2, older)", GAME_FLAGS ) // older / buggier hack

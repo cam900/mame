@@ -1357,6 +1357,7 @@ uniap2pt                        // 1982 Unitron AP II (in Brazilian Portuguese)
 uniap2ti                        // 1982 Unitron AP II+ (Teclado Inteligente)
 craft2p                         // 1982 Craft?
 laser2c                         // 1985? Laser //c (Brazil)
+hkc8800a                        // 1984 HKC 8800A
 
 @source:apple2e.cpp
 apple2c                         // Apr 1984 Apple //c
@@ -1383,6 +1384,7 @@ cece                            // China Education Computer-E
 cecg                            // China Education Computer-G
 cecm                            // China Education Computer-M
 cec2000                         // China Education Computer-2000
+zijini                          // 1989 Zi Jin I
 
 @source:apple2gs.cpp
 apple2gs                        // Aug 1989 Apple IIgs ROM03
@@ -2460,6 +2462,9 @@ ficpio2                         // 1995 FIC 486-PIO-2
 ficvipio                        // FIC 486-VIP-IO
 ficvipio2                       // FIC 486-VIP-IO2
 ftsserv                         // 1991 Apricot FTs (Scorpion)
+pccm321							// PC-Chips M321 motherboard (386)
+pccm326							// PC-Chips M326 motherboard (386)
+pccm919							// PC-Chips M919 motherboard (486)
 hot409                          // Shuttle HOT-409
 ht286                           //
 ibm5162                         // 1986 IBM XT 5162 (XT w/80286)
@@ -15090,6 +15095,10 @@ gyrussb                         // bootleg or actual Taito NZ license?
 gyrussce                        // GX347 (c) 1983 + Centuri license
 venus                           // bootleg
 
+@source:h01x.cpp
+nf500a                          // NF500A - TRS-80 Level II BASIC
+h01jce                          // H-01 JCE - TRS-80 Level II BASIC
+
 @source:h19.cpp
 h19                             // Heath H19 (Zenith Z-19)
 super19                         // Super19 replacement ROMS for H19
@@ -15313,6 +15322,8 @@ gnw_dkong2                      // Nintendo
 gnw_egg                         // Nintendo
 gnw_fire                        // Nintendo
 gnw_fireatk                     // Nintendo
+gnw_fires                       // Nintendo
+gnw_flagman                     // Nintendo
 gnw_gcliff                      // Nintendo
 gnw_ghouse                      // Nintendo
 gnw_helmet                      // Nintendo
@@ -31119,6 +31130,8 @@ cforteb                         //
 @source:novag_const.cpp
 const
 const36
+const36a
+constq
 ssensor4
 supercon
 
@@ -34260,6 +34273,7 @@ tkingb
 
 @source:saitek_superstar.cpp
 sstar28k
+tstar432
 
 @source:sam.cpp
 24_130                          //
@@ -37508,6 +37522,7 @@ kurikint                        // B42 (c) 1988 Taito Corporation Japan (World)
 kurikinta                       // B42 (c) 1988 Taito Corporation Japan (World)
 kurikintj                       // B42 (c) 1988 Taito Corporation (Japan)
 kurikintu                       // B42 (c) 1988 Taito America Corporation (US)
+kurikintw                       // B42 (c) 1988 Taito Corporation (US, World Games, Inc. license)
 lagirl                          // plgirls bootleg?
 palamed                         // C63 (c) 1990 Hot-B Co., Ltd. (US)
 palamedj                        // C63 (c) 1990 Taito Corporation (Japan)
@@ -37600,7 +37615,8 @@ nightrai                        // 2001.05 Night Raid (V2.03J)
 otenamhf                        // 2005.04 Otenami Haiken Final (V2.07JC)
 otenamih                        // 1999.02 Otenami Haiken (Success)
 otenki                          // 2001.10 Otenki Kororin
-psyvaria                        // 2000.03 Psyvariar -Medium Unit- (V2.04J)
+psyvaria                        // 2000.03 Psyvariar -Medium Unit- (V2.02O)
+psyvarij                        // 2000.03 Psyvariar -Medium Unit- (V2.04J)
 psyvarrv                        // 2000.09 Psyvariar -Revision- (V2.04J)
 raycris                         // 1998.12 Ray Crisis (V2.03J)
 rcdego                          // 1999.06 RC De Go (V2.03J)

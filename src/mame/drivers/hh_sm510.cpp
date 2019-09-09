@@ -44,9 +44,9 @@ Game list (* denotes not emulated yet)
 Serial  Series MCU     Title
 ---------------------------------------------
 AC-01     s    SM5A    Ball (aka Toss-Up)
-FL-02*    s    SM5A?   Flagman
+FL-02     s    SM5A    Flagman
 MT-03     s    SM5A    Vermin (aka The Exterminator)
-RC-04*    s    SM5A?   Fire (aka Fireman Fireman)
+RC-04     s    SM5A    Fire (aka Fireman Fireman)
 IP-05*    s    SM5A?   Judge
 MN-06*    g    SM5A?   Manhole
 CN-07     g    SM5A    Helmet (aka Headache)
@@ -1297,6 +1297,88 @@ ROM_END
 
 /***************************************************************************
 
+  Nintendo Game & Watch: Flagman (model FL-02)
+  * PCB label FL-02
+  * Sharp SM5A label FL-02 2005 (no decap)
+  * lcd screen with custom segments, 1-bit sound
+
+  In the USA, it was distributed as Flag Man by Mego under their Time-Out series.
+
+***************************************************************************/
+
+class gnw_flagman_state : public hh_sm510_state
+{
+public:
+	gnw_flagman_state(const machine_config &mconfig, device_type type, const char *tag) :
+		hh_sm510_state(mconfig, type, tag)
+	{ }
+
+	void gnw_flagman(machine_config &config);
+};
+
+// config
+
+static INPUT_PORTS_START( gnw_flagman )
+	PORT_START("IN.0") // R2
+	PORT_BIT( 0x0f, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("IN.1") // R3
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICKLEFT_UP ) PORT_CHANGED_CB(input_changed) PORT_16WAY PORT_NAME("1") // 1
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICKRIGHT_UP ) PORT_CHANGED_CB(input_changed) PORT_16WAY PORT_NAME("2") // 2
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_JOYSTICKLEFT_DOWN ) PORT_CHANGED_CB(input_changed) PORT_16WAY PORT_NAME("3") // 3
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICKRIGHT_DOWN ) PORT_CHANGED_CB(input_changed) PORT_16WAY PORT_NAME("4") // 4
+
+	PORT_START("IN.2") // R4
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_SELECT ) PORT_CHANGED_CB(input_changed) PORT_NAME("Time")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_START2 ) PORT_CHANGED_CB(input_changed) PORT_NAME("Game B")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_START1 ) PORT_CHANGED_CB(input_changed) PORT_NAME("Game A")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_UNUSED )
+
+	PORT_START("B")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED ) // display test?
+
+	PORT_START("ACL")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_SERVICE1 ) PORT_CHANGED_CB(acl_button) PORT_NAME("ACL")
+INPUT_PORTS_END
+
+void gnw_flagman_state::gnw_flagman(machine_config &config)
+{
+	/* basic machine hardware */
+	SM5A(config, m_maincpu);
+	m_maincpu->set_r_mask_option(sm510_base_device::RMASK_DIRECT); // confirmed
+	m_maincpu->write_segs().set(FUNC(hh_sm510_state::sm500_lcd_segment_w));
+	m_maincpu->read_k().set(FUNC(hh_sm510_state::input_r));
+	m_maincpu->write_r().set(FUNC(hh_sm510_state::piezo_input_w));
+	m_maincpu->read_b().set_ioport("B");
+
+	/* video hardware */
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen.set_refresh_hz(60);
+	screen.set_size(1511, 1080);
+	screen.set_visarea_full();
+
+	/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+	SPEAKER_SOUND(config, m_speaker);
+	m_speaker->add_route(ALL_OUTPUTS, "mono", 0.25);
+}
+
+// roms
+
+ROM_START( gnw_flagman )
+	ROM_REGION( 0x1000, "maincpu", 0 )
+	ROM_LOAD( "fl-02", 0x0000, 0x0740, CRC(cc7a99e4) SHA1(d03d9a6b278bc11df7839708831241b5fa805f69) )
+
+	ROM_REGION( 55994, "screen", 0)
+	ROM_LOAD( "gnw_flagman.svg", 0, 55994, CRC(7ab91965) SHA1(a78b8b28b6849fea6a216c4b549c90e8cf1602fe) )
+ROM_END
+
+
+
+
+
+/***************************************************************************
+
   Nintendo Game & Watch: Vermin (model MT-03)
   * PCB label MT-03
   * Sharp SM5A label MT-03 5012 (no decap)
@@ -1370,6 +1452,89 @@ ROM_START( gnw_vermin )
 
 	ROM_REGION( 105437, "screen", 0)
 	ROM_LOAD( "gnw_vermin.svg", 0, 105437, CRC(c0fc6c40) SHA1(fc64292185aa3d0c92ddfce9227722a17aa5d43f) )
+ROM_END
+
+
+
+
+
+/***************************************************************************
+
+  Nintendo Game & Watch: Fire (model RC-04)
+  * PCB label RC-04
+  * Sharp SM5A label RC-04 5103 (no decap)
+  * lcd screen with custom segments, 1-bit sound
+
+  This is the silver version, there's also a wide screen version.
+
+  In the USA, it was distributed as Fireman Fireman by Mego under their Time-Out series.
+
+***************************************************************************/
+
+class gnw_fires_state : public hh_sm510_state
+{
+public:
+	gnw_fires_state(const machine_config &mconfig, device_type type, const char *tag) :
+		hh_sm510_state(mconfig, type, tag)
+	{
+		inp_fixed_last();
+	}
+
+	void gnw_fires(machine_config &config);
+};
+
+// config
+
+static INPUT_PORTS_START( gnw_fires )
+	PORT_START("IN.0")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_SELECT ) PORT_CHANGED_CB(input_changed) PORT_NAME("Time")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_START2 ) PORT_CHANGED_CB(input_changed) PORT_NAME("Game B")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_START1 ) PORT_CHANGED_CB(input_changed) PORT_NAME("Game A")
+	PORT_CONFNAME( 0x08, 0x00, "Invincibility (Cheat)") // factory test, unpopulated on PCB -- disable after boot
+	PORT_CONFSETTING(    0x00, DEF_STR( Off ) )
+	PORT_CONFSETTING(    0x08, DEF_STR( On ) )
+
+	PORT_START("BA")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_CHANGED_CB(input_changed) PORT_16WAY
+
+	PORT_START("B")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_CHANGED_CB(input_changed) PORT_16WAY
+
+	PORT_START("ACL")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_SERVICE1 ) PORT_CHANGED_CB(acl_button) PORT_NAME("ACL")
+INPUT_PORTS_END
+
+void gnw_fires_state::gnw_fires(machine_config &config)
+{
+	/* basic machine hardware */
+	SM5A(config, m_maincpu);
+	m_maincpu->set_r_mask_option(sm510_base_device::RMASK_DIRECT); // confirmed
+	m_maincpu->write_segs().set(FUNC(hh_sm510_state::sm500_lcd_segment_w));
+	m_maincpu->read_k().set(FUNC(hh_sm510_state::input_r));
+	m_maincpu->write_r().set(FUNC(hh_sm510_state::piezo_r1_w));
+	m_maincpu->read_ba().set_ioport("BA");
+	m_maincpu->read_b().set_ioport("B");
+
+	/* video hardware */
+	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_SVG));
+	screen.set_refresh_hz(60);
+	screen.set_size(1646, 1080);
+	screen.set_visarea_full();
+
+	/* sound hardware */
+	SPEAKER(config, "mono").front_center();
+	SPEAKER_SOUND(config, m_speaker);
+	m_speaker->add_route(ALL_OUTPUTS, "mono", 0.25);
+}
+
+// roms
+
+ROM_START( gnw_fires )
+	ROM_REGION( 0x1000, "maincpu", 0 )
+	ROM_LOAD( "rc-04", 0x0000, 0x0740, CRC(154ef27d) SHA1(fb65826dfd405ad05fe0f5f947c213214bbd61c0) )
+
+	ROM_REGION( 102509, "screen", 0)
+	ROM_LOAD( "gnw_fires.svg", 0, 102509, CRC(314152ca) SHA1(bb6cd7dfba54d8cd5698c0cf2f381a1489cd8286) )
 ROM_END
 
 
@@ -1557,6 +1722,9 @@ ROM_END
   * Sharp SM5A label OC-22 204A (no decap)
   * lcd screen with custom segments, 1-bit sound
 
+  Also cloned in 1989 by Elektronika(USSR) as Тайны океана (Tayny okeana),
+  it is close to identical, graphics as well.
+
 ***************************************************************************/
 
 class gnw_octopus_state : public hh_sm510_state
@@ -1731,8 +1899,9 @@ ROM_END
   * Sharp SM5A label FP-24 51YB (die label CMS646, ROM ID 74)
   * lcd screen with custom segments, 1-bit sound
 
-  In 1989, Elektronika(USSR) released a clone: Merry Cook. This game shares
-  the same ROM, though the graphics are slightly different.
+  In 1989, Elektronika(USSR) released a clone: Весёлый повар (Vesolyy povar,
+  export version: Merry Cook). This game shares the same ROM, though the graphics
+  are slightly different.
 
 ***************************************************************************/
 
@@ -1846,11 +2015,11 @@ ROM_END
   MC-25 and EG-26 are the same game, it's assumed that the latter was for
   regions where Nintendo wasn't able to license from Disney.
 
-  In 1984, Elektronika(USSR) released a clone: Nu, pogodi! This was followed
-  by several other titles that were the same under the hood, only differing
-  in graphics. They also made a slightly modified version, adding a new game
-  mode (by pressing A+B) where the player/CPU roles are reversed. This version
-  is known as Razvedciki kosmosa (export version: Explorers of Space).
+  In 1984, Elektronika(USSR) released a clone: Ну, погоди! (Nu, pogodi!). This was
+  followed by several other titles that were the same under the hood, only differing
+  in graphics. They also made a slightly modified version, adding a new game mode
+  (by pressing A+B) where the player/CPU roles are reversed. This version is known as
+  Разведчики космоса (Razvedchiki kosmosa, export version: Explorers of Space).
 
 ***************************************************************************/
 
@@ -2008,8 +2177,9 @@ ROM_END
 
   This is the wide screen version, there's also a silver version.
 
-  In 1989 Elektronika(USSR) release a clone: Space Bridge. This game shares
-  the same ROM, though the graphics are slightly different.
+  In 1989 Elektronika(USSR) released a clone: Космический мост (Kosmicheskiy most,
+  export version: Space Bridge). This game shares the same ROM, though the
+  graphics are different.
 
 ***************************************************************************/
 
@@ -9910,7 +10080,9 @@ CONS( 1991, kgarfld,     0,          0, kgarfld,     kgarfld,     kgarfld_state,
 
 // Nintendo G&W: silver/gold (initial series is uncategorized, "silver" was made up later)
 CONS( 1980, gnw_ball,    0,          0, gnw_ball,    gnw_ball,    gnw_ball_state,    empty_init, "Nintendo", "Game & Watch: Ball", MACHINE_SUPPORTS_SAVE )
+CONS( 1980, gnw_flagman, 0,          0, gnw_flagman, gnw_flagman, gnw_flagman_state, empty_init, "Nintendo", "Game & Watch: Flagman", MACHINE_SUPPORTS_SAVE )
 CONS( 1980, gnw_vermin,  0,          0, gnw_vermin,  gnw_vermin,  gnw_vermin_state,  empty_init, "Nintendo", "Game & Watch: Vermin", MACHINE_SUPPORTS_SAVE )
+CONS( 1980, gnw_fires,   0,          0, gnw_fires,   gnw_fires,   gnw_fires_state,   empty_init, "Nintendo", "Game & Watch: Fire (silver)", MACHINE_SUPPORTS_SAVE )
 CONS( 1981, gnw_helmet,  0,          0, gnw_helmet,  gnw_helmet,  gnw_helmet_state,  empty_init, "Nintendo", "Game & Watch: Helmet", MACHINE_SUPPORTS_SAVE )
 
 // Nintendo G&W: wide screen
