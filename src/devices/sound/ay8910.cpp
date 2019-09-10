@@ -622,6 +622,42 @@ static const u32 duty_cycle[9] =
 	0xfffffffe  // 96.875 %
 };
 
+static const u32 duty_cycle_extended[32] =
+{
+	0x80000000,
+	0xc0000000,
+	0xe0000000,
+	0xf0000000,
+	0xf8000000,
+	0xfc000000,
+	0xfe000000,
+	0xff000000,
+	0xff800000,
+	0xffc00000,
+	0xffe00000,
+	0xfff00000,
+	0xfff80000,
+	0xfffc0000,
+	0xfffe0000,
+	0xffff0000,
+	0xffff8000,
+	0xffffc000,
+	0xffffe000,
+	0xfffff000,
+	0xfffff800,
+	0xfffffc00,
+	0xfffffe00,
+	0xffffff00,
+	0xffffff80,
+	0xffffffc0,
+	0xffffffe0,
+	0xfffffff0,
+	0xfffffff8,
+	0xfffffffc,
+	0xfffffffe,
+	0xffffffff
+};
+
 static const ay8910_device::ay_ym_param ym2149_param =
 {
 	630, 801,
@@ -1140,7 +1176,7 @@ void ay8910_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 			if (tone->count >= tone->period)
 			{
 				tone->duty_cycle = (tone->duty_cycle - 1) & 0x1f;
-				tone->output = BIT(duty_cycle[tone_duty(tone)], tone->duty_cycle);
+				tone->output = BIT((m_feature & PSG_EXTENDED_DUTY) ? duty_cycle_extended[tone_duty(tone)] : duty_cycle[tone_duty(tone)], tone->duty_cycle);
 				tone->count = 0;
 			}
 		}
@@ -1816,9 +1852,9 @@ ymz294_device::ymz294_device(const machine_config &mconfig, const char *tag, dev
 }
 
 
-DEFINE_DEVICE_TYPE(JKM3439, jkm3439_device, "jkm3439", "JKM3439 SSGS")
+DEFINE_DEVICE_TYPE(JKM8930, jkm8930_device, "jkm8930", "JKM8930 EPSGS")
 
-jkm3439_device::jkm3439_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
-	: ay8910_device(mconfig, YM3439, tag, owner, clock, PSG_TYPE_YM, 3, 2, PSG_HAS_EXPANDED_MODE | PSG_STEREO)
+jkm8930_device::jkm8930_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
+	: ay8910_device(mconfig, YM3439, tag, owner, clock, PSG_TYPE_YM, 3, 2, PSG_HAS_EXPANDED_MODE | PSG_EXTENDED_DUTY | PSG_STEREO)
 {
 }

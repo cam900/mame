@@ -68,7 +68,8 @@ public:
 		PSG_PIN26_IS_CLKSEL = 0x1,
 		PSG_EXTENDED_ENVELOPE = 0x2,
 		PSG_HAS_EXPANDED_MODE = 0x4,
-		PSG_STEREO = 0x8
+		PSG_EXTENDED_DUTY = 0x8,
+		PSG_STEREO = 0x10
 	};
 
 	// construction/destruction
@@ -265,7 +266,7 @@ private:
 	inline u8 tone_volume(tone_t *tone) { return tone->volume & (is_expanded_mode() ? 0x1f : 0x0f); }
 	inline u8 tone_envelope(tone_t *tone) { return (tone->volume >> (is_expanded_mode() ? 5 : 4)) & ((m_feature & PSG_EXTENDED_ENVELOPE) ? 3 : 1); }
 	inline u8 tone_pan(tone_t *tone) { return (m_feature & PSG_STEREO) ? ((~tone->volume >> 6) & 3) : ~0; }
-	inline u8 tone_duty(tone_t *tone) { return is_expanded_mode() ? (tone->duty & 0x8 ? 0x8 : tone->duty) : 0x4; }
+	inline u8 tone_duty(tone_t *tone) { return (m_feature & PSG_EXTENDED_DUTY) ? (is_expanded_mode() ? (tone->duty & 0x1f) : 0xf) : (is_expanded_mode() ? (tone->duty & 0x8 ? 0x8 : (tone->duty & 0xf)) : 0x4); }
 	inline u8 get_envelope_chan(int chan) { return is_expanded_mode() ? chan : 0; }
 
 	inline bool noise_enable(int chan) { return BIT(m_regs[AY_ENABLE], 3 + chan); }
@@ -391,13 +392,13 @@ public:
 
 DECLARE_DEVICE_TYPE(YMZ294, ymz294_device)
 
-class jkm3439_device : public ay8910_device
+class jkm8930_device : public ay8910_device
 {
 public:
-	jkm3439_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	jkm8930_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 };
 
-DECLARE_DEVICE_TYPE(JKM3439, jkm3439_device)
+DECLARE_DEVICE_TYPE(JKM8930, jkm8930_device)
 
 
 #endif // MAME_DEVICES_SOUND_AY8910_H
