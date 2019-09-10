@@ -21,6 +21,7 @@ TODO:
 - confirm gnw_mmouse/gnw_egg rom (dumped from Soviet clone, but pretty
   confident that it's same)
 - confirm gnw_climbcs rom (assumed to be the same as gnw_climber)
+- dump/add CN-07 version of gnw_helmet
 - Currently there is no accurate way to dump the SM511/SM512 melody ROM
   electronically. For the ones that weren't decapped, they were read by
   playing back all melody data and reconstructing it to ROM. Visual(decap)
@@ -1550,6 +1551,8 @@ ROM_END
 
   In the UK, it was distributed as Headache by CGL.
 
+  MCU label CN-07 is the first version, CN-17 is a bugfix release.
+
 ***************************************************************************/
 
 class gnw_helmet_state : public hh_sm510_state
@@ -1619,7 +1622,7 @@ void gnw_helmet_state::gnw_helmet(machine_config &config)
 
 ROM_START( gnw_helmet )
 	ROM_REGION( 0x1000, "maincpu", 0 )
-	ROM_LOAD( "cn-07", 0x0000, 0x0740, CRC(6d251e2e) SHA1(c61f591514de36fb2270038a6505945564c9f90e) )
+	ROM_LOAD( "cn-17", 0x0000, 0x0740, CRC(6d251e2e) SHA1(c61f591514de36fb2270038a6505945564c9f90e) )
 
 	ROM_REGION( 109241, "screen", 0)
 	ROM_LOAD( "gnw_helmet.svg", 0, 109241, CRC(fa8294a3) SHA1(05b734ac0126d3bffe160a23753a0a7e6f82996e) )
@@ -4071,7 +4074,7 @@ ROM_START( gnw_mbaway )
 	ROM_LOAD( "tb-94.program", 0x0000, 0x1000, CRC(11d18a48) SHA1(afccfa19dace7c4fcc15a84ecfcfb9d7ae3861e4) )
 
 	ROM_REGION( 0x100, "maincpu:melody", 0 )
-	ROM_LOAD( "tb-94.melody", 0x000, 0x100, BAD_DUMP CRC(883931c2) SHA1(9ad22bde42a67c42d117f3ffa81a23c3c9044e66) ) // decap needed for verification
+	ROM_LOAD( "tb-94.melody", 0x000, 0x100, BAD_DUMP CRC(60d98353) SHA1(8789d7cd39111fe01848a89748ab91731de5caef) ) // decap needed for verification
 
 	ROM_REGION( 514643, "screen", 0)
 	ROM_LOAD( "gnw_mbaway.svg", 0, 514643, CRC(2ec2f18b) SHA1(8e2fd20615d867aac97e443fb977513ff98138b4) )
