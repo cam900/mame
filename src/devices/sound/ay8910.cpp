@@ -1100,9 +1100,12 @@ void ay8910_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 	buf[3] = nullptr;
 	buf[4] = nullptr;
 	buf[5] = nullptr;
-	if (m_streams >= NUM_CHANNELS)
+	if (m_streams >= 2)
 	{
 		buf[1] = outputs[1];
+	}
+	if (m_streams >= NUM_CHANNELS)
+	{
 		buf[2] = outputs[2];
 	}
 	if (m_streams == NUM_CHANNELS << 1)
