@@ -143,7 +143,7 @@
 
   TODO:
   * Measure volume / envelope parameters for AY8930 expanded mode
-  * YM2610 & YM2608 will need a separate flag in their feature structures
+  * YM2610 & YM2608 will need a separate flag in their config structures
     to distinguish between legacy and discrete mode.
 
   The rewrite also introduces a generic model for the DAC. This model is
