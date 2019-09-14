@@ -944,14 +944,20 @@ void jkm2151_device::write_reg(int r, int v)
 				kc_channel |= (op->kc_i & ~63);
 
 				(op+0)->kc_i = kc_channel;
-				(op+1)->kc_i = kc_channel;
-				(op+2)->kc_i = kc_channel;
-				(op+3)->kc_i = kc_channel;
+				if (!op->exfrq)
+				{
+					(op+1)->kc_i = kc_channel;
+					(op+2)->kc_i = kc_channel;
+					(op+3)->kc_i = kc_channel;
+				}
 
 				(op+0)->freq = ((freq[kc_channel + (op+0)->dt2] + (op+0)->dt1) * (op+0)->mul) >> 1;
-				(op+1)->freq = ((freq[kc_channel + (op+1)->dt2] + (op+1)->dt1) * (op+1)->mul) >> 1;
-				(op+2)->freq = ((freq[kc_channel + (op+2)->dt2] + (op+2)->dt1) * (op+2)->mul) >> 1;
-				(op+3)->freq = ((freq[kc_channel + (op+3)->dt2] + (op+3)->dt1) * (op+3)->mul) >> 1;
+				if (!op->exfrq)
+				{
+					(op+1)->freq = ((freq[kc_channel + (op+1)->dt2] + (op+1)->dt1) * (op+1)->mul) >> 1;
+					(op+2)->freq = ((freq[kc_channel + (op+2)->dt2] + (op+2)->dt1) * (op+2)->mul) >> 1;
+					(op+3)->freq = ((freq[kc_channel + (op+3)->dt2] + (op+3)->dt1) * (op+3)->mul) >> 1;
+				}
 			}
 			break;
 
