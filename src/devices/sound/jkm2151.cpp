@@ -5,7 +5,7 @@
 	MATRIX JKM2151 OPMF
 
 	YM2151 with SSG-EG, 7 additional waveform (per operator), Internal FIFO, 16 channel FM
-	channel 0-3 : Can be configurate frequency for each operator
+	channel 8-11 : Can be configurate frequency for each operator
 	channel 12-15 : Selectable DAC PCM output or FM
 	Operation clock : ~12MHz (output rate : input clock / 160); 62.5KHz output rate at 10MHz clock
 */
@@ -1071,7 +1071,7 @@ void jkm2151_device::write_reg(int r, int v)
 		break;
 
 	case 0x100:
-		op = &oper[(r & 3)];
+		op = &oper[32 + (r & 0xf)];
 		switch (r & 0x13)
 		{
 			case 0x0:
