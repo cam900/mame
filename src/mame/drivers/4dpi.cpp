@@ -31,7 +31,7 @@
  *   - https://github.com/NetBSD/src/tree/trunk/sys/arch/sgimips/
  *
  * TODO:
- *   - graphics, audio, printer
+ *   - audio, printer
  *   - devicify ioc1 and ctl1
  *
  * Status:
@@ -224,6 +224,11 @@ private:
 	u8 m_mapindex;
 	std::unique_ptr<u16 []> m_dmahi;
 	offs_t m_dmaaddr;
+
+	u32 m_gdma_dabr;   // descriptor array base
+	u32 m_gdma_bufadr; // buffer address
+	u16 m_gdma_burst;  // burst/delay
+	u16 m_gdma_buflen; // buffer length
 };
 
 void pi4d2x_state::map(address_map &map)
@@ -378,7 +383,7 @@ void pi4d2x_state::map(address_map &map)
 	//map(0x1f9d0004, 0x1f9d0007).rw().umask32(0x0000ffff); // prdmalo - dma low addr reg
 	//map(0x1f9e0000, 0x1f9e0003).rw().umask32(0x000000ff); // mapindex - printer map index (5-bit)
 	//map(0x1f9e0004, 0x1f9e0007).w().umask32(0xff000000); // dmastop
-	//map(0x1f9e0008, 0x1f9e000b).w().umask32(?); // prswack - soft ack
+	//map(0x1f9e0008, 0x1f9e000b).w().umask32(0x000000ff); // prswack - soft ack
 	//map(0x1f9e000c, 0x1f9e000f).w().umask32(0xff000000); // dmastart
 	//map(0x1f9f0000, 0x1f9f0003).r().umask32(0xff000000); // prdy - turn off reset
 	//map(0x1f9f0004, 0x1f9f0007).r().umask32(0xff000000); // prst - turn on reset
@@ -417,10 +422,10 @@ void pi4d2x_state::map(address_map &map)
 			m_refresh_timer = machine().time();
 		});
 
-	//map(0x1fa40008, 0x1fa4000b); // GDMA_DABR_PHYS descriptor array base register
-	//map(0x1fa4000c, 0x1fa4000f); // GDMA_BUFADR_PHYS buffer address register
-	map(0x1fa40010, 0x1fa40013).nopw().umask32(0xffff0000); // GDMA_BURST_PHYS burst/delay register (FIXME: silenced)
-	//map(0x1fa40010, 0x1fa40013).umask32(0x0000ffff); // GDMA_BUFLEN_PHYS buffer length register
+	map(0x1fa40008, 0x1fa4000b).lrw32("gdma_dabr_phys", [this]() { return m_gdma_dabr; }, [this](u32 data) { m_gdma_dabr = data; });
+	map(0x1fa4000c, 0x1fa4000f).lrw32("gdma_bufadr_phys", [this]() { return m_gdma_bufadr; }, [this](u32 data) { m_gdma_bufadr = data; });
+	map(0x1fa40010, 0x1fa40013).lrw16("gdma_burst_phys", [this]() { return m_gdma_burst; }, [this](u16 data) { m_gdma_burst = data; }).umask32(0xffff0000);
+	map(0x1fa40010, 0x1fa40013).lrw16("gdma_buflen_phys", [this]() { return m_gdma_buflen; }, [this](u16 data) { m_gdma_buflen = data; }).umask32(0x0000ffff);
 
 	map(0x1fa60000, 0x1fa60003).lrw8("vmermw", [this]() { m_sysid |= SYSID_VMERMW; return 0; }, [this](u8 data) { m_sysid |= SYSID_VMERMW; }).umask32(0xff000000);
 	//map(0x1fa60004, 0x1fa60007).rw("actpup").umask32(0xff000000); // turn on active bus pullup
@@ -438,6 +443,8 @@ void pi4d2x_state::map(address_map &map)
 
 	map(0x1faa0000, 0x1faa0003).lrw8("clrerr", [this](offs_t offset) { m_parerr &= ~(PARERR_BYTE | (1 << offset)); return 0; }, [this](offs_t offset) { m_parerr &= ~(PARERR_BYTE | (1 << offset)); });
 	map(0x1faa0004, 0x1faa0007).lr8("parerr", [this]() { return m_parerr; }).umask32(0x00ff0000);
+
+	map(0x1fac0000, 0x1fac0003).lrw8("vrrst", [this]() { lio_interrupt<LIO_VR>(1); return 0; }, [this](u8 data) { lio_interrupt<LIO_VR>(1); }).umask32(0xff000000);
 
 	map(0x1fb00000, 0x1fb00003).rw(m_scsi, FUNC(wd33c93_device::indir_addr_r), FUNC(wd33c93_device::indir_addr_w)).umask32(0x00ff0000);
 	map(0x1fb00100, 0x1fb00103).rw(m_scsi, FUNC(wd33c93_device::indir_reg_r), FUNC(wd33c93_device::indir_reg_w)).umask32(0x00ff0000);
@@ -597,16 +604,17 @@ void pi4d2x_state::common(machine_config &config)
 	m_serial[1]->dcd_handler().set(m_duart[1], FUNC(scn2681_device::ip2_w));
 
 	// graphics
-	SGI_GR12(config, m_gfx, 0);
+	SGI_GR1(config, m_gfx);
 	m_gfx->out_vblank().set(
 		[this](int state)
 		{
 			if (state)
-				m_lio_isr |= (1U << LIO_VRSTAT);
-			else
+			{
 				m_lio_isr &= ~(1U << LIO_VRSTAT);
-
-			lio_interrupt<LIO_VR>(!state);
+				lio_interrupt<LIO_VR>(0);
+			}
+			else
+				m_lio_isr |= (1U << LIO_VRSTAT);
 		});
 	m_gfx->out_int_ge().set(*this, FUNC(pi4d2x_state::lio_interrupt<LIO_GE>)).invert();
 	m_gfx->out_int_fifo().set(*this, FUNC(pi4d2x_state::lio_interrupt<LIO_FIFO>)).invert();
@@ -635,6 +643,7 @@ void pi4d2x_state::initialize()
 
 void pi4d2x_state::lio_interrupt(unsigned number, int state)
 {
+	// TODO: special handling for fifo half-full interrupt
 	u16 const mask = 1 << number;
 
 	// record interrupt state
@@ -645,7 +654,7 @@ void pi4d2x_state::lio_interrupt(unsigned number, int state)
 
 	// update interrupt line
 	bool const lio_int = ~m_lio_isr & m_lio_imr;
-	if (m_lio_imr ^ lio_int)
+	if (m_lio_int ^ lio_int)
 	{
 		m_lio_int = lio_int;
 		m_cpu->set_input_line(INPUT_LINE_IRQ1, m_lio_int);

@@ -417,6 +417,7 @@ MACHINES["7200FIFO"] = true
 MACHINES["8530SCC"] = true
 MACHINES["AAKARTDEV"] = true
 MACHINES["ACIA6850"] = true
+MACHINES["ACORN_VIDC"] = true
 MACHINES["ADC0808"] = true
 MACHINES["ADC083X"] = true
 MACHINES["ADC1038"] = true
@@ -1347,7 +1348,6 @@ if (_subtarget=="mess") then
 createMESSProjects(_target, _subtarget, "mameshared")
 files {
 	MAME_DIR .. "src/mame/machine/archimds.cpp",
-	MAME_DIR .. "src/mame/video/archimds.cpp",
 	MAME_DIR .. "src/mame/machine/amiga.cpp",
 	MAME_DIR .. "src/mame/video/amiga.cpp",
 	MAME_DIR .. "src/mame/video/amigaaga.cpp",
@@ -2701,6 +2701,9 @@ files {
 	MAME_DIR .. "src/mame/drivers/m6805evs.cpp",
 	MAME_DIR .. "src/mame/drivers/m68705prg.cpp",
 	MAME_DIR .. "src/mame/drivers/mekd2.cpp",
+	MAME_DIR .. "src/mame/drivers/mekd3.cpp",
+	MAME_DIR .. "src/mame/drivers/mekd4.cpp",
+	MAME_DIR .. "src/mame/drivers/mekd5.cpp",
 	MAME_DIR .. "src/mame/drivers/mvme147.cpp",
 	MAME_DIR .. "src/mame/drivers/mvme162.cpp",
 }
@@ -3213,6 +3216,8 @@ files {
 	MAME_DIR .. "src/mame/video/sgi_ge5.h",
 	MAME_DIR .. "src/mame/video/sgi_re2.cpp",
 	MAME_DIR .. "src/mame/video/sgi_re2.h",
+	MAME_DIR .. "src/mame/video/sgi_xmap2.cpp",
+	MAME_DIR .. "src/mame/video/sgi_xmap2.h",
 }
 
 createMESSProjects(_target, _subtarget, "sharp")
@@ -3925,6 +3930,7 @@ files {
 	MAME_DIR .. "src/mame/drivers/c2color.cpp",
 	MAME_DIR .. "src/mame/drivers/candela.cpp",
 	MAME_DIR .. "src/mame/drivers/cardinal.cpp",
+	MAME_DIR .. "src/mame/drivers/cbnt2039.cpp",
 	MAME_DIR .. "src/mame/drivers/chaos.cpp",
 	MAME_DIR .. "src/mame/drivers/cd2650.cpp",
 	MAME_DIR .. "src/mame/drivers/cdc721.cpp",
