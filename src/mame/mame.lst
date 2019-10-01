@@ -1112,12 +1112,8 @@ gangwarsb                       // bootleg
 gangwarsj                       // Alpha-68K96V       (c) 1989 Alpha Denshi Co.
 gangwarsu                       // Alpha-68K96V       (c) 1989 Alpha Denshi Co.
 goldmedl                        // Alpha-68K96II 'GM' (c) 1988 SNK
-goldmedla                       // Alpha-68K96II 'GM' (c) 1988 SNK
-goldmedlb                       // Alpha-68K96II bootleg
-jongbou                         // (c) 1987 SNK
-kyros                           // (c) 1987 World Games
-kyrosj                          // (c) 1986 Alpha Denshi Co.
-paddlema                        // Alpha-68K96I  'PM' (c) 1988 SNK
+goldmedla                       // Alpha-68K96III 'GM' (c) 1988 SNK
+goldmedlb                       // Alpha-68K96III bootleg
 sbasebal                        // Alpha-68K96V       (c) 1989 SNK of America licensed from Alpha
 sbasebalj                       // Alpha-68K96V
 skyadvnt                        // Alpha-68K96V  'SA' (c) 1989 Alpha Denshi Co.
@@ -1125,12 +1121,21 @@ skyadvntj                       // Alpha-68K96V  'SA' (c) 1989 Alpha Denshi Co.
 skyadvntu                       // Alpha-68K96V  'SA' (c) 1989 SNK of America licensed from Alpha
 skysoldr                        // Alpha-68K96II 'SS' (c) 1988 SNK (Romstar with dip switch)
 skysoldrbl                      // bootleg
-sstingry                        // (c) 1986 Alpha Denshi Co.
 timesold                        // Alpha-68K96II 'BT' (c) 1987 SNK / Romstar
 timesold1                       // Alpha-68K96II 'BT' (c) 1987
+
+
+@source:alpha68k_i.cpp
+paddlema                        // Alpha-68K96I  'PM' (c) 1988 SNK
 tnextspc                        // A8003 'NS' (c) 1989 - MASKROM
 tnextspc2                       // A8003 'NS' (c) 1989 - EPROMs
 tnextspcj                       // A8003 'NS' (c) 1989 - Japan
+
+@source:alpha68k_n.cpp
+jongbou                         // (c) 1987 SNK
+kyros                           // (c) 1987 World Games
+kyrosj                          // (c) 1986 Alpha Denshi Co.
+sstingry                        // (c) 1986 Alpha Denshi Co.
 
 @source:alphasma.cpp
 asma2k                          //
@@ -9587,6 +9592,7 @@ carjmbre                        // (c) 1983 Omori Electric Co., Ltd.
 carpolo                         // (c) 1977
 
 @source:carrera.cpp
+bsebman                         // (c) 19?? BS Electronics
 carrera                         // (c) 19?? BS Electronics
 
 @source:casloopy.cpp
@@ -11184,6 +11190,7 @@ ds348                           // Sigtron Daruma
 @source:daryde.cpp
 cricket                         // (c) 1995 Daryde S.L.
 pandart                         // (c) 1999 Daryde S.L.
+kurdart                         // (c) 199? K7 Kursaal
 
 @source:dassault.cpp
 dassault                        // MAJ (c) 1991 Data East Corporation (US)
@@ -15388,6 +15395,7 @@ gnw_rshower                     // Nintendo
 gnw_sbuster                     // Nintendo
 gnw_smb                         // Nintendo
 gnw_squish                      // Nintendo
+gnw_ssparky                     // Nintendo
 gnw_stennis                     // Nintendo
 gnw_tbridge                     // Nintendo
 gnw_tfish                       // Nintendo
@@ -16175,6 +16183,9 @@ isbc8030                        //
 @source:iskr103x.cpp
 iskr1030m                       //
 iskr1031                        //
+
+@source:island.cpp
+isld_vortex                     //
 
 @source:istellar.cpp
 istellar                        // (c) 1983 Funai / Gakken
@@ -18515,14 +18526,12 @@ madgearj                        // 2/1989 (c) 1989 (Japan)
 lastfght                        // (c) 2000 Subsino
 
 @source:laz_aftrshok.cpp
-aftrshok                        // Lazer-tron After Shock
+aftrshok                        // Lazer-Tron Aftershock
 aftrshoka                       //
 
-@source:laz_awetoss.cpp
-awetoss                         // Lazer-tron Awesome Toss'em
-
 @source:laz_ribrac.cpp
-ribrac                          // Lazer-tron Ribbit Racing
+awetoss                         // Lazer-Tron Awesome Toss 'Em
+ribrac                          // Lazer-Tron Ribbit Racin
 
 @source:lazercmd.cpp
 bbonk                           // [1976?]
@@ -21676,6 +21685,7 @@ megat3caa                       // (c) 1995 Merit
 megat3d                         // (c) 1996 Merit
 megat3nj                        // (c) 1995 Merit
 megat3te                        // (c) 1996 Merit
+megat3tg                        // (c) 1996 Merit
 megat4                          // (c) 1996 Merit
 megat4a                         // (c) 1996 Merit
 megat4b                         // (c) 1996 Merit
@@ -36990,6 +37000,7 @@ hardhea2b                       // bootleg
 hardhead                        // (c) 1988 SunA
 hardheadb                       // bootleg
 hardheadb2                      // bootleg
+hardheadb3                      // bootleg
 pop_hh                          // bootleg
 rranger                         // (c) 1988 SunA + Sharp Image license (distributed by CAPCOM)
 rrangerb                        // bootleg
@@ -39496,6 +39507,7 @@ suprmrio                        // (c) 1986 Nintendo
 suprmrioa                       // (c) 1986 Nintendo
 suprmriobl                      // bootleg
 suprmriobl2                     // bootleg
+suprmriobl3                     // bootleg
 supxevs                         // (c) 1986 Nintendo
 tkoboxng                        // (c) 1987 Data East
 topgun                          // (c) 1987 Konami
@@ -40812,9 +40824,10 @@ zephyr                          //
 1on1gov                         // 1 on 1 Government (JAPAN)
 aerofgts                        // Aero Fighters Special (TAIWAN)
 bam2                            // Bust a Move 2 (JAPANESE ROM ver. 1999/07/17 10:00:00)
-beastrzr                        // Beastorizer (USA)
+beastrzr                        // Beastorizer (USA, Sep 22 1997)
+beastrzra                       // Beastorizer (USA, Jun 21 1997)
 beastrzrb                       // Beastorizer (USA Bootleg)
-bldyroar                        // Bloody Roar (JAPAN)
+bldyroar                        // Bloody Roar (JAPAN, Jun 21 1997)
 bldyror2                        // Bloody Roar 2 (WORLD)
 bldyror2a                       // Bloody Roar 2 (ASIA)
 bldyror2j                       // Bloody Roar 2 (JAPAN)

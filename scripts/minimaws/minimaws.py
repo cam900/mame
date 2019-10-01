@@ -26,6 +26,12 @@
 ## $ python minimaws.py listclones "unkch*"
 ## $ python minimaws.py listbrothers superx
 ##
+## The romident command does not support archives or software lists, but
+## it's far faster than using MAME as it has optimised indexes, and
+## results are grouped by machine rather than by file:
+##
+## $ python minimaws.py romident 27c64.bin dump-dir
+##
 ## One more sophisticated query command is provided that MAME has no
 ## equivalent for.  The listaffected command shows all runnable machines
 ## that reference devices defined in specified source files:
@@ -72,12 +78,16 @@
 ## and see dependent slots update.  Required command-line arguments to
 ## produce the selected configuration are also displayed.
 
+import argparse
+import os
+import os.path
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import lib.auxverbs
 import lib.lxparse
 import lib.wsgiserve
-
-import argparse
-import sys
 
 
 if __name__ == '__main__':
@@ -100,6 +110,9 @@ if __name__ == '__main__':
     subparser = subparsers.add_parser('listaffected', help='show drivers affected by source change(s)')
     subparser.add_argument('pattern', nargs='+', metavar='<pat>', help='source file glob pattern')
 
+    subparser = subparsers.add_parser('romident', help='identify ROM dump(s)')
+    subparser.add_argument('path', nargs='+', metavar='<path>', help='ROM dump file/directory path')
+
     subparser = subparsers.add_parser('serve', help='serve over HTTP')
     subparser.add_argument('--port', metavar='<port>', default=8080, type=int, help='server TCP port')
     subparser.add_argument('--host', metavar='<host>', default='', help='server TCP hostname')
@@ -120,7 +133,11 @@ if __name__ == '__main__':
         lib.auxverbs.do_listbrothers(options)
     elif options.command == 'listaffected':
         lib.auxverbs.do_listaffected(options)
+    elif options.command == 'romident':
+        lib.auxverbs.do_romident(options)
     elif options.command == 'serve':
         lib.wsgiserve.run_server(options)
     elif options.command == 'load':
         lib.lxparse.load_info(options)
+else:
+    application = lib.wsgiserve.MiniMawsApp(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'minimaws.sqlite3'))

@@ -167,13 +167,11 @@ detail::terminal_type detail::core_terminal_t::type() const
 {
 	if (dynamic_cast<const terminal_t *>(this) != nullptr)
 		return terminal_type::TERMINAL;
-	else if (dynamic_cast<const logic_input_t *>(this) != nullptr)
+	else if (dynamic_cast<const logic_input_t *>(this) != nullptr
+		|| dynamic_cast<const analog_input_t *>(this) != nullptr)
 		return terminal_type::INPUT;
-	else if (dynamic_cast<const logic_output_t *>(this) != nullptr)
-		return terminal_type::OUTPUT;
-	else if (dynamic_cast<const analog_input_t *>(this) != nullptr)
-		return terminal_type::INPUT;
-	else if (dynamic_cast<const analog_output_t *>(this) != nullptr)
+	else if (dynamic_cast<const logic_output_t *>(this) != nullptr
+		|| dynamic_cast<const analog_output_t *>(this) != nullptr)
 		return terminal_type::OUTPUT;
 	else
 	{
@@ -472,7 +470,7 @@ void netlist_t::print_stats() const
 		}
 
 		log().verbose("Total calls : {1:12} {2:12} {3:12}", total_count,
-			total_time, total_time / static_cast<decltype(total_time)>(total_count));
+			total_time, total_time / static_cast<decltype(total_time)>(total_count ? total_count : 1));
 
 		log().verbose("Total loop     {1:15}", m_stat_mainloop());
 		log().verbose("Total time     {1:15}", total_time);
@@ -1033,7 +1031,7 @@ nl_double param_model_t::value(const pstring &entity)
 }
 
 
-plib::unique_ptr<plib::pistream> param_data_t::stream()
+plib::unique_ptr<std::istream> param_data_t::stream()
 {
 	return device().setup().get_data_stream(str());
 }

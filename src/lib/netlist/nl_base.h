@@ -1119,7 +1119,7 @@ namespace netlist
 		{
 		}
 
-		plib::unique_ptr<plib::pistream> stream();
+		plib::unique_ptr<std::istream> stream();
 	protected:
 		void changed() override { }
 	};
@@ -1139,7 +1139,7 @@ namespace netlist
 	protected:
 		void changed() override
 		{
-			stream()->read(reinterpret_cast<plib::pistream::char_type *>(&m_data[0]),1<<AW);
+			stream()->read(reinterpret_cast<std::istream::char_type *>(&m_data[0]),1<<AW);
 		}
 
 	private:
@@ -1474,7 +1474,7 @@ namespace netlist
 	// netlist_t
 	// -----------------------------------------------------------------------------
 
-	class netlist_t
+	class netlist_t // NOLINT(clang-analyzer-optin.performance.Padding)
 	{
 	public:
 
@@ -1496,9 +1496,9 @@ namespace netlist
 		void qpush(detail::queue_t::entry_t && e) noexcept
 		{
 			if (!USE_QUEUE_STATS || !m_stats)
-				m_queue.push_nostats(std::move(e));
+				m_queue.push_nostats(std::move(e)); // NOLINT(performance-move-const-arg)
 			else
-				m_queue.push(std::move(e));
+				m_queue.push(std::move(e)); // NOLINT(performance-move-const-arg)
 		}
 
 		template <class R>
@@ -1634,7 +1634,7 @@ namespace netlist
 	{
 		auto f = stream();
 		if (f != nullptr)
-			f->read(reinterpret_cast<plib::pistream::char_type *>(&m_data[0]),1<<AW);
+			f->read(reinterpret_cast<std::istream::char_type *>(&m_data[0]),1<<AW);
 		else
 			device.state().log().warning(MW_ROM_NOT_FOUND(str()));
 	}
