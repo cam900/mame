@@ -5,7 +5,7 @@
  *   MATRIX JKM280B driver
  *   
  *   YMZ280B with independent 16 bit left/right volume, 16 bit registers, 32 bit address,
- *   16 voices
+ *   16 voices, Stereo sample support
  *
  **********************************************************************************************/
 
