@@ -2323,7 +2323,7 @@ void jkm2151_device::device_timer(emu_timer &timer, device_timer_id id, int para
 			if (!fifo.empty)
 			{
 				u16 fifodata = fifo.read();
-				write((fifodata >> 8) & 1, fifodata & 0xff);
+				write((fifodata >> 8) & 3, fifodata & 0xff);
 			}
 		}
 		timer_fifo->adjust(attotime::from_hz(clock()));
