@@ -16,7 +16,8 @@
 #define BUILD_YM2610  (1)       /* build YM2610(OPNB)  emulator */
 #define BUILD_YM2610B (1)       /* build YM2610B(OPNB?)emulator */
 #define BUILD_YM2612  (1)       /* build YM2612(OPN2)  emulator */
-#define BUILD_YM3438  (1)       /* build YM3438(OPN) emulator */
+#define BUILD_YM3438  (1)       /* build YM3438(OPN2C) emulator */
+#define BUILD_JKM3438 (1)       /* build JKM3438(OPN4) emulator */
 
 /* select bit size of output : 8 or 16 */
 #define FM_SAMPLE_BITS 16
@@ -183,6 +184,20 @@ unsigned char ym2612_read(void *chip,int a);
 int ym2612_timer_over(void *chip, int c );
 void ym2612_postload(void *chip);
 #endif /* (BUILD_YM2612||BUILD_YM3438) */
+
+#if (BUILD_JKM3438)
+void * jkm3438_init(device_t *device, int baseclock, int rate,
+				FM_TIMERHANDLER TimerHandler,FM_IRQHANDLER IRQHandler, const ssg_callbacks *ssg);
+void jkm3438_clock_changed(void *chip, int clock, int rate);
+void jkm3438_shutdown(void *chip);
+void jkm3438_reset_chip(void *chip);
+void jkm3438_update_one(void *chip, FMSAMPLE **buffer, int length);
+
+int jkm3438_write(void *chip, int a,unsigned char v);
+unsigned char jkm3438_read(void *chip,int a);
+int jkm3438_timer_over(void *chip, int c );
+void jkm3438_postload(void *chip);
+#endif /* (BUILD_JKM3438) */
 
 
 #endif // MAME_SOUND_FM_H

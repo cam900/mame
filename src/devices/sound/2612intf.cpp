@@ -17,9 +17,23 @@
 #include "2612intf.h"
 #include "fm.h"
 
+const ssg_callbacks jkm3438_device::psgintf =
+{
+	&jkm3438_device::psg_set_clock,
+	&jkm3438_device::psg_write,
+	&jkm3438_device::psg_read,
+	&jkm3438_device::psg_reset
+};
+
 /*------------------------- YM2612 -------------------------------*/
 /* IRQ Handler */
 void ym2612_device::irq_handler(int irq)
+{
+	if (!m_irq_handler.isnull())
+		m_irq_handler(irq);
+}
+
+void jkm3438_device::irq_handler(int irq)
 {
 	if (!m_irq_handler.isnull())
 		m_irq_handler(irq);
@@ -40,7 +54,47 @@ void ym2612_device::device_timer(emu_timer &timer, device_timer_id id, int param
 	}
 }
 
+void jkm3438_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+{
+	switch(id)
+	{
+	case TIMER_A:
+		jkm3438_timer_over(m_chip,0);
+		break;
+
+	case TIMER_B:
+		jkm3438_timer_over(m_chip,1);
+		break;
+	case TIMER_FIFO:
+		if (!(read(0) & 0x80))
+		{
+			if (!fifo.empty)
+			{
+				u16 fifodata = fifo.read();
+				write((fifodata >> 8) & 3, fifodata & 0xff);
+			}
+		}
+		timer_fifo->adjust(attotime::from_hz(clock()));
+		break;
+	}
+}
+
 void ym2612_device::timer_handler(int c,int count,int clock)
+{
+	if( count == 0 || clock == 0 )
+	{   /* Reset FM Timer */
+		m_timer[c]->enable(false);
+	}
+	else
+	{   /* Start FM Timer */
+		attotime period = attotime::from_hz(clock) * count;
+
+		if (!m_timer[c]->enable(true))
+			m_timer[c]->adjust(period);
+	}
+}
+
+void jkm3438_device::timer_handler(int c,int count,int clock)
 {
 	if( count == 0 || clock == 0 )
 	{   /* Reset FM Timer */
@@ -64,10 +118,20 @@ void ym2612_device::sound_stream_update(sound_stream &stream, stream_sample_t **
 	ym2612_update_one(m_chip, outputs, samples);
 }
 
+void jkm3438_device::stream_generate(sound_stream &stream, stream_sample_t **inputs, stream_sample_t **outputs, int samples)
+{
+	jkm3438_update_one(m_chip, outputs, samples);
+}
+
 
 void ym2612_device::device_post_load()
 {
 	ym2612_postload(m_chip);
+}
+
+void jkm3438_device::device_post_load()
+{
+	jkm3438_postload(m_chip);
 }
 
 
@@ -95,13 +159,58 @@ void ym2612_device::device_start()
 		throw emu_fatalerror("ym2612_device(%s): Error creating YM2612 chip", tag());
 }
 
+void jkm3438_device::device_start()
+{
+	int rate = clock()/72;
+
+	m_irq_handler.resolve();
+
+	/* FM init */
+	/* Timer Handler set */
+	m_timer[0] = timer_alloc(TIMER_A);
+	m_timer[1] = timer_alloc(TIMER_B);
+	timer_fifo = timer_alloc(TIMER_FIFO);
+
+	/* stream system initialize */
+	m_stream = machine().sound().stream_alloc(*this,0,2,rate, stream_update_delegate(&jkm3438_device::stream_generate,this));
+
+	save_item(NAME(fifo.data));
+	save_item(NAME(fifo.readpos));
+	save_item(NAME(fifo.writepos));
+	save_item(NAME(fifo.full));
+	save_item(NAME(fifo.empty));
+	save_item(NAME(fifo.overflow));
+	save_item(NAME(fifo.underflow));
+
+	/**** initialize YM2612 ****/
+	m_chip = jkm3438_init(this,clock(),rate,&jkm3438_device::static_timer_handler,&jkm3438_device::static_irq_handler,&jkm3438_device::psgintf);
+	if (!m_chip)
+		throw emu_fatalerror("jkm3438_device(%s): Error creating JKM3438 chip", tag());
+}
+
 void ym2612_device::device_clock_changed()
 {
 	calculate_rates();
 	ym2612_clock_changed(m_chip, clock(), clock() / 72);
 }
 
+void jkm3438_device::device_clock_changed()
+{
+	calculate_rates();
+	jkm3438_clock_changed(m_chip, clock(), clock() / 72);
+}
+
 void ym2612_device::calculate_rates()
+{
+	int rate = clock() / 72;
+
+	if (m_stream != nullptr)
+		m_stream->set_sample_rate(rate);
+	else
+		m_stream = machine().sound().stream_alloc(*this,0,2,rate);
+}
+
+void jkm3438_device::calculate_rates()
 {
 	int rate = clock() / 72;
 
@@ -120,6 +229,11 @@ void ym2612_device::device_stop()
 	ym2612_shutdown(m_chip);
 }
 
+void jkm3438_device::device_stop()
+{
+	jkm3438_shutdown(m_chip);
+}
+
 //-------------------------------------------------
 //  device_reset - device-specific reset
 //-------------------------------------------------
@@ -129,15 +243,47 @@ void ym2612_device::device_reset()
 	ym2612_reset_chip(m_chip);
 }
 
+void jkm3438_device::device_reset()
+{
+	fifo.reset();
+	timer_fifo->adjust(attotime::from_hz(clock()));
+	jkm3438_reset_chip(m_chip);
+}
+
 
 u8 ym2612_device::read(offs_t offset)
 {
 	return ym2612_read(m_chip, offset & 3);
 }
 
+u8 jkm3438_device::read(offs_t offset)
+{
+	u8 ret = jkm3438_read(m_chip, offset & 3);
+	if (offset == 0)
+	{
+		if (fifo.full)      ret |= 0x20;
+		if (fifo.empty)     ret |= 0x10;
+		if (fifo.overflow)  ret |= 0x08;
+		if (fifo.underflow) ret |= 0x04;
+	}
+	return ret;
+}
+
 void ym2612_device::write(offs_t offset, u8 data)
 {
 	ym2612_write(m_chip, offset & 3, data);
+}
+
+void jkm3438_device::write(offs_t offset, u8 data)
+{
+	if (read(0) & 0x80)
+	{
+		fifo.write(((offset & 3) << 8) | data);
+	}
+	else
+	{
+		jkm3438_write(m_chip, offset & 3, data);
+	}
 }
 
 
@@ -165,3 +311,15 @@ ym3438_device::ym3438_device(const machine_config &mconfig, const char *tag, dev
 	: ym2612_device(mconfig, YM3438, tag, owner, clock)
 {
 }
+
+DEFINE_DEVICE_TYPE(JKM3438, jkm3438_device, "jkm3438", "JKM3438 OPN4")
+
+jkm3438_device::jkm3438_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: ay8910_device(mconfig, JKM3438, tag, owner, clock, PSG_TYPE_YM, 3, 2, PSG_HAS_EXPANDED_MODE | PSG_EXTENDED_DUTY | PSG_STEREO)
+	, m_stream(nullptr)
+	, m_timer{ nullptr, nullptr }
+	, m_chip(nullptr)
+	, m_irq_handler(*this)
+{
+}
+
