@@ -26,8 +26,11 @@ public:
 	// configuration helpers
 	auto irq_handler() { return m_irq_handler.bind(); }
 
-	u8 read(offs_t offset);
-	void write(offs_t offset, u8 data);
+	u8 read8(offs_t offset);
+	void write8(offs_t offset, u8 data, u8 mem_mask);
+
+	u16 read16(offs_t offset, u16 mem_mask);
+	void write16(offs_t offset, u16 data, u16 mem_mask);
 
 protected:
 	// device-level overrides
@@ -89,7 +92,7 @@ private:
 	int generate_pcm8(struct JKM280BVoice *voice, int16_t *lbuffer, int16_t *rbuffer, int samples);
 	int generate_pcm16(struct JKM280BVoice *voice, int16_t *lbuffer, int16_t *rbuffer, int samples);
 	void write_to_register(u16 data, u16 mem_mask = ~0);
-	int compute_status();
+	u16 compute_status();
 
 	// internal state
 	struct JKM280BVoice m_voice[16];    /* the 16 voices */

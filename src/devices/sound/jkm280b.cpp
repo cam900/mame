@@ -960,9 +960,9 @@ void jkm280b_device::write_to_register(u16 data, u16 mem_mask)
 
 ***********************************************************************************************/
 
-int jkm280b_device::compute_status()
+u16 jkm280b_device::compute_status()
 {
-	uint8_t result;
+	uint16_t result;
 
 	/* force an update */
 	m_stream->update();
@@ -984,9 +984,9 @@ int jkm280b_device::compute_status()
 
 ***********************************************************************************************/
 
-u8 jkm280b_device::read(offs_t offset)
+u8 jkm280b_device::read8(offs_t offset)
 {
-	if ((offset & 1) == 0)
+	if ((offset & 3) == 1)
 	{
 		if (!m_ext_mem_enable)
 			return 0xff;
@@ -997,21 +997,64 @@ u8 jkm280b_device::read(offs_t offset)
 		m_ext_mem_address = (m_ext_mem_address + 1) & 0xffffffff;
 		return ret;
 	}
-	else
-		return compute_status();
+	else if (offset & 2)
+		return (compute_status() >> ((offset & 1) << 3)) & 0xff;
+
+	return 0xff;
 }
 
 
-void jkm280b_device::write(offs_t offset, u8 data)
+void jkm280b_device::write8(offs_t offset, u8 data, u8 mem_mask)
+{
+	if ((offset & 3) == 1)
+		COMBINE_DATA(&m_current_register);
+	else if (offset & 2)
+	{
+		const int shift = (offset & 1) << 3;
+		/* force an update */
+		m_stream->update();
+
+		write_to_register(data << shift, mem_mask << shift);
+	}
+}
+
+u16 jkm280b_device::read16(offs_t offset, u16 mem_mask)
 {
 	if ((offset & 1) == 0)
-		m_current_register = data;
-	else
+	{
+		if (!m_ext_mem_enable)
+			return 0xffff;
+
+		/* read from external memory */
+		uint8_t ret = 0xff00;
+		if (ACCESSING_BITS_0_7)
+		{
+			ret |= m_ext_readlatch;
+			m_ext_readlatch = read_byte(m_ext_mem_address);
+			m_ext_mem_address = (m_ext_mem_address + 1) & 0xffffffff;
+		}
+		return ret;
+	}
+	else if (offset & 1)
+		return compute_status();
+
+	return 0xffff;
+}
+
+
+void jkm280b_device::write16(offs_t offset, u16 data, u16 mem_mask)
+{
+	if ((offset & 1) == 0)
+	{
+		if (ACCESSING_BITS_0_7)
+			m_current_register = data & 0xff;
+	}
+	else if (offset & 1)
 	{
 		/* force an update */
 		m_stream->update();
 
-		write_to_register(data);
+		write_to_register(data, mem_mask);
 	}
 }
 
