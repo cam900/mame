@@ -20,16 +20,27 @@
 namespace plib
 {
 
+	template <int k>
+	struct do_khelper
+	{
+		static constexpr bool value = true;
+	};
+
+	template <>
+	struct do_khelper<-1>
+	{
+		static constexpr float value = 0.0;
+	};
+
 	template <typename FT, int SIZE>
 	struct mat_precondition_ILU
 	{
 		using mat_type = plib::matrix_compressed_rows_t<FT, SIZE>;
 
-		mat_precondition_ILU(std::size_t size, int ilu_scale = 4
+		mat_precondition_ILU(std::size_t size, std::size_t ilu_scale = 4
 			, std::size_t bw = plib::matrix_compressed_rows_t<FT, SIZE>::FILL_INFINITY)
 		: m_mat(static_cast<typename mat_type::index_type>(size))
 		, m_LU(static_cast<typename mat_type::index_type>(size))
-		, m_use_iLU_preconditioning(ilu_scale >= 0)
 		, m_ILU_scale(static_cast<std::size_t>(ilu_scale))
 		, m_band_width(bw)
 		{
@@ -39,12 +50,9 @@ namespace plib
 		void build(M &fill)
 		{
 			m_mat.build_from_fill_mat(fill, 0);
-			if (m_use_iLU_preconditioning)
-			{
-				m_LU.gaussian_extend_fill_mat(fill);
-				m_LU.build_from_fill_mat(fill, m_ILU_scale, m_band_width); // ILU(2)
-				//m_LU.build_from_fill_mat(fill, 9999, 20); // Band matrix width 20
-			}
+			m_LU.gaussian_extend_fill_mat(fill);
+			m_LU.build_from_fill_mat(fill, m_ILU_scale, m_band_width); // ILU(2)
+			//m_LU.build_from_fill_mat(fill, 9999, 20); // Band matrix width 20
 		}
 
 
@@ -56,30 +64,23 @@ namespace plib
 
 		void precondition()
 		{
-			if (m_use_iLU_preconditioning)
-			{
-				if (m_ILU_scale < 1)
-					m_LU.raw_copy_from(m_mat);
-				else
-					m_LU.reduction_copy_from(m_mat);
-				m_LU.incomplete_LU_factorization();
-			}
+			if (m_ILU_scale < 1)
+				m_LU.raw_copy_from(m_mat);
+			else
+				m_LU.reduction_copy_from(m_mat);
+			m_LU.incomplete_LU_factorization();
 		}
 
 		template<typename V>
 		void solve_LU_inplace(V &v)
 		{
-			if (m_use_iLU_preconditioning)
-			{
-				m_LU.solveLUx(v);
-			}
+			m_LU.solveLU(v);
 		}
 
 		PALIGNAS_VECTOROPT()
 		mat_type                m_mat;
 		PALIGNAS_VECTOROPT()
 		mat_type                m_LU;
-		bool                    m_use_iLU_preconditioning;
 		std::size_t             m_ILU_scale;
 		std::size_t             m_band_width;
 	};
@@ -87,11 +88,11 @@ namespace plib
 	template <typename FT, int SIZE>
 	struct mat_precondition_diag
 	{
-		mat_precondition_diag(std::size_t size)
+		mat_precondition_diag(std::size_t size, int dummy = 0)
 		: m_mat(size)
 		, m_diag(size)
-		, m_use_iLU_preconditioning(true)
 		{
+			plib::unused_var(dummy);
 		}
 
 		template <typename M>
@@ -108,28 +109,55 @@ namespace plib
 
 		void precondition()
 		{
-			if (m_use_iLU_preconditioning)
+			for (std::size_t i = 0; i< m_diag.size(); i++)
 			{
-				for (std::size_t i = 0; i< m_diag.size(); i++)
-				{
-					m_diag[i] = 1.0 / m_mat.A[m_mat.diag[i]];
-				}
+				m_diag[i] = 1.0 / m_mat.A[m_mat.diag[i]];
 			}
 		}
 
 		template<typename V>
 		void solve_LU_inplace(V &v)
 		{
-			if (m_use_iLU_preconditioning)
-			{
-				for (std::size_t i = 0; i< m_diag.size(); i++)
-					v[i] = v[i] * m_diag[i];
-			}
+			for (std::size_t i = 0; i< m_diag.size(); i++)
+				v[i] = v[i] * m_diag[i];
 		}
 
 		plib::matrix_compressed_rows_t<FT, SIZE> m_mat;
 		plib::parray<FT, SIZE> m_diag;
-		bool m_use_iLU_preconditioning;
+	};
+
+	template <typename FT, int SIZE>
+	struct mat_precondition_none
+	{
+		mat_precondition_none(std::size_t size, int dummy = 0)
+		: m_mat(size)
+		{
+			plib::unused_var(dummy);
+		}
+
+		template <typename M>
+		void build(M &fill)
+		{
+			m_mat.build_from_fill_mat(fill, 0);
+		}
+
+		template<typename R, typename V>
+		void calc_rhs(R &rhs, const V &v)
+		{
+			m_mat.mult_vec(rhs, v);
+		}
+
+		void precondition()
+		{
+		}
+
+		template<typename V>
+		void solve_LU_inplace(V &v)
+		{
+			plib::unused_var(v);
+		}
+
+		plib::matrix_compressed_rows_t<FT, SIZE> m_mat;
 	};
 
 	/* FIXME: hardcoding RESTART to 20 becomes an issue on very large
@@ -161,6 +189,75 @@ namespace plib
 		}
 
 		std::size_t size() const { return (SIZE<=0) ? m_size : static_cast<std::size_t>(SIZE); }
+
+		template <int k, typename OPS, typename VT>
+		bool do_k(OPS &ops, VT &x, FT rho_delta, bool dummy)
+		{
+			plib::unused_var(dummy);
+			//printf("%d\n", k);
+			if (do_k<k-1, OPS>(ops, x, rho_delta, do_khelper<k-1>::value))
+				return true;
+
+			const std::size_t kp1 = k + 1;
+			const    std::size_t n = size();
+
+			ops.calc_rhs(m_v[kp1], m_v[k]);
+			ops.solve_LU_inplace(m_v[kp1]);
+
+			for (std::size_t j = 0; j <= k; j++)
+			{
+				m_ht[j][k] = vec_mult<FT>(n, m_v[kp1], m_v[j]);
+				vec_add_mult_scalar(n, m_v[kp1], m_v[j], -m_ht[j][k]);
+			}
+			m_ht[kp1][k] = std::sqrt(vec_mult2<FT>(n, m_v[kp1]));
+
+			if (m_ht[kp1][k] != 0.0)
+				vec_scale(n, m_v[kp1], constants<FT>::one() / m_ht[kp1][k]);
+
+			for (std::size_t j = 0; j < k; j++)
+				givens_mult(m_c[j], m_s[j], m_ht[j][k], m_ht[j+1][k]);
+
+			const float_type mu = 1.0 / std::hypot(m_ht[k][k], m_ht[kp1][k]);
+
+			m_c[k] = m_ht[k][k] * mu;
+			m_s[k] = -m_ht[kp1][k] * mu;
+			m_ht[k][k] = m_c[k] * m_ht[k][k] - m_s[k] * m_ht[kp1][k];
+			m_ht[kp1][k] = 0.0;
+
+			givens_mult(m_c[k], m_s[k], m_g[k], m_g[kp1]);
+
+			FT rho = std::abs(m_g[kp1]);
+
+			// FIXME ..
+			//itr_used = itr_used + 1;
+
+			if (rho <= rho_delta || k == RESTART-1)
+			{
+				/* Solve the system H * y = g */
+				/* x += m_v[j] * m_y[j]       */
+				for (std::size_t i = k + 1; i-- > 0;)
+				{
+					double tmp = m_g[i];
+					for (std::size_t j = i + 1; j <= k; j++)
+						tmp -= m_ht[i][j] * m_y[j];
+					m_y[i] = tmp / m_ht[i][i];
+				}
+
+				for (std::size_t i = 0; i <= k; i++)
+					vec_add_mult_scalar(n, x, m_v[i], m_y[i]);
+				return true;
+			}
+			else
+				return false;
+		}
+
+		template <int k, typename OPS, typename VT>
+		bool do_k(OPS &ops, VT &x, FT rho_delta, float dummy)
+		{
+			plib::unused_var(ops, x, rho_delta, dummy);
+			//printf("here\n");
+			return false;
+		}
 
 		template <typename OPS, typename VT, typename VRHS>
 		std::size_t solve(OPS &ops, VT &x, const VRHS & rhs, const std::size_t itr_max, float_type accuracy)
@@ -234,7 +331,6 @@ namespace plib
 
 			while (itr_used < itr_max)
 			{
-				std::size_t last_k = RESTART;
 				float_type rho;
 
 				ops.calc_rhs(Ax, x);
@@ -255,71 +351,11 @@ namespace plib
 				vec_set_scalar(RESTART+1, m_g, +constants<FT>::zero());
 				m_g[0] = rho;
 
-				//for (std::size_t i = 0; i < mr + 1; i++)
-				//  vec_set_scalar(mr, m_ht[i], NL_FCONST(0.0));
-
 				vec_mult_scalar(n, m_v[0], residual, constants<FT>::one() / rho);
 
-				for (std::size_t k = 0; k < RESTART; k++)
-				{
-					const std::size_t kp1 = k + 1;
-
-					ops.calc_rhs(m_v[kp1], m_v[k]);
-					ops.solve_LU_inplace(m_v[kp1]);
-
-					for (std::size_t j = 0; j <= k; j++)
-					{
-						m_ht[j][k] = vec_mult<FT>(n, m_v[kp1], m_v[j]);
-						vec_add_mult_scalar(n, m_v[kp1], m_v[j], -m_ht[j][k]);
-					}
-					m_ht[kp1][k] = std::sqrt(vec_mult2<FT>(n, m_v[kp1]));
-
-					if (m_ht[kp1][k] != 0.0)
-						vec_scale(n, m_v[kp1], constants<FT>::one() / m_ht[kp1][k]);
-
-					for (std::size_t j = 0; j < k; j++)
-						givens_mult(m_c[j], m_s[j], m_ht[j][k], m_ht[j+1][k]);
-
-					const float_type mu = 1.0 / std::hypot(m_ht[k][k], m_ht[kp1][k]);
-
-					m_c[k] = m_ht[k][k] * mu;
-					m_s[k] = -m_ht[kp1][k] * mu;
-					m_ht[k][k] = m_c[k] * m_ht[k][k] - m_s[k] * m_ht[kp1][k];
-					m_ht[kp1][k] = 0.0;
-
-					givens_mult(m_c[k], m_s[k], m_g[k], m_g[kp1]);
-
-					rho = std::abs(m_g[kp1]);
-
-					itr_used = itr_used + 1;
-
-					if (rho <= rho_delta)
-					{
-						last_k = k;
-						break;
-					}
-				}
-
-				if (last_k >= RESTART)
-					/* didn't converge within accuracy */
-					last_k = RESTART - 1;
-
-				/* Solve the system H * y = g */
-				/* x += m_v[j] * m_y[j]       */
-				for (std::size_t i = last_k + 1; i-- > 0;)
-				{
-					double tmp = m_g[i];
-					for (std::size_t j = i + 1; j <= last_k; j++)
-						tmp -= m_ht[i][j] * m_y[j];
-					m_y[i] = tmp / m_ht[i][i];
-				}
-
-				for (std::size_t i = 0; i <= last_k; i++)
-					vec_add_mult_scalar(n, x, m_v[i], m_y[i]);
-
-				if (rho <= rho_delta)
+				if (do_k<RESTART-1>(ops, x, rho_delta, true))
+					// converged
 					break;
-
 			}
 			return itr_used;
 		}

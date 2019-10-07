@@ -36,7 +36,7 @@ namespace devices
 
 		matrix_solver_GCR_t(netlist_state_t &anetlist, const pstring &name,
 				const solver_parameters_t *params, const std::size_t size)
-			: matrix_solver_t(anetlist, name, matrix_solver_t::PREFER_IDENTITY_TOP_LEFT, params)
+			: matrix_solver_t(anetlist, name, params)
 			, m_dim(size)
 			, RHS(size)
 			, new_V(size)
@@ -283,7 +283,12 @@ namespace devices
 		strm.writeline("{\n");
 		csc_private(strm);
 		strm.writeline("}\n");
+		// mingw 5.3 workaround
+#if !defined(_WIN32) && !defined(_WIN64)
+		return std::pair<pstring, pstring>(name, t.str());
+#else
 		return std::pair<pstring, pstring>(name, pstring(t.str()));
+#endif
 	}
 
 	template <typename FT, int SIZE>
@@ -299,15 +304,14 @@ namespace devices
 
 		/* now solve it */
 
-		//if (m_proc != nullptr)
 		if (m_proc.resolved())
 		{
-			//static_solver(m_A, RHS);
 			m_proc(&mat.A[0], &RHS[0], &new_V[0]);
 		}
 		else
 		{
-			// mat.gaussian_elimination_parallel(RHS);
+			// parallel is slow -- very slow
+			//mat.gaussian_elimination_parallel(RHS);
 			mat.gaussian_elimination(RHS);
 			/* backward substitution */
 			mat.gaussian_back_substitution(new_V, RHS);
