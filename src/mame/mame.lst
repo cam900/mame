@@ -21524,6 +21524,9 @@ megazonej                       // GX319 (c) 1983 + Interlogic / Kosuka
 @source:meijinsn.cpp
 meijinsn                        // (c) 1986 SNK
 
+@source:mekd1.cpp
+mekd1                           // 1975 Motorola Evaluation Kit
+
 @source:mekd2.cpp
 mekd2                           // 1977 Motorola Evaluation Kit
 
@@ -37189,6 +37192,9 @@ swtpc09d3                       // S09, DMF3 Floppy UNIBUG U3 rom - UniFLEX U3
 swtpc09i                        // S09, DC4 Floppy + PIA IDE SBUG rom - FLEX
 swtpc09u                        // S09, DMF2 Floppy UNIBUG rom - UniFLEX
 
+@source:swtpc8212.cpp
+swtpc8212                       //
+
 @source:swyft.cpp
 swyft                           //
 
@@ -37990,7 +37996,6 @@ t4490                           // Terco 4490 Mill CNC Control (c) 1986
 alcat258                        //
 loewe715                        //
 loewed                          //
-swtpc8212                       //
 teleguide                       //
 
 @source:terracre.cpp

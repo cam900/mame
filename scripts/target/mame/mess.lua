@@ -2700,6 +2700,7 @@ createMESSProjects(_target, _subtarget, "motorola")
 files {
 	MAME_DIR .. "src/mame/drivers/m6805evs.cpp",
 	MAME_DIR .. "src/mame/drivers/m68705prg.cpp",
+	MAME_DIR .. "src/mame/drivers/mekd1.cpp",
 	MAME_DIR .. "src/mame/drivers/mekd2.cpp",
 	MAME_DIR .. "src/mame/drivers/mekd3.cpp",
 	MAME_DIR .. "src/mame/drivers/mekd4.cpp",
@@ -3388,6 +3389,7 @@ files {
 	MAME_DIR .. "src/mame/drivers/swtpc09.cpp",
 	MAME_DIR .. "src/mame/includes/swtpc09.h",
 	MAME_DIR .. "src/mame/machine/swtpc09.cpp",
+	MAME_DIR .. "src/mame/drivers/swtpc8212.cpp",
 }
 
 createMESSProjects(_target, _subtarget, "synertek")
