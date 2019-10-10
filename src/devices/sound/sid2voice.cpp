@@ -553,6 +553,7 @@ void jkm8580Operator::set()
 {
 	sidwavemode = reg[11] & 1;
 	sidprocessmode = (reg[11] & 2) >> 1;
+	// filter mode (reg[11] & 4) >> 2;
 
 	masterVolume = reg[10] & 15;
 	masterVolumeAmplIndex = masterVolume << 8;

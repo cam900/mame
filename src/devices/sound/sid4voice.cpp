@@ -56,6 +56,8 @@ static inline void waveAdvance(sid4Operator* pVoice)
 	pVoice->waveStepPnt &= 0xFFFF;
 	pVoice->waveStep &= (pVoice->waveSize << 2) - 1;
 #endif
+	pVoice->reg[14] = pVoice->output;
+	pVoice->reg[15] = pVoice->enveVol;
 }
 
 static inline void noiseAdvance(sid4Operator* pVoice)
@@ -387,8 +389,6 @@ static inline void waveCalcFilter(sid4Operator* pVoice)
 static s8 waveCalcMute(sid4Operator* pVoice)
 {
 	(*pVoice->ADSRproc)(pVoice);  /* just process envelope */
-	pVoice->reg[14] = pVoice->output;
-	pVoice->reg[15] = pVoice->enveVol;
 	return pVoice->filtIO;//&pVoice->outputMask;
 }
 
@@ -416,8 +416,6 @@ static s8 waveCalcRangeCheck(sid4Operator* pVoice)
 	}
 	pVoice->filtIO = ampMod1x8[(*pVoice->ADSRproc)(pVoice)|pVoice->output];
 	waveCalcFilter(pVoice);
-	pVoice->reg[14] = pVoice->output;
-	pVoice->reg[15] = pVoice->enveVol;
 	return pVoice->filtIO;//&pVoice->outputMask;
 }
 
@@ -582,6 +580,7 @@ void sid4Operator::set()
 	if ((oldWave ^ newWave) & 0xF0)
 		cycleLenCount = 0;
 
+	// filter mode (reg[7] & 0x10) >> 4
 	waveSize = 1 << (reg[7] & 0xF);
 	
 	u8 const ADtemp = reg[5];
@@ -740,8 +739,6 @@ s8 sid4Operator::wave_calc_normal(sid4Operator* pVoice)
 	pVoice->filtIO = ampMod1x8[(*pVoice->ADSRproc)(pVoice) | pVoice->output];
 	//pVoice->filtIO = pVoice->sid->masterVolume; // test for digi sound
 	waveCalcFilter(pVoice);
-	pVoice->reg[14] = pVoice->output;
-	pVoice->reg[15] = pVoice->enveVol;
 	return pVoice->filtIO;//&pVoice->outputMask;
 }
 
