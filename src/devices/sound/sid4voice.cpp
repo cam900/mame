@@ -447,7 +447,7 @@ void sid4Operator::clear()
 	curSIDfreq = curNoiseFreq = 0;
 
 	output = noiseOutput = 0;
-	outputMask = ~0;
+	outputLMask = outputRMask = ~0;
 	filtIO = 0;
 
 	filtEnabled = false;
@@ -550,9 +550,10 @@ void sid4Operator::set()
 	if ((oldWave ^ newWave) & 0xF0)
 		cycleLenCount = 0;
 
-	// filter mode (reg[7] & 0x10) >> 4
+	// filter mode (reg[12] & 0x8) >> 3;
+	// filter bias (reg[7] & 0xf0) >> 4;
 	waveSize = 1 << (reg[7] & 0xF);
-	
+
 	u8 const ADtemp = reg[5];
 	u8 const SRtemp = reg[6];
 	if (SIDAD != ADtemp)
@@ -576,10 +577,19 @@ void sid4Operator::set()
 	masterVolume = reg[13] & 15;
 	masterVolumeAmplIndex = masterVolume << 8;
 
+	if ((reg[13] & 0x80) && !(reg[7] & 2))
+		outputLMask = 0;     /* off */
+	else
+		outputLMask = ~0;  /* on */
+
+	if ((reg[13] & 0x80) && !(reg[7] & 4))
+		outputRMask = 0;     /* off */
+	else
+		outputRMask = ~0;  /* on */
+
 	filtEnabled = filter.Enabled && (reg[12] & 1);
 
 	filter.Type = reg[13] & 0x70;
-	outputMask = (reg[13] & 0x80) ? 0 : ~0;
 	if (filter.Type != filter.CurType)
 	{
 		filter.CurType = filter.Type;

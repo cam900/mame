@@ -90,8 +90,8 @@ void JKM6581_t::fill_buffer(stream_sample_t *lbuffer, stream_sample_t *rbuffer, 
 
 		for (int i = 0; i < maxLogicalVoices; i++)
 		{
-			lout += (((optr[i].outProc(&optr[i])&optr[i].outputMask)*optr[i].lvol) >> 8);
-			rout += (((optr[i].outProc(&optr[i])&optr[i].outputMask)*optr[i].rvol) >> 8);
+			lout += (((optr[i].outProc(&optr[i])&optr[i].outputLMask)*optr[i].lvol) >> 8);
+			rout += (((optr[i].outProc(&optr[i])&optr[i].outputRMask)*optr[i].rvol) >> 8);
 		}
 
 		*lbuffer++ = (s16) mix16mono[unsigned(mix16monoMiddleIndex

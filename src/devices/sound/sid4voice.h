@@ -52,7 +52,7 @@ struct sid4Operator
 	u16 curSIDfreq;
 	u16 curNoiseFreq;
 
-	u8 output, outputMask;
+	u8 output, outputLMask, outputRMask;//, outputMask;
 
 	int filtEnabled;
 	float filtLow, filtRef;

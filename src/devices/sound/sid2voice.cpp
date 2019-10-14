@@ -539,19 +539,20 @@ void jkm8580Operator::clear()
 
 void jkm8580Operator::set()
 {
-	sidwavemode = reg[11] & 1;
-	sidprocessmode = (reg[11] & 2) >> 1;
-	// filter mode (reg[11] & 4) >> 2;
+	sidwavemode = (reg[11] & 0x10) >> 4;
+	sidprocessmode = (reg[11] & 0x20) >> 5;
+	// filter mode (reg[9] & 0x8) >> 3;
+	// Filter bias (reg[11] & 0x0f);
 
 	masterVolume = reg[10] & 15;
 	masterVolumeAmplIndex = masterVolume << 8;
 
-	if ((reg[10] & 0x80) && !(reg[9] & 1))
+	if ((reg[10] & 0x80) && !(reg[9] & 2))
 		outputLMask = 0;     /* off */
 	else
 		outputLMask = ~0;  /* on */
 
-	if ((reg[10] & 0x80) && !(reg[9] & 2))
+	if ((reg[10] & 0x80) && !(reg[9] & 4))
 		outputRMask = 0;     /* off */
 	else
 		outputRMask = ~0;  /* on */
@@ -637,7 +638,7 @@ void jkm8580Operator::set()
 	ADSRproc = enveModeTable[enveTemp >> 1];  // shifting out the KEY-bit
 	ADSRctrl = enveTemp & (255 - ENVE_ALTER - 1);
 
-	filtEnabled = filter.Enabled && (reg[9] & 4);
+	filtEnabled = filter.Enabled && (reg[9] & 1);
 }
 
 
