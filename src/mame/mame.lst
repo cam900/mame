@@ -12723,6 +12723,9 @@ splndrbt2                       // (c) 1985 Alpha Denshi Co.
 splndrbta                       // (c) 1985 Alpha Denshi Co.
 splndrbtb                       // (c) 1985 Alpha Denshi Co.
 
+@source:eispc.cpp
+epc                             // 1984 Ericsson PC
+
 @source:ertictac.cpp
 ertictac                        // (c) 1992 Sisteme
 ertictaca                       // (c) 1992 Sisteme
@@ -15386,6 +15389,7 @@ gnw_judge                       // Nintendo
 gnw_lboat                       // Nintendo
 gnw_lion                        // Nintendo
 gnw_manhole                     // Nintendo
+gnw_manholeg                    // Nintendo
 gnw_mario                       // Nintendo
 gnw_mariocm                     // Nintendo
 gnw_mbaway                      // Nintendo
@@ -31678,7 +31682,6 @@ comport                         // Compaq Portable
 dgone                           // 1984 Data General/One
 eagle1600                       //
 eaglespirit                     // Eagle PC Spirit
-epc                             // 1984 Ericsson PC
 eppc                            // 1985 Ericsson Portable PC
 hyo88t                          // Hyosung Topstar 88T
 ibm5550                         //
@@ -38954,6 +38957,7 @@ tx0_8kw                         // 1962 MIT TX-0 (8kw RAM)
 
 @source:tx1.cpp
 buggyboy                        // (c) 1985 Tatsumi
+buggyboyb                       // (c) 1985 Tatsumi
 buggyboyjr                      // (c) 1986 Tatsumi
 tx1                             // (c) 1983 Tatsumi + Atari, Namco and Taito license
 tx1jb                           // (c) 1983 Tatsumi
@@ -38964,6 +38968,9 @@ aliencr                         // (c) 1989 Hudson Soft
 blazlaz                         // (c) 1989 Hudson Soft
 keith                           // (c) 1989 Hudson Soft
 paclandp                        // (c) 1989 Namco
+
+@source:uchroma68.cpp
+uchroma68                       // 1980 Motorola evaluation board for the MC6847
 
 @source:uknc.cpp
 uknc                            //

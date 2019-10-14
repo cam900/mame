@@ -1119,6 +1119,7 @@ function linkProjects_mame_mess(_target, _subtarget)
 		"entex",
 		"epoch",
 		"epson",
+		"ericsson",
 		"exidy",
 		"fairch",
 		"fairlight",
@@ -2182,6 +2183,13 @@ files {
 	MAME_DIR .. "src/mame/machine/qx10kbd.h",
 }
 
+createMESSProjects(_target, _subtarget, "ericsson")
+files {
+	MAME_DIR .. "src/mame/drivers/eispc.cpp",
+	MAME_DIR .. "src/mame/machine/eispc_kb.cpp",
+	MAME_DIR .. "src/mame/machine/eispc_kb.h",
+}
+
 createMESSProjects(_target, _subtarget, "exidy")
 files {
 	MAME_DIR .. "src/mame/machine/sorcerer.cpp",
@@ -2707,6 +2715,7 @@ files {
 	MAME_DIR .. "src/mame/drivers/mekd5.cpp",
 	MAME_DIR .. "src/mame/drivers/mvme147.cpp",
 	MAME_DIR .. "src/mame/drivers/mvme162.cpp",
+	MAME_DIR .. "src/mame/drivers/uchroma68.cpp",
 }
 
 createMESSProjects(_target, _subtarget, "multitch")
@@ -3580,7 +3589,6 @@ files {
 createMESSProjects(_target, _subtarget, "toshiba")
 files {
 	MAME_DIR .. "src/mame/drivers/pasopia.cpp",
-	MAME_DIR .. "src/mame/includes/pasopia.h",
 	MAME_DIR .. "src/mame/drivers/pasopia7.cpp",
 	MAME_DIR .. "src/mame/drivers/paso1600.cpp",
 }
@@ -3778,6 +3786,8 @@ files {
 	MAME_DIR .. "src/mame/drivers/crvision.cpp",
 	MAME_DIR .. "src/mame/includes/crvision.h",
 	MAME_DIR .. "src/mame/drivers/gamemachine.cpp",
+  MAME_DIR .. "src/mame/audio/nl_gamemachine.h",
+  MAME_DIR .. "src/mame/audio/nl_gamemachine.cpp",
 	MAME_DIR .. "src/mame/drivers/geniusiq.cpp",
 	MAME_DIR .. "src/mame/drivers/geniusjr.cpp",
 	MAME_DIR .. "src/mame/drivers/glcx.cpp",
