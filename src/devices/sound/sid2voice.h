@@ -109,6 +109,7 @@ struct jkm8580Operator
 	void set();
 	void set2();
 	static int8_t wave_calc_normal(jkm8580Operator *pVoice);
+	static int8_t wave_calc_digi(jkm8580Operator *pVoice);
 
 private:
 	void wave_calc_cycle_len();

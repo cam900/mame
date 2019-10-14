@@ -224,6 +224,12 @@ static void sidMode00(jkm8580Operator* pVoice)
 	waveAdvance(pVoice);
 }
 
+static void sidModeC0(jkm8580Operator* pVoice)
+{
+	pVoice->output = (pVoice->masterVolume << 4);
+	waveAdvance(pVoice);
+}
+
 #if 0
 /* not used */
 static void sidModeReal00(jkm8580Operator* pVoice)
@@ -299,6 +305,19 @@ static void sidModeLock(jkm8580Operator* pVoice)
 /* */
 /* */
 /* */
+
+static void sidModeC4(jkm8580Operator* pVoice)
+{
+#if defined(DIRECT_FIXPOINT)
+	if (pVoice->modulator->waveStep.w.h < 2048)
+#else
+	if (pVoice->modulator->waveStep < 2048)
+#endif
+	pVoice->output = (pVoice->masterVolume << 4);
+	else
+	pVoice->output = 0xFF ^ (pVoice->masterVolume << 4);
+	waveAdvance(pVoice);
+}
 
 static void sidMode14(jkm8580Operator* pVoice)
 {
@@ -463,11 +482,11 @@ static ptr2sidVoidFunc sidModeNormalTable[2][16] =
 {
 	{
 		sidMode00, sidMode10, sidMode20, sidMode30, sidMode40, sidMode50, sidMode60, sidMode70,
-		sidMode80, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock
+		sidMode80, sidModeLock, sidModeLock, sidModeLock, sidModeC0, sidModeC0, sidModeC0, sidModeC0
 	},
 	{
 		sidMode00, sidMode10, sidMode20, sidMode30, sidMode40, sidMode50, sidMode60, sidMode70,
-		sidMode80, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock
+		sidMode80, sidModeLock, sidModeLock, sidModeLock, sidModeC0, sidModeC0, sidModeC0, sidModeC0
 	}
 };
 
@@ -476,11 +495,11 @@ static ptr2sidVoidFunc sidModeRingTable[2][16] =
 {
 	{
 		sidMode00, sidMode14, sidMode00, sidMode34, sidMode00, sidMode54, sidMode00, sidMode74,
-		sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock
+		sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeC4, sidModeC4, sidModeC4, sidModeC4
 	},
 	{
 		sidMode00, sidMode14, sidMode00, sidMode34, sidMode00, sidMode54, sidMode00, sidMode74,
-		sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeLock
+		sidModeLock, sidModeLock, sidModeLock, sidModeLock, sidModeC4, sidModeC4, sidModeC4, sidModeC4
 	}
 };
 
@@ -754,6 +773,9 @@ void jkm8580Operator::set2()
 		waveProc = sidModeRingTable[sidprocessmode][SIDctrl >> 4];
 	else
 		waveProc = sidModeNormalTable[sidprocessmode][SIDctrl >> 4];
+
+	if ((SIDctrl & 0xc0) == 0xc0)
+		outProc = &jkm8580Operator::wave_calc_digi;
 	}
 }
 
@@ -780,6 +802,31 @@ int8_t jkm8580Operator::wave_calc_normal(jkm8580Operator* pVoice)
 	(*pVoice->waveProc)(pVoice);
 	pVoice->filtIO = ampMod1x8[(*pVoice->ADSRproc)(pVoice) | pVoice->output];
 	//pVoice->filtIO = pVoice->masterVolume; // test for digi sound
+	waveCalcFilter(pVoice);
+	return pVoice->filtIO;
+}
+
+int8_t jkm8580Operator::wave_calc_digi(jkm8580Operator* pVoice)
+{
+	if (pVoice->cycleLenCount <= 0)
+	{
+		pVoice->wave_calc_cycle_len();
+		if (pVoice->SIDctrl & 0x40)
+		{
+			pVoice->pulseIndex = pVoice->newPulseIndex;
+			if (pVoice->pulseIndex > 2048)
+			{
+#if defined(DIRECT_FIXPOINT)
+				pVoice->waveStep.w.h = 0;
+#else
+				pVoice->waveStep = 0;
+#endif
+			}
+		}
+	}
+
+	(*pVoice->waveProc)(pVoice);
+	pVoice->filtIO = s8(pVoice->output ^ 0x80);
 	waveCalcFilter(pVoice);
 	return pVoice->filtIO;
 }
