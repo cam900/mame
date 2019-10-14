@@ -12,8 +12,6 @@
 
 
 std::unique_ptr<float[]> filterTable;
-std::unique_ptr<float[]> bandPassParam;
-#define lowPassParam filterTable
 float filterResTable[16];
 
 static uint8_t triangleTable[4096];
@@ -34,48 +32,19 @@ static const uint8_t* waveform70[2];
 
 void filterTableInit(running_machine &machine)
 {
-	int sample_rate = machine.sample_rate();
-	uint16_t uk;
+	uint32_t uk;
 	/* Parameter calculation has not been moved to a separate function */
 	/* by purpose. */
-	const float filterRefFreq = 44100.0f;
-
-	float yMax = 1.0f;
-	float yMin = 0.01f;
-	float yAdd;
-	float yTmp, rk, rk2;
 
 	float resDyMax;
 	float resDyMin;
 	float resDy;
 
-	filterTable = std::make_unique<float[]>(0x800);
-	bandPassParam = std::make_unique<float[]>(0x800);
+	filterTable = std::make_unique<float[]>(0x10000);
 
-	uk = 0;
-	for (rk = 0; rk < 0x800; rk++)
+	for (uk = 0; uk < 0x10000; uk++)
 	{
-		filterTable[uk] = (((expf(rk/0x800*logf(400.0f))/60.0f)+0.05f)
-			*filterRefFreq) / sample_rate;
-		if (filterTable[uk] < yMin)
-			filterTable[uk] = yMin;
-		if (filterTable[uk] > yMax)
-			filterTable[uk] = yMax;
-		uk++;
-	}
-
-	/*extern float bandPassParam[0x800]; */
-	yMax = 0.22f;
-	yMin = 0.05f;  /* less for some R1/R4 chips */
-	yAdd = (yMax-yMin)/2048.0f;
-	yTmp = yMin;
-	uk = 0;
-	/* Some C++ compilers still have non-local scope! */
-	for (rk2 = 0; rk2 < 0x800; rk2++)
-	{
-		bandPassParam[uk] = (yTmp*filterRefFreq) / sample_rate;
-		yTmp += yAdd;
-		uk++;
+		filterTable[uk] = (1.0f + float(uk)) / 65536.0f;
 	}
 
 	/*extern float filterResTable[16]; */
@@ -595,11 +564,8 @@ void jkm8580Operator::set()
 	}
 	if (filter.Enabled)
 	{
-		filter.Value = 0x7ff & ((reg[7] & 7) | (uint16_t(reg[8]) << 3));
-		if (filter.Type == 0x20)
-			filter.Dy = bandPassParam ? bandPassParam[filter.Value] : 0.0f;
-		else
-			filter.Dy = lowPassParam ? lowPassParam[filter.Value] : 0.0f;
+		filter.Value = ((reg[7] & 0xff) | (uint16_t(reg[8]) << 8));
+		filter.Dy = filterTable ? filterTable[filter.Value] : 0.0f;
 		filter.ResDy = filterResTable[reg[9] >> 4] - filter.Dy;
 		if (filter.ResDy < 1.0f)
 			filter.ResDy = 1.0f;

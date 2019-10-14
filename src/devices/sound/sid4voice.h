@@ -6,7 +6,6 @@
 #pragma once
 
 
-#define lowPassParam filterTable
 /*
   approximation of the jkm6581 chip
   this part is for 1 (of the 3) voices of a chip
@@ -108,7 +107,6 @@ struct sid4Operator
 	u16 enveShortAttackCount;
 
 	std::unique_ptr<float[]> filterTable;
-	std::unique_ptr<float[]> bandPassParam;
 	float filterResTable[16];
 
 	void clear();
