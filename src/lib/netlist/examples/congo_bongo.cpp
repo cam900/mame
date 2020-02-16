@@ -9,7 +9,7 @@
 
 /* set to 1 to use optimizations increasing performance significantly */
 
-#ifndef USE_OPTIMOPTIMIZATIONS
+#ifndef USE_OPTIMIZATIONS
 #define USE_OPTIMIZATIONS    1
 #endif
 
