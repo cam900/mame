@@ -145,6 +145,15 @@ m6809_base_device::m6809_base_device(const machine_config &mconfig, const char *
 	m_sprogram_config("decrypted_opcodes", ENDIANNESS_BIG, 8, 16),
 	m_clock_divider(divider)
 {
+	if (has_iv())
+	{
+		m_program_config.m_addr_width = 24;
+		m_program_config.m_logaddr_width = 16;
+		m_program_config.m_page_shift = 12;
+		m_sprogram_config.m_addr_width = 24;
+		m_sprogram_config.m_logaddr_width = 16;
+		m_sprogram_config.m_page_shift = 12;
+	}
 	m_mintf = nullptr;
 }
 
@@ -155,7 +164,10 @@ m6809_base_device::m6809_base_device(const machine_config &mconfig, const char *
 void m6809_base_device::device_start()
 {
 	if (!m_mintf)
+	{
 		m_mintf = std::make_unique<mi_default>();
+		m_mintf->set_base(this);
+	}
 
 	m_mintf->m_program  = &space(AS_PROGRAM);
 	m_mintf->m_sprogram = has_space(AS_OPCODES) ? &space(AS_OPCODES) : m_mintf->m_program;
@@ -176,6 +188,9 @@ void m6809_base_device::device_start()
 	if (has_iv())
 	{
 		state_add(M6809_IV,    "IV",        m_iv.w).mask(0xffff);
+		state_add(M6809_BA,    "BA",        m_ba.w).mask(0xffff);
+		for (int i = 0; i < 16; i++)
+			state_add(M6809_BANKEDADDR + i,    util::string_format("BANK%d", i).c_str(), m_banked_addr[i]).mask(0xffff);
 	}
 	if (is_6809())
 	{
@@ -198,6 +213,7 @@ void m6809_base_device::device_start()
 	m_x.w = 0;
 	m_y.w = 0;
 	m_v.w = 0xffff;
+	m_ba.w = 0;
 	m_iv.w = 0xfff0;
 	m_iv_start.w = 0xfff0;
 	m_dp = 0;
@@ -215,6 +231,7 @@ void m6809_base_device::device_start()
 	save_item(NAME(m_x.w));
 	save_item(NAME(m_y.w));
 	save_item(NAME(m_v.w));
+	save_item(NAME(m_ba.w));
 	save_item(NAME(m_iv.w));
 	save_item(NAME(m_cc));
 	save_item(NAME(m_temp.w));
@@ -229,6 +246,7 @@ void m6809_base_device::device_start()
 	save_item(NAME(m_addressing_mode));
 	save_item(NAME(m_reg));
 	save_item(NAME(m_cond));
+	save_item(NAME(m_banked_addr));
 
 	// set our instruction counter
 	set_icountptr(m_icount);
@@ -243,6 +261,10 @@ void m6809_base_device::device_start()
 
 void m6809_base_device::device_reset()
 {
+	for (int i = 0; i < 16; i++)
+	{
+		m_banked_addr[i] = i;
+	}
 	m_iv.w = m_iv_start.w;
 	m_nmi_line = false;
 	m_nmi_asserted = false;
@@ -251,12 +273,13 @@ void m6809_base_device::device_reset()
 	m_lds_encountered = false;
 
 	m_dp = 0x00;        // reset direct page register
+	m_ba.w = 0;
 
 	m_cc |= CC_I;       // IRQ disabled
 	m_cc |= CC_F;       // FIRQ disabled
 
-	m_pc.b.h = space(AS_PROGRAM).read_byte(((m_iv & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 0);
-	m_pc.b.l = space(AS_PROGRAM).read_byte(((m_iv & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 1);
+	m_pc.b.h = space(AS_PROGRAM).read_byte(get_addr(((m_iv.w & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 0));
+	m_pc.b.l = space(AS_PROGRAM).read_byte(get_addr(((m_iv.w & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 1));
 
 	// reset sub-instruction state
 	reset_state();
@@ -288,6 +311,8 @@ void m6809_base_device::device_pre_save()
 		m_reg = M6809_IV;
 	else if (m_reg16 == &m_v)
 		m_reg = M6809_V;
+	else if (m_reg16 == &m_ba)
+		m_reg = M6809_BA;
 	else
 		m_reg = 0;
 }
@@ -330,6 +355,9 @@ void m6809_base_device::device_post_load()
 			break;
 		case M6809_V:
 			set_regop16(m_v);
+			break;
+		case M6809_BA:
+			set_regop16(m_ba);
 			break;
 	}
 }
@@ -539,6 +567,7 @@ m6809_base_device::exgtfr_register m6809_base_device::read_exgtfr_register(uint8
 		case 10: result.byte_value = m_cc;      break;  // CC
 		case 11: result.byte_value = m_dp;      break;  // DP
 		case 12: if (has_iv()) { result.word_value = m_iv.w; } break;  // IV
+		case 13: if (has_iv()) { result.word_value = m_ba.w; } break;  // BA
 	}
 	return result;
 }
@@ -564,6 +593,7 @@ void m6809_base_device::write_exgtfr_register(uint8_t reg, m6809_base_device::ex
 		case 10: m_cc    = value.byte_value;    break;  // CC
 		case 11: m_dp    = value.byte_value;    break;  // DP
 		case 12: if (has_iv()) { m_iv.w    = value.word_value; } break;  // IV
+		case 13: if (has_iv()) { m_ba.w    = value.word_value; update_banked_addr(); } break;  // BA
 	}
 }
 
@@ -605,28 +635,34 @@ void m6809_base_device::execute_run()
 	} while(m_icount > 0);
 }
 
-
 uint8_t m6809_base_device::mi_default::read(uint16_t adr)
 {
-	return m_program->read_byte(adr);
+	return m_program->read_byte(m_base->get_addr(adr));
 }
 
 uint8_t m6809_base_device::mi_default::read_opcode(uint16_t adr)
 {
-	return m_scache->read_byte(adr);
+	return m_scache->read_byte(m_base->get_addr(adr));
 }
 
 uint8_t m6809_base_device::mi_default::read_opcode_arg(uint16_t adr)
 {
-	return m_cache->read_byte(adr);
+	return m_cache->read_byte(m_base->get_addr(adr));
 }
 
 
 void m6809_base_device::mi_default::write(uint16_t adr, uint8_t val)
 {
-	m_program->write_byte(adr, val);
+	m_program->write_byte(m_base->get_addr(adr), val);
 }
 
+bool m6809_base_device::memory_translate(int spacenum, int intention, offs_t &address)
+{
+	if (spacenum == AS_PROGRAM || spacenum == AS_OPCODES)
+		address = get_addr(address);
+
+	return true;
+}
 
 
 //-------------------------------------------------

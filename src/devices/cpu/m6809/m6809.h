@@ -35,9 +35,12 @@ protected:
 
 	class memory_interface {
 	public:
+		m6809_base_device *m_base;
+
 		address_space *m_program, *m_sprogram;
 		memory_access_cache<0, 0, ENDIANNESS_BIG> *m_cache, *m_scache;
 
+		virtual void set_base(m6809_base_device *base) { m_base = base; }
 		virtual ~memory_interface() {}
 		virtual uint8_t read(uint16_t adr) = 0;
 		virtual uint8_t read_opcode(uint16_t adr) = 0;
@@ -53,6 +56,8 @@ protected:
 		virtual uint8_t read_opcode_arg(uint16_t adr) override;
 		virtual void write(uint16_t adr, uint8_t val) override;
 	};
+
+	u32 get_addr(u32 adr) { has_iv() ? (m_banked_addr[(adr >> 12) & 0xf] << 12) | (adr & 0xfff) : adr; }
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -72,6 +77,7 @@ protected:
 
 	// device_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
+	virtual bool memory_translate(int spacenum, int intention, offs_t &address) override;
 
 	// device_disasm_interface overrides
 	virtual std::unique_ptr<util::disasm_interface> create_disassembler() override;
@@ -171,6 +177,8 @@ protected:
 	PAIR16                      m_temp;
 	uint8_t                       m_opcode;
 	// MC6809S specific
+	uint16_t                    m_banked_addr[16];
+	PAIR16                      m_ba;
 	PAIR16                      m_v; // from HD6309
 	PAIR16                      m_iv;
 	PAIR16                      m_iv_start;
@@ -222,7 +230,7 @@ protected:
 	// effective address reading/writing
 	uint8_t read_ea()                                 { return read_memory(m_ea.w); }
 	void write_ea(uint8_t data)                       { write_memory(m_ea.w, data); }
-	void set_ea_iv(uint16_t ea)                       { m_ea.w = (m_iv & 0xfff0) | (ea & 0x000f); m_addressing_mode = ADDRESSING_MODE_EA; }
+	void set_ea_iv(uint16_t ea)                       { m_ea.w = (m_iv.w & 0xfff0) | (ea & 0x000f); m_addressing_mode = ADDRESSING_MODE_EA; }
 	void set_ea(uint16_t ea)                          { m_ea.w = ea; m_addressing_mode = ADDRESSING_MODE_EA; }
 	void set_ea_h(uint8_t ea_h)                       { m_ea.b.h = ea_h; }
 	void set_ea_l(uint8_t ea_l)                       { m_ea.b.l = ea_l; m_addressing_mode = ADDRESSING_MODE_EA; }
@@ -236,6 +244,10 @@ protected:
 	// instructions
 	void daa();
 	void mul();
+	void update_banked_addr()
+	{
+		m_banked_addr[m_ba.w & 0xf] = (m_ba.w >> 4) & 0xfff;
+	}
 
 	// miscellaneous
 	void nop()                                      { }
@@ -286,8 +298,8 @@ protected:
 
 private:
 	// address spaces
-	const address_space_config  m_program_config;
-	const address_space_config  m_sprogram_config;
+	address_space_config  m_program_config;
+	address_space_config  m_sprogram_config;
 
 	// other state
 	uint32_t                      m_state;
@@ -339,7 +351,7 @@ public:
 	// construction/destruction
 	mc6809s_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	void set_iv_start(u16 iv) { m_iv_start.w = data; }
+	void set_iv_start(u16 iv) { m_iv_start.w = iv; }
 	// MC6809S has LIC line to indicate opcode/data fetch
 	auto lic() { return m_lic_func.bind(); }
 
@@ -350,7 +362,7 @@ protected:
 enum
 {
 	M6809_PC = STATE_GENPC, M6809_S = 0, M6809_IV ,M6809_CC ,M6809_A, M6809_B, M6809_D, M6809_U, M6809_X, M6809_Y,
-	M6809_DP, M6809_IV, M6809_V
+	M6809_DP, M6809_IV, M6809_V, M6809_BA, M6809_BANKEDADDR
 };
 
 #define M6809_IRQ_LINE  0   /* IRQ line number */

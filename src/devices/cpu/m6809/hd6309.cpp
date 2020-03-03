@@ -222,6 +222,7 @@ void hd6309_device::device_pre_save()
 	else if (m_reg16 == &m_q.p.w)   m_reg = HD6309_W;
 	else if (m_reg16 == &m_v)       m_reg = HD6309_V;
 	else if (m_reg16 == &m_iv)      m_reg = HD6309_IV;
+	else if (m_reg16 == &m_ba)      m_reg = HD6309_BA;
 	else if (m_reg16 == &m_temp)    m_reg = HD6309_ZERO_WORD;
 	else
 		m_reg = 0;
@@ -291,6 +292,9 @@ void hd6309_device::device_post_load()
 		case HD6309_IV:
 			set_regop16(m_iv);
 			break;
+		case HD6309_BA:
+			set_regop16(m_ba);
+			break;
 		case HD6309_ZERO_WORD:
 			set_regop16(m_temp);
 			break;
@@ -347,6 +351,7 @@ inline uint8_t hd6309_device::read_operand(int ordinal)
 		case ADDRESSING_MODE_REGISTER_S:    return (ordinal & 1) ? m_s.b.l : m_s.b.h;
 		case ADDRESSING_MODE_REGISTER_V:    return (ordinal & 1) ? m_v.b.l : m_v.b.h;
 		case ADDRESSING_MODE_REGISTER_IV:   return (ordinal & 1) ? m_iv.b.l : m_iv.b.h;
+		case ADDRESSING_MODE_REGISTER_BA:   return (ordinal & 1) ? m_ba.b.l : m_ba.b.h;
 		case ADDRESSING_MODE_REGISTER_PC:   return (ordinal & 1) ? m_pc.b.l : m_pc.b.h;
 		case ADDRESSING_MODE_ZERO:          return 0x00;
 		default:                            fatalerror("Unexpected");
@@ -390,6 +395,7 @@ inline void hd6309_device::write_operand(int ordinal, uint8_t data)
 		case ADDRESSING_MODE_REGISTER_S:    *((ordinal & 1) ? &m_s.b.l : &m_s.b.h) = data;      break;
 		case ADDRESSING_MODE_REGISTER_V:    *((ordinal & 1) ? &m_v.b.l : &m_v.b.h) = data;      break;
 		case ADDRESSING_MODE_REGISTER_IV:   *((ordinal & 1) ? &m_iv.b.l : &m_iv.b.h) = data;    break;
+		case ADDRESSING_MODE_REGISTER_BA:   *((ordinal & 1) ? &m_ba.b.l : &m_ba.b.h) = data; update_banked_addr(); break;
 		case ADDRESSING_MODE_REGISTER_PC:   *((ordinal & 1) ? &m_pc.b.l : &m_pc.b.h) = data;    break;
 		case ADDRESSING_MODE_ZERO:                                                              break;
 		default:                            fatalerror("Unexpected");
@@ -470,7 +476,7 @@ inline m6809_base_device::exgtfr_register hd6309_device::read_exgtfr_register(ui
 		case 10: value = ((uint16_t) m_cc) << 8 | m_cc;       break;  // CC
 		case 11: value = ((uint16_t) m_dp) << 8 | m_dp;       break;  // DP
 		case 12: value = has_iv() ? m_iv.w : 0;               break;  // 0
-		case 13: value = 0;                                 break;  // 0
+		case 13: value = has_iv() ? m_ba.w : 0;               break;  // 0
 		case 14: value = ((uint16_t) m_q.r.e) << 8 | m_q.r.e; break;  // E
 		case 15: value = ((uint16_t) m_q.r.f) << 8 | m_q.r.f; break;  // F
 		default:
@@ -506,7 +512,7 @@ inline void hd6309_device::write_exgtfr_register(uint8_t reg, m6809_base_device:
 		case 10: m_cc    = (uint8_t) (value.word_value >> 0); break;  // CC
 		case 11: m_dp    = (uint8_t) (value.word_value >> 8); break;  // DP
 		case 12: if (has_iv()) { m_iv.w = value.word_value; } break;  // 0
-		case 13:                                            break;  // 0
+		case 13: if (has_iv()) { m_ba.w = value.word_value; update_banked_addr(); } break;  // 0
 		case 14: m_q.r.e = (uint8_t) (value.word_value >> 8); break;  // E
 		case 15: m_q.r.f = (uint8_t) (value.word_value >> 0); break;  // F
 		default:
@@ -591,7 +597,7 @@ void hd6309_device::register_register_op()
 	uint8_t operand = read_opcode_arg();
 
 	// if the 8/16 bit values are mismatched, we need to promote
-	bool promote = ((((!has_iv()) || ((operand & 0xf0) != 0xc0)) && (operand & 0x80)) ? true : false) != ((((!has_iv()) || ((operand & 0x0f) != 0x0c)) && (operand & 0x08)) ? true : false);
+	bool promote = ((((!has_iv()) || ((operand & 0xe0) != 0xc0)) && (operand & 0x80)) ? true : false) != ((((!has_iv()) || ((operand & 0x0e) != 0x0c)) && (operand & 0x08)) ? true : false);
 
 	// we're using m_temp as "register 0"
 	m_temp.w = 0;
@@ -612,7 +618,7 @@ void hd6309_device::register_register_op()
 		case 10: if (promote) set_regop16(m_temp);  else set_regop8(m_cc);          break;  // CC
 		case 11: if (promote) set_regop16(m_temp);  else set_regop8(m_dp);          break;  // DP
 		case 12: if (has_iv()){ set_regop16(m_iv); } else {if (promote) set_regop16(m_temp);  else set_regop8(m_temp.b.l);}    break;  // 0
-		case 13: if (promote) set_regop16(m_temp);  else set_regop8(m_temp.b.l);    break;  // 0
+		case 13: if (has_iv()){ set_regop16(m_ba); } else {if (promote) set_regop16(m_temp);  else set_regop8(m_temp.b.l);}    break;  // 0
 		case 14: if (promote) set_regop16(m_q.p.w); else set_regop8(m_q.r.e);       break;  // E
 		case 15: if (promote) set_regop16(m_q.p.w); else set_regop8(m_q.r.f);       break;  // F
 		default:
@@ -634,8 +640,8 @@ void hd6309_device::register_register_op()
 		case  9: m_addressing_mode = promote ? ADDRESSING_MODE_REGISTER_D : ADDRESSING_MODE_REGISTER_B; break;  // B
 		case 10: m_addressing_mode = promote ? ADDRESSING_MODE_ZERO : ADDRESSING_MODE_REGISTER_CC;      break;  // CC
 		case 11: m_addressing_mode = promote ? ADDRESSING_MODE_ZERO : ADDRESSING_MODE_REGISTER_DP;      break;  // DP
-		case 12: m_addressing_mode = has_iv() ? ADDRESSING_MODE_IV : ADDRESSING_MODE_ZERO;              break;  // 0
-		case 13: m_addressing_mode = ADDRESSING_MODE_ZERO;                                              break;  // 0
+		case 12: m_addressing_mode = has_iv() ? ADDRESSING_MODE_REGISTER_IV : ADDRESSING_MODE_ZERO;              break;  // 0
+		case 13: m_addressing_mode = has_iv() ? ADDRESSING_MODE_REGISTER_BA : ADDRESSING_MODE_ZERO;              break;  // 0
 		case 14: m_addressing_mode = promote ? ADDRESSING_MODE_REGISTER_W : ADDRESSING_MODE_REGISTER_E; break;  // E
 		case 15: m_addressing_mode = promote ? ADDRESSING_MODE_REGISTER_W : ADDRESSING_MODE_REGISTER_F; break;  // F
 		default:

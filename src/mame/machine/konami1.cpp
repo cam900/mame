@@ -20,6 +20,7 @@ konami1_device::konami1_device(const machine_config &mconfig, const char *tag, d
 void konami1_device::device_start()
 {
 	m_mintf = std::make_unique<mi_konami1>(m_boundary);
+	m_mintf->set_base(this);
 	m6809_base_device::device_start();
 }
 
@@ -61,7 +62,7 @@ konami1_device::mi_konami1::mi_konami1(uint16_t adr)
 
 uint8_t konami1_device::mi_konami1::read_opcode(uint16_t adr)
 {
-	uint8_t val = m_scache->read_byte(adr);
+	uint8_t val = mi_default::read_opcode(adr);
 	if(adr < m_boundary)
 		return val;
 	switch(adr & 0xa) {
