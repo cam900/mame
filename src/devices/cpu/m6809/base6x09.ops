@@ -7,7 +7,7 @@ NMI:
 	m_temp.w = entire_state_registers();
 	%PUSH_REGISTERS;
 	m_cc |= CC_I | CC_F;
-	set_ea(VECTOR_NMI);
+	set_ea_iv(VECTOR_NMI);
 	eat(1);
 	standard_irq_callback(INPUT_LINE_NMI);
 	goto INTERRUPT_VECTOR;
@@ -26,7 +26,7 @@ FIRQ:
 	set_regop16(m_s);
 	%PUSH_REGISTERS;
 	m_cc |= CC_I | CC_F;
-	set_ea(VECTOR_FIRQ);
+	set_ea_iv(VECTOR_FIRQ);
 	eat(1);
 	standard_irq_callback(M6809_FIRQ_LINE);
 	goto INTERRUPT_VECTOR;
@@ -37,7 +37,7 @@ IRQ:
 	m_temp.w = entire_state_registers();
 	%PUSH_REGISTERS;
 	m_cc |= CC_I;
-	set_ea(VECTOR_IRQ);
+	set_ea_iv(VECTOR_IRQ);
 	eat(1);
 	standard_irq_callback(M6809_IRQ_LINE);
 	goto INTERRUPT_VECTOR;
@@ -435,7 +435,7 @@ CWAI:
 	m_temp.w = entire_state_registers();
 	%PUSH_REGISTERS;
 
-	while((m_ea.w = get_pending_interrupt()) == 0)
+	while((m_ea.w = ((m_iv & 0xfff0) | (get_pending_interrupt() & 0x000f))) == 0)
 	{
 		// massaging the PC this way makes the debugger's behavior more
 		// intuitive
@@ -450,16 +450,19 @@ CWAI:
 	if (m_nmi_asserted)
 		m_nmi_asserted = false;
 
-	set_ea(m_ea.w);	// need to do this to set the addressing mode
-	m_cc |= CC_I | (m_ea.w != VECTOR_IRQ ? CC_F : 0);
+	set_ea_iv(m_ea.w);	// need to do this to set the addressing mode
+	m_cc |= CC_I | (m_ea.w != ((m_iv & 0xfff0) | (VECTOR_IRQ & 0x000f)) ? CC_F : 0);
 
 	// invoke standard interrupt callback for MAME core
-	switch (m_ea.w)
+	if ((m_ea.w & 0xfff0) == (m_iv & 0xfff0))
 	{
-		case VECTOR_NMI:	standard_irq_callback(INPUT_LINE_NMI); break;
-		case VECTOR_FIRQ:	standard_irq_callback(M6809_FIRQ_LINE); break;
-		case VECTOR_IRQ:	standard_irq_callback(M6809_IRQ_LINE); break;
-		default:			break;
+		switch (0xfff0 | (m_ea.w & 0x000f))
+		{
+			case VECTOR_NMI:	standard_irq_callback(INPUT_LINE_NMI); break;
+			case VECTOR_FIRQ:	standard_irq_callback(M6809_FIRQ_LINE); break;
+			case VECTOR_IRQ:	standard_irq_callback(M6809_IRQ_LINE); break;
+			default:			break;
+		}
 	}
 
 	goto INTERRUPT_VECTOR;
@@ -503,7 +506,7 @@ PULU:
 SWI:
 	// doesn't use SOFTWARE_INTERRUPT label because SWI will
 	// inhibit IRQ/FIRQ
-	set_ea(VECTOR_SWI);
+	set_ea_iv(VECTOR_SWI);
 	m_cc |= CC_E;
 	set_regop16(m_s);
 	m_temp.w = entire_state_registers();
@@ -512,11 +515,11 @@ SWI:
 	goto INTERRUPT_VECTOR;
 
 SWI2:
-	set_ea(VECTOR_SWI2);
+	set_ea_iv(VECTOR_SWI2);
 	goto SOFTWARE_INTERRUPT;
 
 SWI3:
-	set_ea(VECTOR_SWI3);
+	set_ea_iv(VECTOR_SWI3);
 	goto SOFTWARE_INTERRUPT;
 
 SOFTWARE_INTERRUPT:

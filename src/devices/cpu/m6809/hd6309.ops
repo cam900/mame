@@ -519,6 +519,12 @@ DISPATCH11:
 #include "base6x09.ops"
 
 PUSH_REGISTERS:
+	if (m_temp.w & 0x800)
+	{
+		@write_memory(--regop16().w, m_iv.b.l);
+		@write_memory(--regop16().w, m_iv.b.h);
+		nop();
+	}
 	if (m_temp.w & 0x80)
 	{
 		@write_memory(--regop16().w, m_pc.b.l);
@@ -628,6 +634,12 @@ PULL_REGISTERS:
 	{
 		@m_pc.b.h = read_memory(regop16().w++);
 		@m_pc.b.l = read_memory(regop16().w++);
+		nop();
+	}
+	if (m_temp.w & 0x800)
+	{
+		@m_iv.b.h = read_memory(regop16().w++);
+		@m_iv.b.l = read_memory(regop16().w++);
 		nop();
 	}
 	@eat(1);
@@ -817,12 +829,12 @@ TFR:
 
 ILLEGAL:
 	m_md |= 0x40;		// illegal op flag
-	set_ea(VECTOR_ILLEGAL);
+	set_ea_iv(VECTOR_ILLEGAL);
 	goto SOFTWARE_INTERRUPT;
 
 DIVIDE_BY_ZERO:
 	m_md |= 0x80;		// divide by zero flag
-	set_ea(VECTOR_ILLEGAL);
+	set_ea_iv(VECTOR_ILLEGAL);
 	goto SOFTWARE_INTERRUPT;
 
 IMM_IM:

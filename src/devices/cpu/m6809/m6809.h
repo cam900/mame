@@ -21,6 +21,7 @@
 // device type definition
 DECLARE_DEVICE_TYPE(MC6809, mc6809_device)
 DECLARE_DEVICE_TYPE(MC6809E, mc6809e_device)
+DECLARE_DEVICE_TYPE(MC6809S, mc6809s_device)
 DECLARE_DEVICE_TYPE(M6809, m6809_device)
 
 // ======================> m6809_base_device
@@ -80,6 +81,7 @@ protected:
 	virtual void state_string_export(const device_state_entry &entry, std::string &str) const override;
 
 	virtual bool is_6809() { return true; };
+	virtual bool has_iv() { return false; };
 
 	// addressing modes
 	enum
@@ -168,6 +170,10 @@ protected:
 	uint8_t                       m_cc;
 	PAIR16                      m_temp;
 	uint8_t                       m_opcode;
+	// MC6809S specific
+	PAIR16                      m_v; // from HD6309
+	PAIR16                      m_iv;
+	PAIR16                      m_iv_start;
 
 	// other internal state
 	uint8_t *                     m_reg8;
@@ -216,6 +222,7 @@ protected:
 	// effective address reading/writing
 	uint8_t read_ea()                                 { return read_memory(m_ea.w); }
 	void write_ea(uint8_t data)                       { write_memory(m_ea.w, data); }
+	void set_ea_iv(uint16_t ea)                       { m_ea.w = (m_iv & 0xfff0) | (ea & 0x000f); m_addressing_mode = ADDRESSING_MODE_EA; }
 	void set_ea(uint16_t ea)                          { m_ea.w = ea; m_addressing_mode = ADDRESSING_MODE_EA; }
 	void set_ea_h(uint8_t ea_h)                       { m_ea.b.h = ea_h; }
 	void set_ea_l(uint8_t ea_l)                       { m_ea.b.l = ea_l; m_addressing_mode = ADDRESSING_MODE_EA; }
@@ -266,8 +273,8 @@ protected:
 
 	// interrupt registers
 	bool firq_saves_entire_state()      { return false; }
-	uint16_t partial_state_registers()    { return 0x81; }
-	uint16_t entire_state_registers()     { return 0xFF; }
+	uint16_t partial_state_registers()    { return (has_iv() ? 0x800 : 0) | 0x81; }
+	uint16_t entire_state_registers()     { return (has_iv() ? 0x800 : 0) | 0xFF; }
 
 	// miscellaneous
 	inline exgtfr_register read_exgtfr_register(uint8_t reg);
@@ -324,10 +331,26 @@ public:
 	m6809_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 };
 
+// ======================> mc6809s_device
+
+class mc6809s_device : public m6809_base_device
+{
+public:
+	// construction/destruction
+	mc6809s_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	void set_iv_start(u16 iv) { m_iv_start.w = data; }
+	// MC6809S has LIC line to indicate opcode/data fetch
+	auto lic() { return m_lic_func.bind(); }
+
+protected:
+	virtual bool has_iv() { return true; };
+};
+
 enum
 {
-	M6809_PC = STATE_GENPC, M6809_S = 0, M6809_CC ,M6809_A, M6809_B, M6809_D, M6809_U, M6809_X, M6809_Y,
-	M6809_DP
+	M6809_PC = STATE_GENPC, M6809_S = 0, M6809_IV ,M6809_CC ,M6809_A, M6809_B, M6809_D, M6809_U, M6809_X, M6809_Y,
+	M6809_DP, M6809_IV, M6809_V
 };
 
 #define M6809_IRQ_LINE  0   /* IRQ line number */

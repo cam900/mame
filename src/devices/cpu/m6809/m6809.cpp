@@ -130,6 +130,7 @@ March 2013 NPW:
 
 DEFINE_DEVICE_TYPE(MC6809, mc6809_device, "mc6809", "Motorola MC6809")
 DEFINE_DEVICE_TYPE(MC6809E, mc6809e_device, "mc6809e", "Motorola MC6809E")
+DEFINE_DEVICE_TYPE(MC6809S, mc6809s_device, "mc6809s", "Motorola MC6809S")
 DEFINE_DEVICE_TYPE(M6809, m6809_device, "m6809", "MC6809 (legacy)")
 
 
@@ -172,6 +173,10 @@ void m6809_base_device::device_start()
 	state_add(M6809_CC,        "CC",        m_cc).mask(0xff);
 	state_add(M6809_DP,        "DP",        m_dp).mask(0xff);
 
+	if (has_iv())
+	{
+		state_add(M6809_IV,    "IV",        m_iv.w).mask(0xffff);
+	}
 	if (is_6809())
 	{
 		state_add(M6809_A,     "A",         m_q.r.a).mask(0xff);
@@ -180,6 +185,8 @@ void m6809_base_device::device_start()
 		state_add(M6809_X,     "X",         m_x.w).mask(0xffff);
 		state_add(M6809_Y,     "Y",         m_y.w).mask(0xffff);
 		state_add(M6809_U,     "U",         m_u.w).mask(0xffff);
+		if (has_iv())
+			state_add(M6809_V,    "V",        m_v.w).mask(0xffff);
 	}
 
 	// initialize variables
@@ -190,6 +197,9 @@ void m6809_base_device::device_start()
 	m_q.q = 0;
 	m_x.w = 0;
 	m_y.w = 0;
+	m_v.w = 0xffff;
+	m_iv.w = 0xfff0;
+	m_iv_start.w = 0xfff0;
 	m_dp = 0;
 	m_reg = 0;
 	m_reg8 = nullptr;
@@ -204,6 +214,8 @@ void m6809_base_device::device_start()
 	save_item(NAME(m_s.w));
 	save_item(NAME(m_x.w));
 	save_item(NAME(m_y.w));
+	save_item(NAME(m_v.w));
+	save_item(NAME(m_iv.w));
 	save_item(NAME(m_cc));
 	save_item(NAME(m_temp.w));
 	save_item(NAME(m_opcode));
@@ -231,6 +243,7 @@ void m6809_base_device::device_start()
 
 void m6809_base_device::device_reset()
 {
+	m_iv.w = m_iv_start.w;
 	m_nmi_line = false;
 	m_nmi_asserted = false;
 	m_firq_line = false;
@@ -242,8 +255,8 @@ void m6809_base_device::device_reset()
 	m_cc |= CC_I;       // IRQ disabled
 	m_cc |= CC_F;       // FIRQ disabled
 
-	m_pc.b.h = space(AS_PROGRAM).read_byte(VECTOR_RESET_FFFE + 0);
-	m_pc.b.l = space(AS_PROGRAM).read_byte(VECTOR_RESET_FFFE + 1);
+	m_pc.b.h = space(AS_PROGRAM).read_byte(((m_iv & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 0);
+	m_pc.b.l = space(AS_PROGRAM).read_byte(((m_iv & 0xfff0) | (VECTOR_RESET_FFFE & 0x000f)) + 1);
 
 	// reset sub-instruction state
 	reset_state();
@@ -271,6 +284,10 @@ void m6809_base_device::device_pre_save()
 		m_reg = M6809_U;
 	else if (m_reg16 == &m_s)
 		m_reg = M6809_S;
+	else if (m_reg16 == &m_iv)
+		m_reg = M6809_IV;
+	else if (m_reg16 == &m_v)
+		m_reg = M6809_V;
 	else
 		m_reg = 0;
 }
@@ -307,6 +324,12 @@ void m6809_base_device::device_post_load()
 			break;
 		case M6809_S:
 			set_regop16(m_s);
+			break;
+		case M6809_IV:
+			set_regop16(m_iv);
+			break;
+		case M6809_V:
+			set_regop16(m_v);
 			break;
 	}
 }
@@ -510,10 +533,12 @@ m6809_base_device::exgtfr_register m6809_base_device::read_exgtfr_register(uint8
 		case  3: result.word_value = m_u.w;     break;  // U
 		case  4: result.word_value = m_s.w;     break;  // S
 		case  5: result.word_value = m_pc.w;    break;  // PC
+		case  7: if (has_iv()) { result.word_value = m_v.w; } break;  // V
 		case  8: result.byte_value = m_q.r.a;   break;  // A
 		case  9: result.byte_value = m_q.r.b;   break;  // B
 		case 10: result.byte_value = m_cc;      break;  // CC
 		case 11: result.byte_value = m_dp;      break;  // DP
+		case 12: if (has_iv()) { result.word_value = m_iv.w; } break;  // IV
 	}
 	return result;
 }
@@ -533,10 +558,12 @@ void m6809_base_device::write_exgtfr_register(uint8_t reg, m6809_base_device::ex
 		case  3: m_u.w   = value.word_value;    break;  // U
 		case  4: m_s.w   = value.word_value;    break;  // S
 		case  5: m_pc.w  = value.word_value;    break;  // PC
+		case  7: if (has_iv()) { m_v.w   = value.word_value; } break;  // V
 		case  8: m_q.r.a = value.byte_value;    break;  // A
 		case  9: m_q.r.b = value.byte_value;    break;  // B
 		case 10: m_cc    = value.byte_value;    break;  // CC
 		case 11: m_dp    = value.byte_value;    break;  // DP
+		case 12: if (has_iv()) { m_iv.w    = value.word_value; } break;  // IV
 	}
 }
 
@@ -619,6 +646,17 @@ mc6809_device::mc6809_device(const machine_config &mconfig, const char *tag, dev
 
 mc6809e_device::mc6809e_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 		: m6809_base_device(mconfig, tag, owner, clock, MC6809E, 1)
+{
+}
+
+
+
+//-------------------------------------------------
+//  mc6809s_device
+//-------------------------------------------------
+
+mc6809s_device::mc6809s_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+		: m6809_base_device(mconfig, tag, owner, clock, MC6809S, 1)
 {
 }
 
