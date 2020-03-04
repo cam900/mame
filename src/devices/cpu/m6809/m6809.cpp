@@ -215,7 +215,8 @@ void m6809_base_device::device_start()
 	m_v.w = 0xffff;
 	m_ba.w = 0;
 	m_iv.w = 0xfff0;
-	m_iv_start.w = 0xfff0;
+	m_iv_start = 0xfff0;
+	m_ba_start = 0;
 	m_dp = 0;
 	m_reg = 0;
 	m_reg8 = nullptr;
@@ -265,7 +266,7 @@ void m6809_base_device::device_reset()
 	{
 		m_banked_addr[i] = i;
 	}
-	m_iv.w = m_iv_start.w;
+	m_iv.w = m_iv_start;
 	m_nmi_line = false;
 	m_nmi_asserted = false;
 	m_firq_line = false;
@@ -273,7 +274,8 @@ void m6809_base_device::device_reset()
 	m_lds_encountered = false;
 
 	m_dp = 0x00;        // reset direct page register
-	m_ba.w = 0;
+	m_ba.w = m_ba_start;
+	m_banked_addr[m_ba_start & 0xf] = (m_ba_start >> 4) & 0xfff;
 
 	m_cc |= CC_I;       // IRQ disabled
 	m_cc |= CC_F;       // FIRQ disabled

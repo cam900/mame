@@ -181,7 +181,8 @@ protected:
 	PAIR16                      m_ba;
 	PAIR16                      m_v; // from HD6309
 	PAIR16                      m_iv;
-	PAIR16                      m_iv_start;
+	uint16_t                    m_iv_start;
+	uint16_t                    m_ba_start;
 
 	// other internal state
 	uint8_t *                     m_reg8;
@@ -351,7 +352,8 @@ public:
 	// construction/destruction
 	mc6809s_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	void set_iv_start(u16 iv) { m_iv_start.w = iv; }
+	void set_iv_start(u16 iv) { m_iv_start = iv; }
+	void set_ba_start(u16 ba) { m_ba_start = ba; }
 	// MC6809S has LIC line to indicate opcode/data fetch
 	auto lic() { return m_lic_func.bind(); }
 
