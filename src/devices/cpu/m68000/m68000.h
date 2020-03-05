@@ -395,7 +395,7 @@ protected:
 	m68000_device(const machine_config &mconfig, const device_type type, const char *tag, device_t *owner, u32 clock);
 
 	m68000_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock,
-						const device_type type, u32 prg_data_width, u32 prg_address_bits, address_map_constructor internal_map);
+						const device_type type, u32 prg_data_width, u32 prg_address_bits, address_map_constructor internal_map = address_map_constructor());
 };
 
 
@@ -653,6 +653,14 @@ public:
 	virtual void device_start() override;
 };
 
+class fx6832_device : public m68000_device
+{
+public:
+	// construction/destruction
+	fx6832_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+
+};
+
 
 DECLARE_DEVICE_TYPE(M68000, m68000_device)
 DECLARE_DEVICE_TYPE(M68008, m68008_device)
@@ -670,6 +678,7 @@ DECLARE_DEVICE_TYPE(M68LC040, m68lc040_device)
 DECLARE_DEVICE_TYPE(M68040, m68040_device)
 DECLARE_DEVICE_TYPE(FSCPU32, fscpu32_device)
 DECLARE_DEVICE_TYPE(MCF5206E, mcf5206e_device)
+DECLARE_DEVICE_TYPE(FX6832, fx6832_device)
 
 
 #endif // MAME_CPU_M68000_M68000_H

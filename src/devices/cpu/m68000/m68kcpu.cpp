@@ -1676,7 +1676,7 @@ u16 m68000_base_device::get_fc()
 
 void m68000_base_device::define_state(void)
 {
-	u32 addrmask = (m_cpu_type & MASK_24BIT_SPACE) ? 0xffffff : 0xffffffff;
+	u32 addrmask = (1 << m_program_config.addr_width()) - 1;
 
 	state_add(STATE_GENPC,     "PC",        m_pc).mask(addrmask).callimport();
 	state_add(STATE_GENPCBASE, "CURPC",     m_ppc).mask(addrmask).callimport().noshow();
@@ -2572,6 +2572,7 @@ DEFINE_DEVICE_TYPE(M68LC040,    m68lc040_device,    "m68lc040",     "Motorola MC
 DEFINE_DEVICE_TYPE(M68040,      m68040_device,      "m68040",       "Motorola MC68040")
 DEFINE_DEVICE_TYPE(FSCPU32,     fscpu32_device,     "fscpu32",      "Freescale CPU32 Core")
 DEFINE_DEVICE_TYPE(MCF5206E,    mcf5206e_device,    "mcf5206e",     "Freescale MCF5206E")
+DEFINE_DEVICE_TYPE(FX6832,      fx6832_device,      "fx6832",       "FX68 FPGA driven CPU (32 bit address)")
 
 m68000_device::m68000_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
 	: m68000_device(mconfig, M68000, tag, owner, clock)
@@ -2816,6 +2817,11 @@ void mcf5206e_device::device_start()
 {
 	m68000_base_device::device_start();
 	init_cpu_coldfire();
+}
+
+fx6832_device::fx6832_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
+	: m68000_device(mconfig, tag, owner, clock, FX6832, 16, 32)
+{
 }
 
 void m68000_base_device::m68ki_set_one(unsigned short opcode, u16 state, const opcode_handler_struct &s)
