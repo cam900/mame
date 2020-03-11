@@ -1,5 +1,8 @@
 <?xml version="1.0"?>
 <!DOCTYPE softwarelist SYSTEM "softwarelist.dtd">
+<!--
+license:CC0
+-->
 <softwarelist name="st_flop" description="Atari ST disk images">
 
 	<software name="10frame" supported="no">
@@ -4086,6 +4089,18 @@
 		<part name="flop1" interface="floppy_3_5">
 			<dataarea name="flop" size="471664">
 				<rom name="spidertronic (europe).ipf" size="471664" crc="f1e6df96" sha1="f52b44f4e27eb1cc76408cafb678812a5fc269df" offset="0" />
+			</dataarea>
+		</part>
+	</software>
+
+	<software name="spidertr1" cloneof="spidertr" supported="no">
+		<description>Spidertronic (Euro, Smash 16)</description>
+		<year>1990</year>
+		<publisher>Smash 16</publisher>
+		<sharedfeat name="compatibility" value="PAL"/>
+		<part name="flop1" interface="floppy_3_5">
+			<dataarea name="flop" size="415008">
+				<rom name="spidertronic.stx" size="415008" crc="78214642" sha1="3838054a74b86a5d3b16e4683f50728f9ab20a78" offset="0" />
 			</dataarea>
 		</part>
 	</software>

@@ -2952,6 +2952,7 @@ atetrisa                        // 136066           (c) 1988
 atetrisb                        // (bootleg)
 atetrisb2                       // (bootleg)
 atetrisb3                       // (bootleg)
+atetrisb4                       // (bootleg)
 atetb3482                       // (bootleg, with UM3482)
 atetrisbp                       //
 atetrisc                        // 136066           (c) 1989
@@ -10688,6 +10689,7 @@ nemoj                           // 20/11/1990 (c) 1990 (Japan)
 nemor1                          // 09/11/1990 (c) 1990 (World)
 pang3                           // 01/06/1995 (c) 1995 Mitchell (Euro) not listed on Capcom's site
 pang3b                          // bootleg
+pang3b2                         // bootleg
 pang3j                          // 11/05/1995 (c) 1995 Mitchell (Japan) not listed on Capcom's site
 pang3r1                         // 11/05/1995 (c) 1995 Mitchell (Euro) not listed on Capcom's site
 pnickj                          // 08/06/1994 (c) 1994 Compile + Capcom license (Japan) not listed on Capcom's site
@@ -11826,6 +11828,7 @@ slyspy3                         // FA (c) 1989 Data East USA (US)
 breywood                        // (c) 1986 Data East Corporation (Japan)
 cobracom                        // (c) 1988 Data East Corporation (World/US)
 cobracoma                       // (c) 1988 Data East Corporation (World/US)
+cobracomb                       // (c) 1988 Data East Corporation (World/US)
 cobracomj                       // (c) 1988 Data East Corporation (Japan)
 csilver                         // (c) 1987 Data East Corporation (Japan)
 csilverj                        // (c) 1987 Data East Corporation (Japan)
@@ -12287,6 +12290,7 @@ drgnmst2                        // (c) 1994
 
 @source:dribling.cpp
 dribling                        // (c) 1983 Model Racing
+driblinga                       // (c) 1983 Model Racing
 driblingbr                      // bootleg
 driblingo                       // (c) 1983 Olympia
 
@@ -14005,6 +14009,7 @@ galaxianbl3                     // bootleg
 galaxiani                       // (c) Irem
 galaxianm                       // (c) Midway
 galaxianmo                      // (c) Midway
+galaxianrp                      // bootleg (Rene Pierre)
 galaxiant                       // (c) Taito
 galaxrcgg                       // bootleg (Recreativos Covadonga)
 galaxrf                         // bootleg (Recreativos Franco)
@@ -15064,6 +15069,7 @@ nfb96i                          // (c) 1996 Amcoe
 nfb96j                          // (c) 1996 Amcoe
 nfb96k                          // (c) 1996 Amcoe
 nfb96l                          // (c) 1996 Amcoe
+nfb96m                          // (c) 1996 Amcoe
 nfb96se                         // bootleg
 nfb96sea                        // bootleg
 nfb96seb                        // bootleg
@@ -18458,6 +18464,20 @@ wndrplnt                        // (c) 1987 Data East Corporation (Japan)
 @source:kas89.cpp
 kas89                           // 1989, SFC S.R.L.
 
+@source:kawai_k1.cpp
+k1                              //
+k1m                             //
+k1r                             //
+k1rii                           //
+
+@source:kawai_k4.cpp
+k4                              //
+k4r                             //
+
+@source:kawai_k5.cpp
+k5                              //
+k5m                             //
+
 @source:kaypro.cpp
 kaypro1                         // Kaypro 1
 kaypro10                        // Kaypro 10/83
@@ -18683,6 +18703,10 @@ kontest                         // GX800 (c) 198? (Japan)
 
 @source:kopunch.cpp
 kopunch                         // 834-0103 (c) 1981 Sega
+
+@source:korgds8.cpp
+ds8                             //
+korg707                         //
 
 @source:korgdss1.cpp
 dss1                            //
@@ -19474,6 +19498,7 @@ ssoldier                        // (c) 1993 Irem America (US)
 thndblst                        // (c) 1991 Irem (Japan)
 uccops                          // (c) 1992 Irem (World)
 uccopsar                        // (c) 1992 Irem (World)
+uccopsaru                       // (c) 1992 Irem America (US)
 uccopsj                         // (c) 1992 Irem (Japan)
 uccopsu                         // (c) 1992 Irem (US)
 
@@ -30131,6 +30156,7 @@ machbrkrj                       // (c) 1995 (Japan)
 nebulray                        // (c) 1994 (World)
 nebulrayj                       // (c) 1994 (Japan)
 outfxies                        // (c) 1994 (World)
+outfxiesa                       // (c) 1994 (Korea?)
 outfxiesj                       // (c) 1994 (Japan)
 ptblank                         // (c) 1994 (GN2 World)
 ptblanka                        // (c) 1994 (GN2 World) - Alternate labels, NRx-SPR0 (X=1 to 9)
@@ -31429,6 +31455,7 @@ gprnrs16
 ddrdismx                        // (c) 2006 Majesco / Konami [(c) 2001 Disney on title screen]
 ddrstraw                        // (c) 2006 Majesco / Konami
 megapad
+timetp36
 majkon
 majgnc
 sudopptv
@@ -32436,6 +32463,7 @@ pencil2                         //
 
 @source:pengadvb.cpp
 pengadvb                        // (c) 1988 Screen
+pengadvb2                       // (c) 1988 Comet
 
 @source:pengo.cpp
 jrpacmbl                        // bootleg on Pengo HW
@@ -34531,13 +34559,14 @@ hangzo
 @source:roland_cm32p.cpp
 cm32p                           //
 
+@source:roland_d10.cpp
+d10                             //
+d110                            //
+
 @source:roland_d50.cpp
 d50                             //
 d50o                            //
 d550                            //
-
-@source:roland_d110.cpp
-d110                            //
 
 @source:roland_mt32.cpp
 cm32l                           //
@@ -37114,6 +37143,9 @@ pballpup
 swclone
 dreamlss
 
+@source:spg2xx_digimake.cpp
+rad_digi
+
 @source:spg2xx_dreamlife.cpp
 dreamlif                        //
 dsgnwrld
@@ -37794,9 +37826,13 @@ starfigh                        // (c) 1990 SunA
 @source:sunplus_unsp20soc.cpp
 paccon
 jak_s500
+jak_pf
+jak_prft
+jak_tink
 jak_totm
 jak_ths
 smartfp                         // Smart Fit Park
+gormiti
 wlsair60                        // Wireless Air 60
 wrlshunt                        // Wireless: Hunting Video Game System
 tkmag220                        //
@@ -37814,6 +37850,7 @@ bkrankp
 
 @source:sunplus_unsp20soc_mobigo.cpp
 mobigo
+mobigos
 mobigo2
 
 @source:supbtime.cpp
@@ -39513,6 +39550,10 @@ vs4jc                           // 2004.09 Virtua Striker 4 (Japan) (Rev C)
 
 @source:triplhnt.cpp
 triplhnt                        // 008422-008791    1977/04 [6800]
+
+@source:triviaquiz.cpp
+triviaqz                        // 1985 Intermatic Manufacturing
+triviaqz2                       // 1985 Intermatic Manufacturing
 
 @source:trivrus.cpp
 trivrus                         // 2009 AGT. Trivia R Us
@@ -41389,6 +41430,7 @@ xavmusic                        //
 domfitex                        //
 domfitch                        //
 domdance                        //
+domstepc                        //
 
 @source:xavix2.cpp
 ltv_naru                        //
