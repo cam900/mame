@@ -60,12 +60,12 @@ protected:
 		u32      k2ramp    = 0;          // k2 ramp register
 		u32      k1        = 0;          // k1 register
 		u32      k1ramp    = 0;          // k1 ramp register
-		s32      o4n1      = 0;          // filter storage O4(n-1)
-		s32      o3n1      = 0;          // filter storage O3(n-1)
-		s32      o3n2      = 0;          // filter storage O3(n-2)
-		s32      o2n1      = 0;          // filter storage O2(n-1)
-		s32      o2n2      = 0;          // filter storage O2(n-2)
-		s32      o1n1      = 0;          // filter storage O1(n-1)
+		s32      o4n1[2]   = {0,0};      // filter storage O4(n-1)
+		s32      o3n1[2]   = {0,0};      // filter storage O3(n-1)
+		s32      o3n2[2]   = {0,0};      // filter storage O3(n-2)
+		s32      o2n1[2]   = {0,0};      // filter storage O2(n-1)
+		s32      o2n2[2]   = {0,0};      // filter storage O2(n-2)
+		s32      o1n1[2]   = {0,0};      // filter storage O1(n-1)
 		u64      exbank    = 0;          // external address bank
 
 		// internal state
@@ -105,13 +105,13 @@ protected:
 	inline s64 get_sample(s32 sample, u32 volume) { return rshift_signed<s64, s8>(sample * get_volume(volume), m_volume_acc_shift); }
 
 	inline s32 interpolate(s32 sample1, s32 sample2, u64 accum);
-	inline void apply_filters(es550x_voice *voice, s32 &sample);
+	inline void apply_filters(es550x_voice *voice, s32 &sample, u8 slot = 0);
 	virtual void update_envelopes(es550x_voice *voice) = 0;
 	virtual void check_for_end_forward(es550x_voice *voice, u64 &accum) = 0;
 	virtual void check_for_end_reverse(es550x_voice *voice, u64 &accum) = 0;
 	void generate_dummy(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
-	void generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
-	void generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples);
+	void generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples, bool stereo = false, bool swap = false);
+	void generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples, bool stereo = false, bool swap = false, u16 mask = 0xffff);
 	inline void generate_irq(es550x_voice *voice, int v);
 	virtual void generate_samples(s32 **outputs, int offset, int samples) {};
 
@@ -126,6 +126,7 @@ protected:
 	s8            m_volume_shift;
 	s64           m_volume_acc_shift;
 
+	u8            m_filter_page;
 	u8            m_current_page;         /* current register page */
 	u8            m_active_voices;        /* number of active voices */
 	u16           m_mode;                 /* MODE register */
@@ -153,14 +154,62 @@ protected:
 };
 
 
+class jkm5506_device : public es550x_device
+{
+public:
+	jkm5506_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
+	~jkm5506_device() {}
+
+	u32 read_latch_r();
+	void read_update_w(offs_t offset, u8 data = 0);
+	void write_latch_w(offs_t offset, u32 data, u32 mem_mask = ~0);
+	void write_update_w(offs_t offset, u8 data = 0);
+
+protected:
+	// device-level overrides
+	virtual void device_start() override;
+	virtual void device_reset() override;
+
+	const s8 VOLUME_BIT_JKM5506 = 16;
+	const s8 ADDRESS_INTEGER_BIT_JKM5506 = 21;
+	const s8 ADDRESS_FRAC_BIT_JKM5506 = 11;
+
+	virtual inline u32 get_bank(u32 control) override { return (control >> 14) & 0x3fff; }
+	virtual inline u32 get_ca(u32 control) override { return (control >> 10) & 7; }
+	virtual inline u32 get_lp(u32 control) override { return (control >> 8) & LP_MASK; }
+
+	virtual void update_envelopes(es550x_voice *voice) override;
+	virtual void check_for_end_forward(es550x_voice *voice, u64 &accum) override;
+	virtual void check_for_end_reverse(es550x_voice *voice, u64 &accum) override;
+	virtual void generate_samples(s32 **outputs, int offset, int samples) override;
+
+private:
+	inline void reg_write_low(es550x_voice *voice, offs_t offset, u32 data);
+	inline void reg_write_high(es550x_voice *voice, offs_t offset, u32 data);
+	inline void reg_write_test(es550x_voice *voice, offs_t offset, u32 data);
+	inline u32 reg_read_low(es550x_voice *voice, offs_t offset);
+	inline u32 reg_read_high(es550x_voice *voice, offs_t offset);
+	inline u32 reg_read_test(es550x_voice *voice, offs_t offset);
+
+	// ES5506 specific registers
+	u32      m_write_latch;            /* currently accumulated data for write */
+	u32      m_read_latch;             /* currently accumulated data for read */
+	u8       m_wst;                    /* W_ST register */
+	u8       m_wend;                   /* W_END register */
+	u8       m_lrend;                  /* LR_END register */
+};
+
+DECLARE_DEVICE_TYPE(JKM5506, jkm5506_device)
+
+
 class es5506_device : public es550x_device
 {
 public:
 	es5506_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 	~es5506_device() {}
 
-	uint8_t read(offs_t offset);
-	void write(offs_t offset, uint8_t data);
+	u8 read(offs_t offset);
+	void write(offs_t offset, u8 data);
 	void voice_bank_w(int voice, int bank);
 
 protected:

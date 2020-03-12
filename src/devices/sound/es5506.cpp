@@ -111,6 +111,9 @@ static constexpr u32 ULAW_MAXBITS        = 8;
 namespace {
 
 enum : u16 {
+	CONTROL_MASK        = 0x80000000,
+	CONTROL_SWAP        = 0x40000000,
+	CONTROL_STEREO      = 0x20000000,
 	CONTROL_BS1         = 0x8000,
 	CONTROL_BS0         = 0x4000,
 	CONTROL_CMPD        = 0x2000,
@@ -152,6 +155,7 @@ es550x_device::es550x_device(const machine_config &mconfig, device_type type, co
 	, m_stream(nullptr)
 	, m_sample_rate(0)
 	, m_master_clock(0)
+	, m_filter_page(0)
 	, m_current_page(0)
 	, m_active_voices(0)
 	, m_mode(0)
@@ -207,6 +211,7 @@ void es550x_device::device_start()
 	/* register save */
 	save_item(NAME(m_sample_rate));
 
+	save_item(NAME(m_filter_page));
 	save_item(NAME(m_current_page));
 	save_item(NAME(m_active_voices));
 	save_item(NAME(m_mode));
@@ -357,6 +362,90 @@ void es550x_device::device_stop()
 		wav_close(m_wavraw);
 	}
 #endif
+}
+
+DEFINE_DEVICE_TYPE(JKM5506, jkm5506_device, "es5506", "Ensoniq ES5506")
+
+jkm5506_device::jkm5506_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock)
+	: es550x_device(mconfig, JKM5506, tag, owner, clock)
+	, m_write_latch(0)
+	, m_read_latch(0)
+	, m_wst(0)
+	, m_wend(0)
+	, m_lrend(0)
+{
+}
+
+//-------------------------------------------------
+//  device_start - device-specific startup
+//-------------------------------------------------
+void jkm5506_device::device_start()
+{
+	es550x_device::device_start();
+	int channels = 1;  /* 1 channel by default, for backward compatibility */
+
+	/* only override the number of channels if the value is in the valid range 1 .. 6 */
+	if (1 <= m_channels && m_channels <= 6)
+		channels = m_channels;
+
+	/* create the stream */
+	m_stream = machine().sound().stream_alloc(*this, 0, 2 * channels, clock() / (16*32));
+
+	/* initialize the regions */
+	m_region_base[0] = m_region_base[1] = m_region_base[2] = m_region_base[3] = nullptr;
+	if (m_region0)
+	{
+		memory_region *region0 = machine().root_device().memregion(m_region0);
+		if (region0 != nullptr)
+		{
+			m_region_base[0] = (u16 *)region0->base();
+		}
+	}
+
+	/* compute the tables */
+	compute_tables(VOLUME_BIT_JKM5506, 4, 8); // 4 bit exponent, 8 bit mantissa
+
+	/* initialize the rest of the structure */
+	m_channels = channels;
+
+	/* KT-76 assumes all voices are active on an ES5506 without setting them! */
+	m_active_voices = 31;
+	m_sample_rate = m_master_clock / (16 * (m_active_voices + 1));
+	m_stream->set_sample_rate(m_sample_rate);
+
+	// 21 bit integer and 11 bit fraction
+	get_accum_mask(ADDRESS_INTEGER_BIT_JKM5506, ADDRESS_FRAC_BIT_JKM5506);
+
+	/* register save */
+	save_item(NAME(m_write_latch));
+	save_item(NAME(m_read_latch));
+
+	save_item(NAME(m_wst));
+	save_item(NAME(m_wend));
+	save_item(NAME(m_lrend));
+
+	for (int j = 0; j < 32; j++)
+	{
+		save_item(NAME(m_voice[j].ecount), j);
+		save_item(NAME(m_voice[j].lvramp), j);
+		save_item(NAME(m_voice[j].rvramp), j);
+		save_item(NAME(m_voice[j].k2ramp), j);
+		save_item(NAME(m_voice[j].k1ramp), j);
+		save_item(NAME(m_voice[j].filtcount), j);
+	}
+
+	/* success */
+}
+
+//-------------------------------------------------
+//  device_reset - device-specific reset
+//-------------------------------------------------
+
+void jkm5506_device::device_reset() // RESB for Reset input
+{
+	m_active_voices = 0x1f; // 32 voice at reset
+	m_mode = 0x17; // Dual, Slave, BCLK_EN high, WCLK_EN high, LRCLK_EN high
+	notify_clock_changed();
 }
 
 DEFINE_DEVICE_TYPE(ES5505, es5505_device, "es5505", "Ensoniq ES5505")
@@ -559,57 +648,57 @@ static inline void update_2_pole(s32 &prev, s32 &pole, s32 sample)
 	pole = sample;
 }
 
-inline void es550x_device::apply_filters(es550x_voice *voice, s32 &sample)
+inline void es550x_device::apply_filters(es550x_voice *voice, s32 &sample, u8 slot)
 {
 	/* pole 1 is always low-pass using K1 */
-	sample = apply_lowpass(sample, voice->k1, voice->o1n1);
-	update_pole(voice->o1n1, sample);
+	sample = apply_lowpass(sample, voice->k1, voice->o1n1[slot]);
+	update_pole(voice->o1n1[slot], sample);
 
 	/* pole 2 is always low-pass using K1 */
-	sample = apply_lowpass(sample, voice->k1, voice->o2n1);
-	update_2_pole(voice->o2n2, voice->o2n1, sample);
+	sample = apply_lowpass(sample, voice->k1, voice->o2n1[slot]);
+	update_2_pole(voice->o2n2[slot], voice->o2n1[slot], sample);
 
 	/* remaining poles depend on the current filter setting */
 	switch (get_lp(voice->control))
 	{
 		case 0:
 			/* pole 3 is high-pass using K2 */
-			sample = apply_highpass(sample, voice->k2, voice->o3n1, voice->o2n2);
-			update_2_pole(voice->o3n2, voice->o3n1, sample);
+			sample = apply_highpass(sample, voice->k2, voice->o3n1[slot], voice->o2n2[slot]);
+			update_2_pole(voice->o3n2[slot], voice->o3n1[slot], sample);
 
 			/* pole 4 is high-pass using K2 */
-			sample = apply_highpass(sample, voice->k2, voice->o4n1, voice->o3n2);
-			update_pole(voice->o4n1, sample);
+			sample = apply_highpass(sample, voice->k2, voice->o4n1[slot], voice->o3n2[slot]);
+			update_pole(voice->o4n1[slot], sample);
 			break;
 
 		case LP3:
 			/* pole 3 is low-pass using K1 */
-			sample = apply_lowpass(sample, voice->k1, voice->o3n1);
-			update_2_pole(voice->o3n2, voice->o3n1, sample);
+			sample = apply_lowpass(sample, voice->k1, voice->o3n1[slot]);
+			update_2_pole(voice->o3n2[slot], voice->o3n1[slot], sample);
 
 			/* pole 4 is high-pass using K2 */
-			sample = apply_highpass(sample, voice->k2, voice->o4n1, voice->o3n2);
-			update_pole(voice->o4n1, sample);
+			sample = apply_highpass(sample, voice->k2, voice->o4n1[slot], voice->o3n2[slot]);
+			update_pole(voice->o4n1[slot], sample);
 			break;
 
 		case LP4:
 			/* pole 3 is low-pass using K2 */
-			sample = apply_lowpass(sample, voice->k2, voice->o3n1);
-			update_2_pole(voice->o3n2, voice->o3n1, sample);
+			sample = apply_lowpass(sample, voice->k2, voice->o3n1[slot]);
+			update_2_pole(voice->o3n2[slot], voice->o3n1[slot], sample);
 
 			/* pole 4 is low-pass using K2 */
-			sample = apply_lowpass(sample, voice->k2, voice->o4n1);
-			update_pole(voice->o4n1, sample);
+			sample = apply_lowpass(sample, voice->k2, voice->o4n1[slot]);
+			update_pole(voice->o4n1[slot], sample);
 			break;
 
 		case LP3 | LP4:
 			/* pole 3 is low-pass using K1 */
-			sample = apply_lowpass(sample, voice->k1, voice->o3n1);
-			update_2_pole(voice->o3n2, voice->o3n1, sample);
+			sample = apply_lowpass(sample, voice->k1, voice->o3n1[slot]);
+			update_2_pole(voice->o3n2[slot], voice->o3n1[slot], sample);
 
 			/* pole 4 is low-pass using K2 */
-			sample = apply_lowpass(sample, voice->k2, voice->o4n1);
-			update_pole(voice->o4n1, sample);
+			sample = apply_lowpass(sample, voice->k2, voice->o4n1[slot]);
+			update_pole(voice->o4n1[slot], sample);
 			break;
 	}
 }
@@ -620,6 +709,49 @@ inline void es550x_device::apply_filters(es550x_voice *voice, s32 &sample)
      update_envelopes -- update the envelopes
 
 ***********************************************************************************************/
+
+inline void jkm5506_device::update_envelopes(es550x_voice *voice)
+{
+	const u32 volume_max = (1 << VOLUME_BIT_JKM5506) - 1;
+	/* decrement the envelope counter */
+	voice->ecount--;
+
+	/* ramp left volume */
+	if (voice->lvramp)
+	{
+		voice->lvol += (int8_t)voice->lvramp;
+		if ((s32)voice->lvol < 0) voice->lvol = 0;
+		else if (voice->lvol > volume_max) voice->lvol = volume_max;
+	}
+
+	/* ramp right volume */
+	if (voice->rvramp)
+	{
+		voice->rvol += (int8_t)voice->rvramp;
+		if ((s32)voice->rvol < 0) voice->rvol = 0;
+		else if (voice->rvol > volume_max) voice->rvol = volume_max;
+	}
+
+	/* ramp k1 filter constant */
+	if (voice->k1ramp && ((s32)voice->k1ramp >= 0 || !(voice->filtcount & 7)))
+	{
+		voice->k1 += (int8_t)voice->k1ramp;
+		if ((s32)voice->k1 < 0) voice->k1 = 0;
+		else if (voice->k1 > 0xffff) voice->k1 = 0xffff;
+	}
+
+	/* ramp k2 filter constant */
+	if (voice->k2ramp && ((s32)voice->k2ramp >= 0 || !(voice->filtcount & 7)))
+	{
+		voice->k2 += (int8_t)voice->k2ramp;
+		if ((s32)voice->k2 < 0) voice->k2 = 0;
+		else if (voice->k2 > 0xffff) voice->k2 = 0xffff;
+	}
+
+	/* update the filter constant counter */
+	voice->filtcount++;
+
+}
 
 inline void es5506_device::update_envelopes(es550x_voice *voice)
 {
@@ -677,6 +809,80 @@ inline void es5505_device::update_envelopes(es550x_voice *voice)
      check_for_end_reverse -- check for loop end and loop appropriately
 
 ***********************************************************************************************/
+
+inline void jkm5506_device::check_for_end_forward(es550x_voice *voice, u64 &accum)
+{
+	/* are we past the end? */
+	if (accum > voice->end && !(voice->control & CONTROL_LEI))
+	{
+		/* generate interrupt if required */
+		if (voice->control & CONTROL_IRQE)
+			voice->control |= CONTROL_IRQ;
+
+		/* handle the different types of looping */
+		switch (voice->control & CONTROL_LOOPMASK)
+		{
+			/* non-looping */
+			case 0:
+				voice->control |= CONTROL_STOP0;
+				break;
+
+			/* uni-directional looping */
+			case CONTROL_LPE:
+				accum = (voice->start + (accum - voice->end)) & m_address_acc_mask;
+				break;
+
+			/* trans-wave looping */
+			case CONTROL_BLE:
+				accum = (voice->start + (accum - voice->end)) & m_address_acc_mask;
+				voice->control = (voice->control & ~CONTROL_LOOPMASK) | CONTROL_LEI;
+				break;
+
+			/* bi-directional looping */
+			case CONTROL_LPE | CONTROL_BLE:
+				accum = (voice->end - (accum - voice->end)) & m_address_acc_mask;
+				voice->control ^= CONTROL_DIR;
+				break;
+		}
+	}
+}
+
+inline void jkm5506_device::check_for_end_reverse(es550x_voice *voice, u64 &accum)
+{
+	/* are we past the end? */
+	if (accum < voice->start && !(voice->control & CONTROL_LEI))
+	{
+		/* generate interrupt if required */
+		if (voice->control & CONTROL_IRQE)
+			voice->control |= CONTROL_IRQ;
+
+		/* handle the different types of looping */
+		switch (voice->control & CONTROL_LOOPMASK)
+		{
+			/* non-looping */
+			case 0:
+				voice->control |= CONTROL_STOP0;
+				break;
+
+			/* uni-directional looping */
+			case CONTROL_LPE:
+				accum = (voice->end - (voice->start - accum)) & m_address_acc_mask;
+				break;
+
+			/* trans-wave looping */
+			case CONTROL_BLE:
+				accum = (voice->end - (voice->start - accum)) & m_address_acc_mask;
+				voice->control = (voice->control & ~CONTROL_LOOPMASK) | CONTROL_LEI;
+				break;
+
+			/* bi-directional looping */
+			case CONTROL_LPE | CONTROL_BLE:
+				accum = (voice->start + (voice->start - accum)) & m_address_acc_mask;
+				voice->control ^= CONTROL_DIR;
+				break;
+		}
+	}
+}
 
 inline void es5506_device::check_for_end_forward(es550x_voice *voice, u64 &accum)
 {
@@ -878,7 +1084,7 @@ void es550x_device::generate_dummy(es550x_voice *voice, u16 *base, s32 *lbuffer,
 
 ***********************************************************************************************/
 
-void es550x_device::generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples)
+void es550x_device::generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples, bool stereo, bool swap)
 {
 	const u32 freqcount = voice->freqcount;
 	u64 accum = voice->accum & m_address_acc_mask;
@@ -893,27 +1099,73 @@ void es550x_device::generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, 
 		if (!(voice->control & CONTROL_DIR))
 		{
 			/* fetch two samples */
-			s32 val1 = base[get_integer_addr(accum)];
-			s32 val2 = base[get_integer_addr(accum, 1)];
+			if (stereo)
+			{
+				s32 val1l = base[get_integer_addr(accum)];
+				s32 val1r = base[get_integer_addr(accum, 1)];
+				s32 val2l = base[get_integer_addr(accum, 2)];
+				s32 val2r = base[get_integer_addr(accum, 3)];
+				if (swap)
+				{
+					val1l = ((val1l << 8) | (val1l >> 8)) & 0xffff;
+					val1r = ((val1r << 8) | (val1r >> 8)) & 0xffff;
+					val2l = ((val2l << 8) | (val2l >> 8)) & 0xffff;
+					val2r = ((val2r << 8) | (val2r >> 8)) & 0xffff;
+				}
 
-			/* decompress u-law */
-			val1 = m_ulaw_lookup[val1 >> (16 - ULAW_MAXBITS)];
-			val2 = m_ulaw_lookup[val2 >> (16 - ULAW_MAXBITS)];
+				/* decompress u-law */
+				val1l = m_ulaw_lookup[val1l >> 8];
+				val1r = m_ulaw_lookup[val1r >> 8];
+				val2l = m_ulaw_lookup[val2l >> 8];
+				val2r = m_ulaw_lookup[val2r >> 8];
 
-			/* interpolate */
-			val1 = interpolate(val1, val2, accum);
-			accum = (accum + freqcount) & m_address_acc_mask;
+				/* interpolate */
+				val1l = interpolate(val1l, val2l, accum);
+				val1r = interpolate(val1r, val2r, accum);
+				accum = (accum + freqcount) & m_address_acc_mask;
 
-			/* apply filters */
-			apply_filters(voice, val1);
+				/* apply filters */
+				apply_filters(voice, val1l, 0);
+				apply_filters(voice, val1r, 1);
 
-			/* update filters/volumes */
-			if (voice->ecount != 0)
-				update_envelopes(voice);
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
 
-			/* apply volumes and add */
-			*lbuffer += get_sample(val1, voice->lvol);
-			*rbuffer += get_sample(val1, voice->rvol);
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1l, voice->lvol);
+				*rbuffer += get_sample(val1r, voice->rvol);
+			}
+			else
+			{
+				s32 val1 = base[get_integer_addr(accum)];
+				s32 val2 = base[get_integer_addr(accum, 1)];
+				if (swap)
+				{
+					val1 = ((val1 << 8) | (val1 >> 8)) & 0xffff;
+					val2 = ((val2 << 8) | (val2 >> 8)) & 0xffff;
+				}
+
+				/* decompress u-law */
+				val1 = m_ulaw_lookup[val1];
+				val2 = m_ulaw_lookup[val2];
+
+				/* interpolate */
+				val1 = interpolate(val1, val2, accum);
+				accum = (accum + freqcount) & m_address_acc_mask;
+
+				/* apply filters */
+				apply_filters(voice, val1, 0);
+				apply_filters(voice, val1, 1);
+
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
+
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1, voice->lvol);
+				*rbuffer += get_sample(val1, voice->rvol);
+			}
 
 			/* check for loop end */
 			check_for_end_forward(voice, accum);
@@ -922,28 +1174,75 @@ void es550x_device::generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, 
 		/* two cases: second case is backward direction */
 		else
 		{
-			/* fetch two samples */
-			s32 val1 = base[get_integer_addr(accum)];
-			s32 val2 = base[get_integer_addr(accum, 1)];
+			if (stereo)
+			{
+				/* fetch two samples */
+				s32 val1l = base[get_integer_addr(accum)];
+				s32 val1r = base[get_integer_addr(accum, 1)];
+				s32 val2l = base[get_integer_addr(accum, 2)];
+				s32 val2r = base[get_integer_addr(accum, 3)];
+				if (swap)
+				{
+					val1l = ((val1l << 8) | (val1l >> 8)) & 0xffff;
+					val1r = ((val1r << 8) | (val1r >> 8)) & 0xffff;
+					val2l = ((val2l << 8) | (val2l >> 8)) & 0xffff;
+					val2r = ((val2r << 8) | (val2r >> 8)) & 0xffff;
+				}
 
-			/* decompress u-law */
-			val1 = m_ulaw_lookup[val1 >> (16 - ULAW_MAXBITS)];
-			val2 = m_ulaw_lookup[val2 >> (16 - ULAW_MAXBITS)];
+				/* decompress u-law */
+				val1l = m_ulaw_lookup[val1l];
+				val1r = m_ulaw_lookup[val1r];
+				val2l = m_ulaw_lookup[val2l];
+				val2r = m_ulaw_lookup[val2r];
 
-			/* interpolate */
-			val1 = interpolate(val1, val2, accum);
-			accum = (accum - freqcount) & m_address_acc_mask;
+				/* interpolate */
+				val1l = interpolate(val1l, val2l, accum);
+				val1r = interpolate(val1r, val2r, accum);
+				accum = (accum - freqcount) & m_address_acc_mask;
 
-			/* apply filters */
-			apply_filters(voice, val1);
+				/* apply filters */
+				apply_filters(voice, val1l, 0);
+				apply_filters(voice, val1r, 1);
 
-			/* update filters/volumes */
-			if (voice->ecount != 0)
-				update_envelopes(voice);
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
 
-			/* apply volumes and add */
-			*lbuffer += get_sample(val1, voice->lvol);
-			*rbuffer += get_sample(val1, voice->rvol);
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1l, voice->lvol);
+				*rbuffer += get_sample(val1r, voice->rvol);
+			}
+			else
+			{
+				/* fetch two samples */
+				s32 val1 = base[get_integer_addr(accum)];
+				s32 val2 = base[get_integer_addr(accum, 1)];
+				if (swap)
+				{
+					val1 = ((val1 << 8) | (val1 >> 8)) & 0xffff;
+					val2 = ((val2 << 8) | (val2 >> 8)) & 0xffff;
+				}
+
+				/* decompress u-law */
+				val1 = m_ulaw_lookup[val1];
+				val2 = m_ulaw_lookup[val2];
+
+				/* interpolate */
+				val1 = interpolate(val1, val2, accum);
+				accum = (accum - freqcount) & m_address_acc_mask;
+
+				/* apply filters */
+				apply_filters(voice, val1, 0);
+				apply_filters(voice, val1, 1);
+
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
+
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1, voice->lvol);
+				*rbuffer += get_sample(val1, voice->rvol);
+			}
 
 			/* check for loop end */
 			check_for_end_reverse(voice, accum);
@@ -967,7 +1266,7 @@ void es550x_device::generate_ulaw(es550x_voice *voice, u16 *base, s32 *lbuffer, 
 
 ***********************************************************************************************/
 
-void es550x_device::generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples)
+void es550x_device::generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s32 *rbuffer, int samples, bool stereo, bool swap, u16 mask)
 {
 	const u32 freqcount = voice->freqcount;
 	u64 accum = voice->accum & m_address_acc_mask;
@@ -981,53 +1280,153 @@ void es550x_device::generate_pcm(es550x_voice *voice, u16 *base, s32 *lbuffer, s
 		/* two cases: first case is forward direction */
 		if (!(voice->control & CONTROL_DIR))
 		{
-			/* fetch two samples */
-			s32 val1 = (s16)base[get_integer_addr(accum)];
-			s32 val2 = (s16)base[get_integer_addr(accum, 1)];
+			if (stereo)
+			{
+				/* fetch two samples */
+				s32 val1l = base[get_integer_addr(accum)];
+				s32 val1r = base[get_integer_addr(accum, 1)];
+				s32 val2l = base[get_integer_addr(accum, 2)];
+				s32 val2r = base[get_integer_addr(accum, 3)];
+				if (swap)
+				{
+					val1l = ((val1l << 8) | (val1l >> 8)) & 0xffff;
+					val1r = ((val1r << 8) | (val1r >> 8)) & 0xffff;
+					val2l = ((val2l << 8) | (val2l >> 8)) & 0xffff;
+					val2r = ((val2r << 8) | (val2r >> 8)) & 0xffff;
+				}
+				val1l = (s16)(val1l & mask);
+				val1r = (s16)(val1r & mask);
+				val2l = (s16)(val2l & mask);
+				val2r = (s16)(val2r & mask);
 
-			/* interpolate */
-			val1 = interpolate(val1, val2, accum);
-			accum = (accum + freqcount) & m_address_acc_mask;
+				/* interpolate */
+				val1l = interpolate(val1l, val2l, accum);
+				val1l = interpolate(val1r, val2r, accum);
+				accum = (accum + freqcount) & m_address_acc_mask;
 
-			/* apply filters */
-			apply_filters(voice, val1);
+				/* apply filters */
+				apply_filters(voice, val1l, 0);
+				apply_filters(voice, val1r, 1);
 
-			/* update filters/volumes */
-			if (voice->ecount != 0)
-				update_envelopes(voice);
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
 
-			/* apply volumes and add */
-			*lbuffer += get_sample(val1, voice->lvol);
-			*rbuffer += get_sample(val1, voice->rvol);
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1l, voice->lvol);
+				*rbuffer += get_sample(val1r, voice->rvol);
 
-			/* check for loop end */
-			check_for_end_forward(voice, accum);
+				/* check for loop end */
+				check_for_end_forward(voice, accum);
+			}
+			else
+			{
+				/* fetch two samples */
+				s32 val1 = base[get_integer_addr(accum)];
+				s32 val2 = base[get_integer_addr(accum, 1)];
+				if (swap)
+				{
+					val1 = ((val1 << 8) | (val1 >> 8)) & 0xffff;
+					val2 = ((val2 << 8) | (val2 >> 8)) & 0xffff;
+				}
+				val1 = (s16)(val1 & mask);
+				val2 = (s16)(val2 & mask);
+
+				/* interpolate */
+				val1 = interpolate(val1, val2, accum);
+				accum = (accum + freqcount) & m_address_acc_mask;
+
+				/* apply filters */
+				apply_filters(voice, val1, 0);
+				apply_filters(voice, val1, 1);
+
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
+
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1, voice->lvol);
+				*rbuffer += get_sample(val1, voice->rvol);
+
+				/* check for loop end */
+				check_for_end_forward(voice, accum);
+			}
 		}
 
 		/* two cases: second case is backward direction */
 		else
 		{
-			/* fetch two samples */
-			s32 val1 = (s16)base[get_integer_addr(accum)];
-			s32 val2 = (s16)base[get_integer_addr(accum, 1)];
+			if (stereo)
+			{
+				/* fetch two samples */
+				s32 val1l = base[get_integer_addr(accum)];
+				s32 val1r = base[get_integer_addr(accum, 1)];
+				s32 val2l = base[get_integer_addr(accum, 2)];
+				s32 val2r = base[get_integer_addr(accum, 3)];
+				if (swap)
+				{
+					val1l = ((val1l << 8) | (val1l >> 8)) & 0xffff;
+					val1r = ((val1r << 8) | (val1r >> 8)) & 0xffff;
+					val2l = ((val2l << 8) | (val2l >> 8)) & 0xffff;
+					val2r = ((val2r << 8) | (val2r >> 8)) & 0xffff;
+				}
+				val1l = (s16)(val1l & mask);
+				val1r = (s16)(val1r & mask);
+				val2l = (s16)(val2l & mask);
+				val2r = (s16)(val2r & mask);
 
-			/* interpolate */
-			val1 = interpolate(val1, val2, accum);
-			accum = (accum - freqcount) & m_address_acc_mask;
+				/* interpolate */
+				val1l = interpolate(val1l, val2l, accum);
+				val1l = interpolate(val1r, val2r, accum);
+				accum = (accum - freqcount) & m_address_acc_mask;
 
-			/* apply filters */
-			apply_filters(voice, val1);
+				/* apply filters */
+				apply_filters(voice, val1l, 0);
+				apply_filters(voice, val1r, 1);
 
-			/* update filters/volumes */
-			if (voice->ecount != 0)
-				update_envelopes(voice);
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
 
-			/* apply volumes and add */
-			*lbuffer += get_sample(val1, voice->lvol);
-			*rbuffer += get_sample(val1, voice->rvol);
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1l, voice->lvol);
+				*rbuffer += get_sample(val1r, voice->rvol);
 
-			/* check for loop end */
-			check_for_end_reverse(voice, accum);
+				/* check for loop end */
+				check_for_end_forward(voice, accum);
+			}
+			else
+			{
+				/* fetch two samples */
+				s32 val1 = base[get_integer_addr(accum)];
+				s32 val2 = base[get_integer_addr(accum, 1)];
+				if (swap)
+				{
+					val1 = ((val1 << 8) | (val1 >> 8)) & 0xffff;
+					val2 = ((val2 << 8) | (val2 >> 8)) & 0xffff;
+				}
+				val1 = (s16)(val1 & mask);
+				val2 = (s16)(val2 & mask);
+
+				/* interpolate */
+				val1 = interpolate(val1, val2, accum);
+				accum = (accum - freqcount) & m_address_acc_mask;
+
+				/* apply filters */
+				apply_filters(voice, val1, 0);
+				apply_filters(voice, val1, 1);
+
+				/* update filters/volumes */
+				if (voice->ecount != 0)
+					update_envelopes(voice);
+
+				/* apply volumes and add */
+				*lbuffer += get_sample(val1, voice->lvol);
+				*rbuffer += get_sample(val1, voice->rvol);
+
+				/* check for loop end */
+				check_for_end_forward(voice, accum);
+			}
 		}
 	}
 	else
@@ -1074,6 +1473,57 @@ inline void es550x_device::generate_irq(es550x_voice *voice, int v)
      generate_samples -- tell each voice to generate samples
 
 ***********************************************************************************************/
+
+void jkm5506_device::generate_samples(s32 **outputs, int offset, int samples)
+{
+	/* skip if nothing to do */
+	if (!samples)
+		return;
+
+	/* clear out the accumulators */
+	for (int i = 0; i < m_channels << 1; i++)
+	{
+		memset(outputs[i] + offset, 0, sizeof(s32) * samples);
+	}
+
+	/* loop while we still have samples to generate */
+	while (samples)
+	{
+		/* loop over voices */
+		for (int v = 0; v <= m_active_voices; v++)
+		{
+			es550x_voice *voice = &m_voice[v];
+			u16 *base = m_region_base[0];
+
+			/* special case: if end == start, stop the voice */
+			if (voice->start == voice->end)
+				voice->control |= CONTROL_STOP0;
+
+			const int voice_channel = get_ca(voice->control);
+			const int channel = voice_channel % m_channels;
+			const int l = channel << 1;
+			const int r = l + 1;
+			s32 *left = outputs[l] + offset;
+			s32 *right = outputs[r] + offset;
+
+			/* generate from the appropriate source */
+			if (!base)
+			{
+				LOG("es5506: nullptr region base %d\n",0);
+				generate_dummy(voice, base, left, right, samples);
+			}
+			else if (voice->control & CONTROL_CMPD)
+				generate_ulaw(voice, base, left, right, samples, voice->control & CONTROL_STEREO, voice->control & CONTROL_SWAP);
+			else
+				generate_pcm(voice, base, left, right, samples, voice->control & CONTROL_STEREO, voice->control & CONTROL_SWAP, (voice->control & CONTROL_MASK) ? 0xff00 : 0xffff);
+
+			/* does this voice have it's IRQ bit raised? */
+			generate_irq(voice, v);
+		}
+		offset++;
+		samples--;
+	}
+}
 
 void es5506_device::generate_samples(s32 **outputs, int offset, int samples)
 {
@@ -1182,6 +1632,481 @@ void es5505_device::generate_samples(s32 **outputs, int offset, int samples)
 	}
 }
 
+
+
+/**********************************************************************************************
+
+     reg_write -- handle a write to the selected ES5506 register
+
+***********************************************************************************************/
+
+inline void jkm5506_device::reg_write_low(es550x_voice *voice, offs_t offset, u32 data)
+{
+	switch (offset)
+	{
+		case 0x00/8:    /* CR */
+			voice->control = data & 0xffffffff;
+			voice->exbank = ((data >> 14) & 0x7ff) << ADDRESS_INTEGER_BIT_JKM5506;
+			LOG("voice %d, control=%04x\n", m_current_page & 0x1f, voice->control);
+			break;
+
+		case 0x08/8:    /* FC */
+			voice->freqcount = get_address_acc_shifted_val(data & 0x1ffff);
+			LOG("voice %d, freq count=%08x\n", m_current_page & 0x1f, get_address_acc_res(voice->freqcount));
+			break;
+
+		case 0x10/8:    /* LVOL */
+			voice->lvol = data & 0xffff; // low 4 bit is used for finer envelope control
+			LOG("voice %d, left vol=%04x\n", m_current_page & 0x1f, voice->lvol);
+			break;
+
+		case 0x18/8:    /* LVRAMP */
+			voice->lvramp = (data & 0xff00) >> 8;
+			LOG("voice %d, left vol ramp=%04x\n", m_current_page & 0x1f, voice->lvramp);
+			break;
+
+		case 0x20/8:    /* RVOL */
+			voice->rvol = data & 0xffff; // low 4 bit is used for finer envelope control
+			LOG("voice %d, right vol=%04x\n", m_current_page & 0x1f, voice->rvol);
+			break;
+
+		case 0x28/8:    /* RVRAMP */
+			voice->rvramp = (data & 0xff00) >> 8;
+			LOG("voice %d, right vol ramp=%04x\n", m_current_page & 0x1f, voice->rvramp);
+			break;
+
+		case 0x30/8:    /* ECOUNT */
+			voice->ecount = data & 0x1ff;
+			voice->filtcount = 0;
+			LOG("voice %d, envelope count=%04x\n", m_current_page & 0x1f, voice->ecount);
+			break;
+
+		case 0x38/8:    /* K2 */
+			voice->k2 = data & 0xffff; // low 4 bit is used for finer envelope control
+			LOG("voice %d, K2=%04x\n", m_current_page & 0x1f, voice->k2);
+			break;
+
+		case 0x40/8:    /* K2RAMP */
+			voice->k2ramp = ((data & 0xff00) >> 8) | ((data & 0x0001) << 31);
+			LOG("voice %d, K2 ramp=%04x\n", m_current_page & 0x1f, voice->k2ramp);
+			break;
+
+		case 0x48/8:    /* K1 */
+			voice->k1 = data & 0xffff; // low 4 bit is used for finer envelope control
+			LOG("voice %d, K1=%04x\n", m_current_page & 0x1f, voice->k1);
+			break;
+
+		case 0x50/8:    /* K1RAMP */
+			voice->k1ramp = ((data & 0xff00) >> 8) | ((data & 0x0001) << 31);
+			LOG("voice %d, K1 ramp=%04x\n", m_current_page & 0x1f, voice->k1ramp);
+			break;
+
+		case 0x58/8:    /* ACTV */
+		{
+			m_active_voices = data & 0x1f;
+			m_sample_rate = m_master_clock / (16 * (m_active_voices + 1));
+			m_stream->set_sample_rate(m_sample_rate);
+			if (!m_sample_rate_changed_cb.isnull())
+				m_sample_rate_changed_cb(m_sample_rate);
+
+			LOG("active voices=%d, sample_rate=%d\n", m_active_voices, m_sample_rate);
+			break;
+		}
+
+		case 0x60/8:    /* MODE */
+			// [4:3] = 00 : Single, Master, Early address mode
+			// [4:3] = 01 : Single, Master, Normal address mode
+			// [4:3] = 10 : Dual, Slave, Normal address mode
+			// [4:3] = 11 : Dual, Master, Normal address mode
+			m_mode = data & 0x1f; // MODE1[4], MODE0[3], BCLK_EN[2], WCLK_EN[1], LRCLK_EN[0]
+			break;
+
+		case 0x68/8:    /* PAR - read only */
+		case 0x70/8:    /* IRQV - read only */
+			break;
+
+		case 0x78/8:    /* PAGE */
+			m_filter_page = (data & 0x80) >> 7;
+			m_current_page = data & 0x7f;
+			break;
+	}
+}
+
+inline void jkm5506_device::reg_write_high(es550x_voice *voice, offs_t offset, u32 data)
+{
+	switch (offset)
+	{
+		case 0x00/8:    /* CR */
+			voice->control = data & 0xffffffff;
+			voice->exbank = ((data >> 14) & 0x7ff) << ADDRESS_INTEGER_BIT_JKM5506;
+			LOG("voice %d, control=%04x\n", m_current_page & 0x1f, voice->control);
+			break;
+
+		case 0x08/8:    /* START */
+			voice->start = get_address_acc_shifted_val(data);
+			LOG("voice %d, loop start=%08x\n", m_current_page & 0x1f, get_address_acc_res(voice->start));
+			break;
+
+		case 0x10/8:    /* END */
+			voice->end = get_address_acc_shifted_val(data);
+			LOG("voice %d, loop end=%08x\n", m_current_page & 0x1f, get_address_acc_res(voice->end));
+			break;
+
+		case 0x18/8:    /* ACCUM */
+			voice->accum = get_address_acc_shifted_val(data);
+			LOG("voice %d, accum=%08x\n", m_current_page & 0x1f, get_address_acc_res(voice->accum));
+			break;
+
+		case 0x20/8:    /* O4(n-1) */
+			voice->o4n1[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O4(n-1)=%05x\n", m_current_page & 0x1f, voice->o4n1[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x28/8:    /* O3(n-1) */
+			voice->o3n1[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O3(n-1)=%05x\n", m_current_page & 0x1f, voice->o3n1[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x30/8:    /* O3(n-2) */
+			voice->o3n2[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O3(n-2)=%05x\n", m_current_page & 0x1f, voice->o3n2[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x38/8:    /* O2(n-1) */
+			voice->o2n1[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O2(n-1)=%05x\n", m_current_page & 0x1f, voice->o2n1[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x40/8:    /* O2(n-2) */
+			voice->o2n2[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O2(n-2)=%05x\n", m_current_page & 0x1f, voice->o2n2[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x48/8:    /* O1(n-1) */
+			voice->o1n1[m_filter_page] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O1(n-1)=%05x\n", m_current_page & 0x1f, voice->o1n1[m_filter_page] & 0x3ffff);
+			break;
+
+		case 0x50/8:    /* W_ST */
+			m_wst = data & 0x7f;
+			break;
+
+		case 0x58/8:    /* W_END */
+			m_wend = data & 0x7f;
+			break;
+
+		case 0x60/8:    /* LR_END */
+			m_lrend = data & 0x7f;
+			break;
+
+		case 0x68/8:    /* PAR - read only */
+		case 0x70/8:    /* IRQV - read only */
+			break;
+
+		case 0x78/8:    /* PAGE */
+			m_filter_page = (data & 0x80) >> 7;
+			m_current_page = data & 0x7f;
+			break;
+	}
+}
+
+inline void jkm5506_device::reg_write_test(es550x_voice *voice, offs_t offset, u32 data)
+{
+	switch (offset)
+	{
+		case 0x00/8:    /* CHANNEL 0 LEFT */
+			LOG("Channel 0 left test write %08x\n", data);
+			break;
+
+		case 0x08/8:    /* CHANNEL 0 RIGHT */
+			LOG("Channel 0 right test write %08x\n", data);
+			break;
+
+		case 0x10/8:    /* CHANNEL 1 LEFT */
+			LOG("Channel 1 left test write %08x\n", data);
+			break;
+
+		case 0x18/8:    /* CHANNEL 1 RIGHT */
+			LOG("Channel 1 right test write %08x\n", data);
+			break;
+
+		case 0x20/8:    /* CHANNEL 2 LEFT */
+			LOG("Channel 2 left test write %08x\n", data);
+			break;
+
+		case 0x28/8:    /* CHANNEL 2 RIGHT */
+			LOG("Channel 2 right test write %08x\n", data);
+			break;
+
+		case 0x30/8:    /* CHANNEL 3 LEFT */
+			LOG("Channel 3 left test write %08x\n", data);
+			break;
+
+		case 0x38/8:    /* CHANNEL 3 RIGHT */
+			LOG("Channel 3 right test write %08x\n", data);
+			break;
+
+		case 0x40/8:    /* CHANNEL 4 LEFT */
+			LOG("Channel 4 left test write %08x\n", data);
+			break;
+
+		case 0x48/8:    /* CHANNEL 4 RIGHT */
+			LOG("Channel 4 right test write %08x\n", data);
+			break;
+
+		case 0x50/8:    /* CHANNEL 5 LEFT */
+			LOG("Channel 5 left test write %08x\n", data);
+			break;
+
+		case 0x58/8:    /* CHANNEL 6 RIGHT */
+			LOG("Channel 5 right test write %08x\n", data);
+			break;
+
+		case 0x60/8:    /* EMPTY */
+			LOG("Test write EMPTY %08x\n", data);
+			break;
+
+		case 0x68/8:    /* PAR - read only */
+		case 0x70/8:    /* IRQV - read only */
+			break;
+
+		case 0x78/8:    /* PAGE */
+			m_filter_page = (data & 0x80) >> 7;
+			m_current_page = data & 0x7f;
+			break;
+	}
+}
+
+void jkm5506_device::write_latch_w(offs_t offset, u32 data, u32 mem_mask = ~0)
+{
+	COMBINE_DATA(&m_write_latch);
+}
+
+void jkm5506_device::write_update_w(offs_t offset, u8 data)
+{
+	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
+
+	/* force an update */
+	m_stream->update();
+
+	/* switch off the page and register */
+	if (m_current_page < 0x20)
+		reg_write_low(voice, offset, m_write_latch);
+	else if (m_current_page < 0x40)
+		reg_write_high(voice, offset, m_write_latch);
+	else
+		reg_write_test(voice, offset, m_write_latch);
+
+	/* clear the write latch when done */
+	m_write_latch = 0;
+}
+
+
+
+/**********************************************************************************************
+
+     reg_read -- read from the specified ES5506 register
+
+***********************************************************************************************/
+
+inline u32 jkm5506_device::reg_read_low(es550x_voice *voice, offs_t offset)
+{
+	u32 result = 0;
+
+	switch (offset)
+	{
+		case 0x00/8:    /* CR */
+			result = voice->control;
+			break;
+
+		case 0x08/8:    /* FC */
+			result = get_address_acc_res(voice->freqcount);
+			break;
+
+		case 0x10/8:    /* LVOL */
+			result = voice->lvol;
+			break;
+
+		case 0x18/8:    /* LVRAMP */
+			result = voice->lvramp << 8;
+			break;
+
+		case 0x20/8:    /* RVOL */
+			result = voice->rvol;
+			break;
+
+		case 0x28/8:    /* RVRAMP */
+			result = voice->rvramp << 8;
+			break;
+
+		case 0x30/8:    /* ECOUNT */
+			result = voice->ecount;
+			break;
+
+		case 0x38/8:    /* K2 */
+			result = voice->k2;
+			break;
+
+		case 0x40/8:    /* K2RAMP */
+			result = (voice->k2ramp << 8) | (voice->k2ramp >> 31);
+			break;
+
+		case 0x48/8:    /* K1 */
+			result = voice->k1;
+			break;
+
+		case 0x50/8:    /* K1RAMP */
+			result = (voice->k1ramp << 8) | (voice->k1ramp >> 31);
+			break;
+
+		case 0x58/8:    /* ACTV */
+			result = m_active_voices;
+			break;
+
+		case 0x60/8:    /* MODE */
+			result = m_mode;
+			break;
+
+		case 0x68/8:    /* PAR */
+			if (!m_read_port_cb.isnull())
+				result = m_read_port_cb(0) & 0x3ff; // 10 bit, 9:0
+			break;
+
+		case 0x70/8:    /* IRQV */
+			result = m_irqv;
+			if (!machine().side_effects_disabled())
+				update_internal_irq_state();
+			break;
+
+		case 0x78/8:    /* PAGE */
+			result = (m_filter_page << 7) | m_current_page;
+			break;
+	}
+	return result;
+}
+
+
+inline u32 jkm5506_device::reg_read_high(es550x_voice *voice, offs_t offset)
+{
+	u32 result = 0;
+
+	switch (offset)
+	{
+		case 0x00/8:    /* CR */
+			result = voice->control;
+			break;
+
+		case 0x08/8:    /* START */
+			result = get_address_acc_res(voice->start);
+			break;
+
+		case 0x10/8:    /* END */
+			result = get_address_acc_res(voice->end);
+			break;
+
+		case 0x18/8:    /* ACCUM */
+			result = get_address_acc_res(voice->accum);
+			break;
+
+		case 0x20/8:    /* O4(n-1) */
+			result = voice->o4n1[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x28/8:    /* O3(n-1) */
+			result = voice->o3n1[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x30/8:    /* O3(n-2) */
+			result = voice->o3n2[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x38/8:    /* O2(n-1) */
+			result = voice->o2n1[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x40/8:    /* O2(n-2) */
+			result = voice->o2n2[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x48/8:    /* O1(n-1) */
+			result = voice->o1n1[m_filter_page] & 0x3ffff;
+			break;
+
+		case 0x50/8:    /* W_ST */
+			result = m_wst;
+			break;
+
+		case 0x58/8:    /* W_END */
+			result = m_wend;
+			break;
+
+		case 0x60/8:    /* LR_END */
+			result = m_lrend;
+			break;
+
+		case 0x68/8:    /* PAR */
+			if (!m_read_port_cb.isnull())
+				result = m_read_port_cb(0) & 0x3ff; // 10 bit, 9:0
+			break;
+
+		case 0x70/8:    /* IRQV */
+			result = m_irqv;
+			if (!machine().side_effects_disabled())
+				update_internal_irq_state();
+			break;
+
+		case 0x78/8:    /* PAGE */
+			result = (m_filter_page << 7) | m_current_page;
+			break;
+	}
+	return result;
+}
+inline u32 jkm5506_device::reg_read_test(es550x_voice *voice, offs_t offset)
+{
+	u32 result = 0;
+
+	switch (offset)
+	{
+		case 0x68/8:    /* PAR */
+			if (!m_read_port_cb.isnull())
+				result = m_read_port_cb(0) & 0x3ff; // 10 bit, 9:0
+			break;
+
+		case 0x70/8:    /* IRQV */
+			result = m_irqv;
+			break;
+
+		case 0x78/8:    /* PAGE */
+			result = (m_filter_page << 7) | m_current_page;
+			break;
+	}
+	return result;
+}
+
+u32 jkm5506_device::read_latch_r()
+{
+	return m_read_latch;
+}
+
+void jkm5506_device::read_update_w(offs_t offset, u8 data)
+{
+	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
+
+	LOG("read from %02x/%02x -> ", m_current_page, offset);
+
+	/* force an update */
+	m_stream->update();
+
+	/* switch off the page and register */
+	if (m_current_page < 0x20)
+		m_read_latch = reg_read_low(voice, offset);
+	else if (m_current_page < 0x40)
+		m_read_latch = reg_read_high(voice, offset);
+	else
+		m_read_latch = reg_read_test(voice, offset);
+
+	LOG("%08x\n", m_read_latch);
+}
 
 
 /**********************************************************************************************
@@ -1305,33 +2230,33 @@ inline void es5506_device::reg_write_high(es550x_voice *voice, offs_t offset, u3
 			break;
 
 		case 0x20/8:    /* O4(n-1) */
-			voice->o4n1 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O4(n-1)=%05x\n", m_current_page & 0x1f, voice->o4n1 & 0x3ffff);
+			voice->o4n1[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O4(n-1)=%05x\n", m_current_page & 0x1f, voice->o4n1[0] & 0x3ffff);
 			break;
 
 		case 0x28/8:    /* O3(n-1) */
-			voice->o3n1 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O3(n-1)=%05x\n", m_current_page & 0x1f, voice->o3n1 & 0x3ffff);
+			voice->o3n1[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O3(n-1)=%05x\n", m_current_page & 0x1f, voice->o3n1[0] & 0x3ffff);
 			break;
 
 		case 0x30/8:    /* O3(n-2) */
-			voice->o3n2 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O3(n-2)=%05x\n", m_current_page & 0x1f, voice->o3n2 & 0x3ffff);
+			voice->o3n2[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O3(n-2)=%05x\n", m_current_page & 0x1f, voice->o3n2[0] & 0x3ffff);
 			break;
 
 		case 0x38/8:    /* O2(n-1) */
-			voice->o2n1 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O2(n-1)=%05x\n", m_current_page & 0x1f, voice->o2n1 & 0x3ffff);
+			voice->o2n1[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O2(n-1)=%05x\n", m_current_page & 0x1f, voice->o2n1[0] & 0x3ffff);
 			break;
 
 		case 0x40/8:    /* O2(n-2) */
-			voice->o2n2 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O2(n-2)=%05x\n", m_current_page & 0x1f, voice->o2n2 & 0x3ffff);
+			voice->o2n2[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O2(n-2)=%05x\n", m_current_page & 0x1f, voice->o2n2[0] & 0x3ffff);
 			break;
 
 		case 0x48/8:    /* O1(n-1) */
-			voice->o1n1 = (s32)(data << 14) >> 14;
-			LOG("voice %d, O1(n-1)=%05x\n", m_current_page & 0x1f, voice->o1n1 & 0x3ffff);
+			voice->o1n1[0] = (s32)(data << 14) >> 14;
+			LOG("voice %d, O1(n-1)=%05x\n", m_current_page & 0x1f, voice->o1n1[0] & 0x3ffff);
 			break;
 
 		case 0x50/8:    /* W_ST */
@@ -1422,7 +2347,7 @@ inline void es5506_device::reg_write_test(es550x_voice *voice, offs_t offset, u3
 	}
 }
 
-void es5506_device::write(offs_t offset, uint8_t data)
+void es5506_device::write(offs_t offset, u8 data)
 {
 	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
 	int shift = 8 * (offset & 3);
@@ -1557,27 +2482,27 @@ inline u32 es5506_device::reg_read_high(es550x_voice *voice, offs_t offset)
 			break;
 
 		case 0x20/8:    /* O4(n-1) */
-			result = voice->o4n1 & 0x3ffff;
+			result = voice->o4n1[0] & 0x3ffff;
 			break;
 
 		case 0x28/8:    /* O3(n-1) */
-			result = voice->o3n1 & 0x3ffff;
+			result = voice->o3n1[0] & 0x3ffff;
 			break;
 
 		case 0x30/8:    /* O3(n-2) */
-			result = voice->o3n2 & 0x3ffff;
+			result = voice->o3n2[0] & 0x3ffff;
 			break;
 
 		case 0x38/8:    /* O2(n-1) */
-			result = voice->o2n1 & 0x3ffff;
+			result = voice->o2n1[0] & 0x3ffff;
 			break;
 
 		case 0x40/8:    /* O2(n-2) */
-			result = voice->o2n2 & 0x3ffff;
+			result = voice->o2n2[0] & 0x3ffff;
 			break;
 
 		case 0x48/8:    /* O1(n-1) */
-			result = voice->o1n1 & 0x3ffff;
+			result = voice->o1n1[0] & 0x3ffff;
 			break;
 
 		case 0x50/8:    /* W_ST */
@@ -1631,7 +2556,7 @@ inline u32 es5506_device::reg_read_test(es550x_voice *voice, offs_t offset)
 	return result;
 }
 
-uint8_t es5506_device::read(offs_t offset)
+u8 es5506_device::read(offs_t offset)
 {
 	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
 	int shift = 8 * (offset & 3);
@@ -1827,50 +2752,50 @@ inline void es5505_device::reg_write_high(es550x_voice *voice, offs_t offset, u1
 
 		case 0x01:  /* O4(n-1) */
 			if (ACCESSING_BITS_0_7)
-				voice->o4n1 = (voice->o4n1 & ~0x00ff) | (data & 0x00ff);
+				voice->o4n1[0] = (voice->o4n1[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o4n1 = (s16)((voice->o4n1 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O4(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o4n1 & 0xffff);
+				voice->o4n1[0] = (s16)((voice->o4n1[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O4(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o4n1[0] & 0xffff);
 			break;
 
 		case 0x02:  /* O3(n-1) */
 			if (ACCESSING_BITS_0_7)
-				voice->o3n1 = (voice->o3n1 & ~0x00ff) | (data & 0x00ff);
+				voice->o3n1[0] = (voice->o3n1[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o3n1 = (s16)((voice->o3n1 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O3(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o3n1 & 0xffff);
+				voice->o3n1[0] = (s16)((voice->o3n1[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O3(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o3n1[0] & 0xffff);
 			break;
 
 		case 0x03:  /* O3(n-2) */
 			if (ACCESSING_BITS_0_7)
-				voice->o3n2 = (voice->o3n2 & ~0x00ff) | (data & 0x00ff);
+				voice->o3n2[0] = (voice->o3n2[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o3n2 = (s16)((voice->o3n2 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O3(n-2)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o3n2 & 0xffff);
+				voice->o3n2[0] = (s16)((voice->o3n2[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O3(n-2)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o3n2[0] & 0xffff);
 			break;
 
 		case 0x04:  /* O2(n-1) */
 			if (ACCESSING_BITS_0_7)
-				voice->o2n1 = (voice->o2n1 & ~0x00ff) | (data & 0x00ff);
+				voice->o2n1[0] = (voice->o2n1[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o2n1 = (s16)((voice->o2n1 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O2(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o2n1 & 0xffff);
+				voice->o2n1[0] = (s16)((voice->o2n1[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O2(n-1)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o2n1[0] & 0xffff);
 			break;
 
 		case 0x05:  /* O2(n-2) */
 			if (ACCESSING_BITS_0_7)
-				voice->o2n2 = (voice->o2n2 & ~0x00ff) | (data & 0x00ff);
+				voice->o2n2[0] = (voice->o2n2[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o2n2 = (s16)((voice->o2n2 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O2(n-2)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o2n2 & 0xffff);
+				voice->o2n2[0] = (s16)((voice->o2n2[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O2(n-2)=%04x\n", machine().describe_context(), m_current_page & 0x1f, voice->o2n2[0] & 0xffff);
 			break;
 
 		case 0x06:  /* O1(n-1) */
 			if (ACCESSING_BITS_0_7)
-				voice->o1n1 = (voice->o1n1 & ~0x00ff) | (data & 0x00ff);
+				voice->o1n1[0] = (voice->o1n1[0] & ~0x00ff) | (data & 0x00ff);
 			if (ACCESSING_BITS_8_15)
-				voice->o1n1 = (s16)((voice->o1n1 & ~0xff00) | (data & 0xff00));
-			LOG("%s:voice %d, O1(n-1)=%04x (accum=%08x)\n", machine().describe_context(), m_current_page & 0x1f, voice->o1n1 & 0xffff, get_address_acc_res(voice->accum));
+				voice->o1n1[0] = (s16)((voice->o1n1[0] & ~0xff00) | (data & 0xff00));
+			LOG("%s:voice %d, O1(n-1)=%04x (accum=%08x)\n", machine().describe_context(), m_current_page & 0x1f, voice->o1n1[0] & 0xffff, get_address_acc_res(voice->accum));
 			break;
 
 		case 0x07:
@@ -2066,23 +2991,23 @@ inline u16 es5505_device::reg_read_high(es550x_voice *voice, offs_t offset)
 			break;
 
 		case 0x01:  /* O4(n-1) */
-			result = voice->o4n1 & 0xffff;
+			result = voice->o4n1[0] & 0xffff;
 			break;
 
 		case 0x02:  /* O3(n-1) */
-			result = voice->o3n1 & 0xffff;
+			result = voice->o3n1[0] & 0xffff;
 			break;
 
 		case 0x03:  /* O3(n-2) */
-			result = voice->o3n2 & 0xffff;
+			result = voice->o3n2[0] & 0xffff;
 			break;
 
 		case 0x04:  /* O2(n-1) */
-			result = voice->o2n1 & 0xffff;
+			result = voice->o2n1[0] & 0xffff;
 			break;
 
 		case 0x05:  /* O2(n-2) */
-			result = voice->o2n2 & 0xffff;
+			result = voice->o2n2[0] & 0xffff;
 			break;
 
 		case 0x06:  /* O1(n-1) */
@@ -2094,10 +3019,10 @@ inline u16 es5505_device::reg_read_high(es550x_voice *voice, offs_t offset)
 			/* accumulator */
 			if ((voice->control & CONTROL_STOPMASK) && m_region_base[get_bank(voice->control)])
 			{
-				voice->o1n1 = m_region_base[get_bank(voice->control)][voice->exbank + get_integer_addr(voice->accum)];
-				// logerror("%02x %08x ==> %08x\n",voice->o1n1,get_bank(voice->control),voice->exbank + get_integer_addr(voice->accum));
+				voice->o1n1[0] = m_region_base[get_bank(voice->control)][voice->exbank + get_integer_addr(voice->accum)];
+				// logerror("%02x %08x ==> %08x\n",voice->o1n1[0],get_bank(voice->control),voice->exbank + get_integer_addr(voice->accum));
 			}
-			result = voice->o1n1 & 0xffff;
+			result = voice->o1n1[0] & 0xffff;
 			break;
 
 		case 0x07:
