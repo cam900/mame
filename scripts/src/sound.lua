@@ -1553,3 +1553,15 @@ if (SOUNDS["VGMVIZ"]~=null) then
 		MAME_DIR .. "src/devices/sound/vgm_visualizer.h",
 	}
 end
+
+---------------------------------------------------
+--
+--@src/devices/sound/jkm2151.h,SOUNDS["JKM2151"] = true
+---------------------------------------------------
+
+if (SOUNDS["JKM2151"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/sound/jkm2151.cpp",
+		MAME_DIR .. "src/devices/sound/jkm2151.h",
+	}
+end
