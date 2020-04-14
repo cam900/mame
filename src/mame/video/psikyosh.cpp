@@ -103,7 +103,7 @@ do                                                                              
 }                                                                                                   \
 while (0)
 
-static inline void pixop_transparent_priority(u8 source, u32 *dest, u16 *pri, const pen_t *pal, u16 z)
+static inline void pixop_transparent_priority(u8 source, u32 *dest, u32 *pri, const pen_t *pal, u32 z)
 {
 	if (z >= *pri)
 	{
@@ -121,7 +121,7 @@ static inline void pixop_transparent(u8 source, u32 *dest, const pen_t *pal)
 		*dest = pal[source];
 }
 
-static inline void pixop_transparent_alpha_priority(u8 source, u32 *dest, u16 *pri, const pen_t *pal, u16 z, s16 alpha)
+static inline void pixop_transparent_alpha_priority(u8 source, u32 *dest, u32 *pri, const pen_t *pal, u32 z, s16 alpha)
 {
 	if (z >= *pri)
 	{
@@ -139,7 +139,7 @@ static inline void pixop_transparent_alpha(u8 source, u32 *dest, const pen_t *pa
 		*dest = alpha_blend_r32(*dest, pal[source], alpha);
 }
 
-static inline void pixop_transparent_alphatable_priority(u8 source, u32 *dest, u16 *pri, const pen_t *pal, u16 z, u8 *alphatable)
+static inline void pixop_transparent_alphatable_priority(u8 source, u32 *dest, u32 *pri, const pen_t *pal, u32 z, u8 *alphatable)
 {
 	if (z >= *pri)
 	{
@@ -248,6 +248,64 @@ void psikyosh_state::draw_bglayer(u8 const layer, bitmap_rgb32 &bitmap, const re
 	}
 }
 
+#define PIXEL_OP_REMAP_ARGB32(DEST, SOURCE)                                                         \
+do                                                                                                  \
+{                                                                                                   \
+	u32 srcdata = (SOURCE);                                                                         \
+	int resa = (rgb_t(paldata[srcdata]).a() * alpha) / 255;                                         \
+	(DEST) = alpha_blend_r32((DEST), paldata[srcdata], resa);                                       \
+}                                                                                                   \
+while (0)
+
+void psikyosh6_state::draw_bglayer(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	gfx_element *gfx = m_gfxdecode->gfx(0);
+	assert(!BG_LINE(layer));
+
+	u8 const size = 64;
+	u16 const height = 8 * size;
+
+	u8 const regbank = BG_TYPE(layer);
+
+	u16 const scrollx = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fc0 / 4 + (layer * 0x10) / 4] & 0x000003ff) >> 0;
+	u16 const scrolly = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fc0 / 4 + (layer * 0x10) / 4] & 0x03ff0000) >> 16;
+
+	u8 const zoom     = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fd0 / 4 + (layer * 0x10) / 4] & 0x0000ffff) >> 8;
+	u8 const tilebank = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fd0 / 4 + (layer * 0x10) / 4] & 0x00ff0000) >> 16;
+	u8 const pri      = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fd0 / 4 + (layer * 0x10) / 4] & 0xff000000) >> 24;
+	s16 alpha         = (m_spriteram[(regbank * 0x8000) / 4 + 0x7fe0 / 4 + (layer * 0x10) / 4] & 0x000000ff) >> 8;
+
+	if (pri != req_pri)
+		return;
+
+	if (zoom)
+		popmessage("draw_bglayer() zoom not implemented\nContact MAMEDEV");
+
+	{
+		u8 basey = ((0x400 - scrolly + cliprect.top() - 1) & (height - 1)) >> 3;
+		for (int sy = (cliprect.top() - 1) >> 3; sy <= cliprect.bottom() >> 3; sy++)
+		{
+			u8 basex = ((0x400 - scrollx + cliprect.left() - 1) & 0x3ff) >> 3;
+			for (int sx = (cliprect.left() - 1) >> 3; sx <= cliprect.right() >> 3; sx++)
+			{
+				u32 const tileno = (m_spriteram[(tilebank * 0x8000) / 4 + (((basey & 0x3f) << 7) | (basex & 0x7f))] & 0x0007ffff);
+				bool const flipx = (m_spriteram[(tilebank * 0x8000) / 4 + (((basey & 0x3f) << 7) | (basex & 0x7f))] & 0x00400000);
+				bool const flipy = (m_spriteram[(tilebank * 0x8000) / 4 + (((basey & 0x3f) << 7) | (basex & 0x7f))] & 0x00800000);
+				u32 colour  = (m_spriteram[(tilebank * 0x8000) / 4 + (((basey & 0x3f) << 7) | (basex & 0x7f))] & 0xff000000) >> 24;
+
+				colour = gfx->colorbase() + gfx->granularity() * (colour % gfx->colors());
+				const pen_t *paldata = m_palette->pens() + gfx->colorbase() + gfx->granularity() * colour;
+				gfx->drawgfx_core(bitmap, cliprect, tileno % gfx->elements(),
+							flipx, flipy, (8 * sx) + (scrollx & 0x7), (8 * sy) + (scrolly & 0x7),
+							[paldata, alpha](u32 &destp, const u8 &srcp) { PIXEL_OP_REMAP_ARGB32(destp, srcp); });
+
+				basex++;
+			}
+			basey = ((basey + 1) & ((height >> 3) - 1));
+		}
+	}
+}
+
 
 /* populate bg_bitmap for the given bank if it's not already */
 void psikyosh_state::cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const size, u8 const tilebank, s16 const alpha, u8 *last_bank)
@@ -278,6 +336,58 @@ void psikyosh_state::cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const
 
 			if (tileno) // valid tile, but blank in all games?
 				gfx->alphastore(m_bg_bitmap, m_bg_bitmap.cliprect(), tileno, colour, 0, 0, (16 * sx) & 0x1ff, ((16 * sy) & (height - 1)), need_alpha, m_alphatable.get());
+
+			offs++;
+		}
+		last_bank[sy] = tilebank;
+	}
+}
+
+//#define MAKE_ARGB_RGB(a, rgb) rgb_t(a, rgb.r(), rgb.g(), rgb.b())
+#define MAKE_ARGB_RGB(srca, rgb)   rgb_t(rgb).set_a((srca * rgb_t(rgb).a()) / 255)
+
+// combine in 'alpha' when copying to store in ARGB
+#define PIXEL_OP_REMAP_ARGBSTORE32(DEST, SOURCE)                                                    \
+do                                                                                                  \
+{                                                                                                   \
+	u32 srcdata = (SOURCE);                                                                         \
+	(DEST) = MAKE_ARGB_RGB(alpha,paldata[srcdata]);                                                 \
+}                                                                                                   \
+while (0)
+
+void psikyosh6_state::cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const size, u8 const tilebank, s16 const alpha, u8 *last_bank)
+{
+	// test if the tile row is the cached one or not
+	u8 const sy = scanline / 8;
+
+	assert(sy >= 0 && sy < 64);
+
+	if (tilebank != last_bank[sy])
+	{
+		rectangle cliprect;
+		u16 const minsy = sy * 8;
+		u16 const maxsy = minsy + 8 - 1;
+
+		cliprect.set(0, m_bg_bitmap.width() - 1, minsy, maxsy );
+		cliprect &= m_bg_bitmap.cliprect();
+
+		m_bg_bitmap.fill(BG_TRANSPEN, cliprect);
+		u16 const height = size * 8;
+
+		u32 offs = 128 * sy;
+		for (int sx = 0; sx < 128; sx++)
+		{
+			u32 const tileno = (m_spriteram[(tilebank * 0x8000) / 4 + offs] & 0x003fffff);
+			bool const flipx = (m_spriteram[(tilebank * 0x8000) / 4 + offs] & 0x00400000);
+			bool const flipy = (m_spriteram[(tilebank * 0x8000) / 4 + offs] & 0x00800000);
+			u32 colour = (m_spriteram[(tilebank * 0x8000) / 4 + offs] & 0xff000000) >> 24;
+			int need_alpha = alpha < 0 ? -1 : 0xff; // store per-pen alpha in bitmap, otherwise don't since we'll need it per-line
+
+			colour = gfx->colorbase() + gfx->granularity() * (colour % gfx->colors());
+			const pen_t *paldata = m_palette->pens() + gfx->colorbase() + gfx->granularity() * colour;
+			gfx->drawgfx_core(m_bg_bitmap, cliprect, tileno % gfx->elements(),
+						flipx, flipy, (8 * sx) & 0x3ff, ((8 * sy) & (height - 1)),
+						[paldata, alpha](u32 &destp, const u8 &srcp) { PIXEL_OP_REMAP_ARGBSTORE32(destp, srcp); });
 
 			offs++;
 		}
@@ -382,6 +492,85 @@ void psikyosh_state::draw_bglayerscroll(u8 const layer, bitmap_rgb32 &bitmap, co
 	}
 }
 
+void psikyosh6_state::draw_bglayerscroll(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	assert(BG_LINE(layer));
+
+	u8 const size = 64;
+	u16 const height = size * 8;
+
+	u8 const linebank = BG_TYPE(layer);
+
+	/* cache rendered bitmap */
+	u8 last_bank[64]; // corresponds to bank of bitmap in m_bg_bitmap. bg_bitmap is split into 16/32-rows of one-tile high each
+	for (auto & elem : last_bank) elem = -1;
+
+	int const scr_width = cliprect.width();
+	u32 *scroll_reg = &m_spriteram[((linebank * 0x8000) / 4 + cliprect.top()) << 2];
+	u32 *pzab_reg   = &m_spriteram[(((linebank * 0x8000) / 4 + cliprect.top()) << 2) + 1]; // pri, zoom, alpha, bank
+	u32 *pzab_reg2  = &m_spriteram[(((linebank * 0x8000) / 4 + cliprect.top()) << 2) + 2]; // pri, zoom, alpha, bank
+
+// now, for each scanline, check priority,
+// extract the relevant scanline from the bitmap, after applying per-scanline vscroll,
+// stretch it and scroll it into another buffer
+// write it with alpha
+	for (int scanline = cliprect.top(); scanline <= cliprect.bottom(); scanline++)
+	{
+		u8 const pri = (*pzab_reg & 0xff000000) >> 24;
+
+		if (pri == req_pri)
+		{
+			u16 const scrollx  = (*scroll_reg & 0x000003ff) >> 0;
+			u16 const scrolly  = (*scroll_reg & 0x03ff0000) >> 16;
+
+			u8 const tilebank  = (*pzab_reg & 0x00ff0000) >> 16;
+			u8 const zoom      = (*pzab_reg & 0x0000ffff) >> 0;
+			s16 alpha          = (*pzab_reg2 & 0x000000ff) >> 8;
+
+			{
+				u16 const tilemap_scanline = (scanline - scrolly + 0x400) & (height - 1);
+
+				// render reelvant tiles to temp bitmap, assume bank changes infrequently/never. render alpha as per-pen
+				cache_bitmap(tilemap_scanline, m_gfxdecode->gfx(0), size, tilebank, alpha, last_bank);
+
+				/* zoomy and 'wibbly' effects - extract an entire row from tilemap */
+				g_profiler.start(PROFILER_USER2);
+				u32 tilemap_line[128 * 8];
+				u32 scr_line[128 * 8];
+				std::copy_n(&m_bg_bitmap.pix32(tilemap_scanline, 0), 0x400, tilemap_line);
+				g_profiler.stop();
+
+				/* slow bit, needs optimising. apply scrollx and zoomx by assembling scanline from row */
+				g_profiler.start(PROFILER_USER3);
+				if (zoom)
+				{
+					int jj = (0x400 << 10) + (zoom * cliprect.left()); // ensure +ve for mod
+					for (int ii = cliprect.left(); ii <= cliprect.right(); ii++)
+					{
+						scr_line[ii] = tilemap_line[((jj>>10) - scrollx) & 0x3ff];
+						jj += zoom;
+					}
+				}
+				else
+				{
+					for (int ii = cliprect.left(); ii <= cliprect.right(); ii++)
+						scr_line[ii] = tilemap_line[(ii - scrollx + 0x400) & 0x3ff];
+				}
+				g_profiler.stop();
+
+				/* blend line into output */
+				g_profiler.start(PROFILER_USER4);
+				draw_scanline32_argb(bitmap, cliprect.left(), scanline, scr_width, &scr_line[cliprect.left()]);
+
+				g_profiler.stop();
+			}
+		}
+
+		scroll_reg += 4;
+		pzab_reg += 4;
+	}
+}
+
 /* 3 BG layers, with priority */
 void psikyosh_state::draw_background(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
 {
@@ -417,6 +606,24 @@ void psikyosh_state::draw_background(bitmap_rgb32 &bitmap, const rectangle &clip
 	}
 }
 
+void psikyosh6_state::draw_background(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	int i;
+
+	/* 1st-4th layers */
+	for (i = 0; i <= 3; i++)
+	{
+		if (!BG_LAYER_ENABLE(i))
+			continue;
+
+		if (BG_LINE(i)) /* per-line alpha, scroll, zoom etc. check the priority for the first scanline */
+			draw_bglayerscroll(i, bitmap, cliprect, req_pri);
+		else /* not per-line alpha, scroll, zoom etc. */
+			draw_bglayer(i, bitmap, cliprect, req_pri);
+
+	}
+}
+
 /* --- SPRITES --- */
 
 /* 32-bit ONLY */
@@ -428,7 +635,7 @@ void psikyosh_state::draw_background(bitmap_rgb32 &bitmap, const rectangle &clip
 /* pixel is only plotted if z is >= priority_buffer[y][x] */
 void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangle &clip, gfx_element *gfx,
 		u32 const code, u16 const color, u8 const flipx, u8 const flipy, s32 const offsx, s32 const offsy,
-		s16 const alpha, u32 const zoomx, u32 const zoomy, u8 const wide, u8 const high, u16 const z)
+		s16 const alpha, u32 const zoomx, u32 const zoomy, u8 const wide, u8 const high, u32 const z)
 {
 	rectangle myclip; /* Clip to screen boundaries */
 	int code_offset = 0;
@@ -515,7 +722,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = code_base + (y_index) * gfx->rowbytes() + x_index_base;
 								u32 *dest = &dest_bmp.pix32(sy, sx);
-								u16 *pri = &m_z_bitmap.pix16(sy, sx);
+								u32 *pri = &m_z_bitmap.pix32(sy, sx);
 								const int src_modulo = yinc * gfx->rowbytes() - xinc * (ex - sx);
 								const int dst_modulo = dest_bmp.rowpixels() - (ex - sx);
 
@@ -561,7 +768,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = code_base + y_index * gfx->rowbytes() + x_index_base;
 								u32 *dest = &dest_bmp.pix32(sy, sx);
-								u16 *pri = &m_z_bitmap.pix16(sy, sx);
+								u32 *pri = &m_z_bitmap.pix32(sy, sx);
 								const int src_modulo = yinc * gfx->rowbytes() - xinc * (ex - sx);
 								const int dst_modulo = dest_bmp.rowpixels() - (ex - sx);
 
@@ -608,7 +815,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = code_base + y_index * gfx->rowbytes() + x_index_base;
 								u32 *dest = &dest_bmp.pix32(sy, sx);
-								u16 *pri = &m_z_bitmap.pix16(sy, sx);
+								u32 *pri = &m_z_bitmap.pix32(sy, sx);
 								const int src_modulo = yinc * gfx->rowbytes() - xinc * (ex - sx);
 								const int dst_modulo = dest_bmp.rowpixels() - (ex - sx);
 
@@ -740,7 +947,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = &m_zoom_bitmap.pix8(y_index >> 10);
 								u32 *dest = &dest_bmp.pix32(y);
-								u16 *pri = &m_z_bitmap.pix16(y);
+								u32 *pri = &m_z_bitmap.pix32(y);
 
 								int x_index = x_index_base;
 								for (int x = sx; x < ex; x++)
@@ -780,7 +987,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = &m_zoom_bitmap.pix8(y_index >> 10);
 								u32 *dest = &dest_bmp.pix32(y);
-								u16 *pri = &m_z_bitmap.pix16(y);
+								u32 *pri = &m_z_bitmap.pix32(y);
 
 								int x_index = x_index_base;
 								for (int x = sx; x < ex; x++)
@@ -820,7 +1027,7 @@ void psikyosh_state::psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangl
 							{
 								const u8 *source = &m_zoom_bitmap.pix8(y_index >> 10);
 								u32 *dest = &dest_bmp.pix32(y);
-								u16 *pri = &m_z_bitmap.pix16(y);
+								u32 *pri = &m_z_bitmap.pix32(y);
 
 								int x_index = x_index_base;
 								for (int x = sx; x < ex; x++)
@@ -935,6 +1142,111 @@ void psikyosh_state::get_sprites()
 	m_sprite_end = sprite_ptr;
 }
 
+void psikyosh6_state::get_sprites()
+{
+	/*- Sprite Format 0x0000 - 0x37ff -**
+
+	0 ---- --yy yyyy yyyy | ---- --xx xxxx xxxx  1  F-?? hhhh ZZZZ ZZZZ | f-PP wwww zzzz zzzz
+	2 pppp pppp -aaa -nnn | nnnn nnnn nnnn nnnn  3  ---- ---- ---- ---- | ---- ---- ---- ----
+
+	y = ypos
+	x = xpos
+
+	h = height
+	w = width
+
+	F = flip (y)
+	f = flip (x)
+
+	Z = zoom (y)
+	z = zoom (x)
+
+	n = tile number
+
+	p = palette
+
+	a = alpha blending, selects which of the 8 alpha values in vid_regs[0-1] to use
+
+	P = priority
+	Points to a 4-bit entry in vid_regs[2] which provides a priority comparable with the bg layer's priorities.
+	However, sprite-sprite priority needs to be preserved.
+	daraku and soldivid only use the lsb
+
+	? = unknown
+	Could be a sprite-sprite priority, tests seem to back this up
+
+	**- End Sprite Format -*/
+
+	const u32 *list = m_spriteram.target() + ((SPRITE_LIST_BANK() * 0x8000) / 4);
+	u32 const listlen = 0x8000 / 4;
+
+	struct sprite_t *sprite_ptr = m_spritelist.get();
+	u32 listcntr = 0;
+	while (listcntr < listlen)
+	{
+		u32 const listdat0 = list[listcntr];
+		u32 const listdat1 = list[listcntr + 1];
+		u32 const listdat2 = list[listcntr + 2];
+		u32 const listdat3 = list[listcntr + 3];
+		u32 sprnum = (listdat0 & 0x0007ffff) * 4;
+		u32 sprlst = (listdat0 & 0x7ff00000) >> 20;
+		s32 const yoffs = (listdat1 & 0xffff0000) >> 16;
+		s32 const xoffs = (listdat1 & 0x0000ffff) >> 00;
+
+		sprite_ptr->alphatable[0] = (listdat2 & 0xff000000) >> 24;
+		sprite_ptr->alphatable[1] = (listdat2 & 0x00ff0000) >> 16;
+		sprite_ptr->alphatable[2] = (listdat2 & 0x0000ff00) >> 8;
+		sprite_ptr->alphatable[3] = (listdat2 & 0x000000ff) >> 0;
+		sprite_ptr->alphatable[4] = (listdat3 & 0xff000000) >> 24;
+		sprite_ptr->alphatable[5] = (listdat3 & 0x00ff0000) >> 16;
+		sprite_ptr->alphatable[6] = (listdat3 & 0x0000ff00) >> 8;
+		sprite_ptr->alphatable[7] = (listdat3 & 0x000000ff) >> 0;
+
+		s32 ypos = yoffs;
+		s32 xpos = xoffs;
+		while (sprlst > 0)
+		{
+			if ((m_spriteram[sprnum + 2] & 0x00000008))
+			{
+				ypos += ((m_spriteram[sprnum + 0] & 0xffff0000) >> 16);
+				xpos += ((m_spriteram[sprnum + 0] & 0x0000ffff) >> 00);
+			}
+			else
+			{
+				ypos = yoffs + ((m_spriteram[sprnum + 0] & 0xffff0000) >> 16);
+				xpos = xoffs + ((m_spriteram[sprnum + 0] & 0x0000ffff) >> 00);
+			}
+
+			ypos = s32(s16(ypos));
+			xpos = s32(s16(xpos));
+
+			sprite_ptr->ypos    = ypos;
+			sprite_ptr->xpos    = xpos;
+			sprite_ptr->zoomy   = (m_spriteram[sprnum + 1] & 0xffff0000) >> 16;
+			sprite_ptr->zoomx   = (m_spriteram[sprnum + 1] & 0x0000ffff) >> 00;
+
+			sprite_ptr->bg_pri  =  (m_spriteram[sprnum + 2] & 0xff000000) >> 24;
+			sprite_ptr->spr_pri =  (m_spriteram[sprnum + 2] & 0x00ff0000) >> 16;
+			sprite_ptr->high    = ((m_spriteram[sprnum + 2] & 0x0000fc00) >> 10) + 1;
+			sprite_ptr->wide    = ((m_spriteram[sprnum + 2] & 0x000003f0) >> 4) + 1;
+
+			sprite_ptr->alpha   =  (m_spriteram[sprnum + 2] & 0x00000007) >> 00;
+
+			sprite_ptr->tnum    = (m_spriteram[sprnum + 3] & 0x003fffff) >> 00;
+			sprite_ptr->flpx    = (m_spriteram[sprnum + 3] & 0x00400000) >> 15;
+			sprite_ptr->flpy    = (m_spriteram[sprnum + 3] & 0x00800000) >> 31;
+			sprite_ptr->colr    = (m_spriteram[sprnum + 3] & 0xff000000) >> 24;
+
+			sprite_ptr++;
+			sprnum += 4;
+			sprlst--;
+		}
+		listcntr += 4;
+		if (listdat0 & 0x80000000) break;
+	}
+	m_sprite_end = sprite_ptr;
+}
+
 void psikyosh_state::draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
 {
 	const input_code spr_keys[8] = {KEYCODE_Y, KEYCODE_U, KEYCODE_I, KEYCODE_O};
@@ -994,6 +1306,39 @@ void psikyosh_state::draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprec
 	}
 }
 
+void psikyosh6_state::draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	int i = 0;
+	struct sprite_t *sprite_ptr = m_spritelist.get();
+
+	while (sprite_ptr != m_sprite_end)
+	{
+		u8 const bg_pri = SPRITE_PRI(sprite_ptr->bg_pri);
+		// sprite vs backgrounds pri
+		if (bg_pri == req_pri)
+		{
+			u32 const zoomy   = sprite_ptr->zoomy;
+			u32 const zoomx   = sprite_ptr->zoomx;
+			s16 alpha         = sprite_ptr->alpha;
+
+			alpha = sprite_ptr->alphatable[alpha & 7] & 0xff;
+
+			/* start drawing */
+			if (zoomy && zoomx) /* Avoid division-by-zero when table contains 0 (Uninitialised/Bug) */
+			{
+				psikyosh_drawgfxzoom(bitmap, cliprect, m_gfxdecode->gfx(0),
+									sprite_ptr->tnum, sprite_ptr->colr,
+									sprite_ptr->flpx, sprite_ptr->flpy,
+									sprite_ptr->xpos, sprite_ptr->ypos, alpha,
+									zoomx, zoomy, sprite_ptr->wide, sprite_ptr->high, i);
+			}
+			/* end drawing */
+		}
+		i++;
+		sprite_ptr++;
+	}
+}
+
 void psikyosh_state::prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect )
 {
 	/* There are 224 values for pre-lineblending. Using one for every row currently */
@@ -1013,6 +1358,29 @@ void psikyosh_state::prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprec
 		/* linefill[y] & 0xff does what? */
 		for (int x = cliprect.left(); x <= cliprect.right(); x++)
 			dstline[x] = linefill[y] >> 8;
+	}
+	g_profiler.stop();
+}
+
+void psikyosh6_state::prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect )
+{
+	/* There are 224 values for pre-lineblending. Using one for every row currently */
+	/* I suspect that it should be blended against black by the amount specified as
+	   gnbarich sets the 0x000000ff to 0x7f in test mode whilst the others use 0x80.
+	   tgm2 sets it to 0x00 on warning screen. Likely has no effect. */
+	u8 const bank = (m_vidregs[7] & 0xff000000) >> 24; /* bank is always 8 (0x4000) except for daraku/soldivid */
+	u32 const *linefill = &m_spriteram[(bank * 0x8000) / 4]; /* Per row */
+
+	assert(bitmap.bpp() == 32);
+
+	g_profiler.start(PROFILER_USER8);
+	for (int y = cliprect.top(); y <= cliprect.bottom(); y++)
+	{
+		u32 *dstline = &bitmap.pix32(y);
+
+		/* linefill[y] & 0xff does what? */
+		for (int x = cliprect.left(); x <= cliprect.right(); x++)
+			dstline[x] = linefill[y];
 	}
 	g_profiler.stop();
 }
@@ -1043,6 +1411,88 @@ void psikyosh_state::postlineblend(bitmap_rgb32 &bitmap, const rectangle &clipre
 		{
 			for (int x = cliprect.left(); x <= cliprect.right(); x++)
 				dstline[x] = alpha_blend_r32(dstline[x], lineblend[y] >> 8, 2 * (lineblend[y] & 0x7f));
+		}
+	}
+	g_profiler.stop();
+}
+
+void psikyosh6_state::postlineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	/* There are 224 values for post-lineblending. Using one for every row currently */
+	u8 const bank  = (m_vidregs[7] & 0xff000000) >> 24; /* bank is always 8 (i.e. 0x4000) except for daraku/soldivid */
+	u32 const *lineblend = &m_spriteram[(bank * 0x8000) / 4 + 0x2000 / 4]; /* Per row */
+
+	assert(bitmap.bpp() == 32);
+
+	if ((m_vidregs[2] & 0xf) != req_pri)
+		return;
+
+	g_profiler.start(PROFILER_USER8);
+	for (int y = cliprect.top(); y <= cliprect.bottom(); y++)
+	{
+		u32 *dstline = &bitmap.pix32(y);
+
+		rgb_t blend = rgb_t(lineblend[y]);
+		if (blend.a() == 0xff) /* solid */
+		{
+			for (int x = cliprect.left(); x <= cliprect.right(); x++)
+				dstline[x] = blend;
+		}
+		else if (blend.a() & 0xff) /* blended */
+		{
+			for (int x = cliprect.left(); x <= cliprect.right(); x++)
+				dstline[x] = alpha_blend_r32(dstline[x], blend, blend.a());
+		}
+	}
+	g_profiler.stop();
+}
+
+void psikyosh6_state::draw_bitmap(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri)
+{
+	/* There are 224 values for post-lineblending. Using one for every row currently */
+	u8 const bank  = BITMAP_BANK(); /* bank is always 8 (i.e. 0x4000) except for daraku/soldivid */
+	u32 const *bitmapreg = &m_spriteram[(bank * 0x8000) / 4]; /* Per row */
+
+	assert(bitmap.bpp() == 32);
+
+	u32 yscroll = (bitmapreg[0] & 0xffff0000) >> 16;
+	u32 xscroll = bitmapreg[0] & 0x0000ffff;
+	u32 pri     = (bitmapreg[1] & 0xff000000) >> 24;
+	u32 colbank = (bitmapreg[1] & 0x00ff0000) >> 16;
+	u32 alpha   = (bitmapreg[1] & 0x0000ff00) >> 8;
+	u32 rambank = (bitmapreg[1] & 0x000000ff) >> 0;
+	u32 colbankl = (bitmapreg[2] & 0x000f0000) >> 16;
+	u32 mode = (bitmapreg[2] & 0x00000ff) >> 0;
+
+	if (pri != req_pri)
+		return;
+
+	u32 const *bitmapram = &m_spriteram[(rambank * 0x8000) / 4]; /* Per row */
+	g_profiler.start(PROFILER_USER8);
+	for (int y = cliprect.top(); y <= cliprect.bottom(); y++)
+	{
+		u32 *dstline = &bitmap.pix32(y);
+		for (int x = cliprect.left(); x <= cliprect.right(); x++)
+		{
+			rgb_t pix = 0;
+			u32 addr = (((y + yscroll) & 0xff) << 9) | ((x + xscroll) & 0x1ff);
+			switch (mode & 3)
+			{
+			case 0:
+				pix = rgb_t(m_palette->pen((colbank << 8) | (colbankl << 4) | ((bitmapram[addr >> 3] >> ((7 - (addr & 7)) << 2)) & 0xf)));
+				break;
+			case 1:
+				pix = rgb_t(m_palette->pen((colbank << 8) | ((bitmapram[addr >> 2] >> ((3 - (addr & 3)) << 3)) & 0xff)));
+				break;
+			case 2:
+				pix = rgb_t(m_palette->pen((bitmapram[addr >> 1] >> ((1 - (addr & 1)) << 4)) & 0xffff));
+				break;
+			case 3:
+				pix = rgb_t(bitmapram[addr]);
+				break;
+			}
+			int resa = (pix.a() * alpha) / 255;
+			dstline[x] = alpha_blend_r32(dstline[x], pix, resa);
 		}
 	}
 	g_profiler.stop();
@@ -1085,6 +1535,20 @@ void psikyosh_state::video_start()
 	save_item(NAME(m_zoom_bitmap));
 	save_item(NAME(m_bg_bitmap));
 	save_pointer(NAME(m_bg_zoom), 256);
+}
+
+void psikyosh6_state::video_start()
+{
+	m_spritelist = std::make_unique<struct sprite_t []>(0x800*0x800);
+	m_sprite_end = m_spritelist.get();
+
+	m_screen->register_screen_bitmap(m_z_bitmap); /* z-buffer */
+	m_zoom_bitmap.allocate(64*8, 64*8); /* temp buffer for assembling sprites */
+	m_bg_bitmap.allocate(128*8, 64*8); /* temp buffer for assembling tilemaps */
+
+	save_item(NAME(m_z_bitmap));
+	save_item(NAME(m_zoom_bitmap));
+	save_item(NAME(m_bg_bitmap));
 }
 
 
@@ -1135,6 +1599,26 @@ popmessage   ("%08x %08x %08x %08x\n%08x %08x %08x %08x",
 
 			postlineblend(bitmap, cliprect, i); // assume this has highest priority at same priority level
 		}
+	}
+	return 0;
+}
+
+u32 psikyosh6_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)/* Note the z-buffer on each sprite to get correct priority */
+{
+	int i;
+
+	m_z_bitmap.fill(0, cliprect); /* z-buffer */
+
+	prelineblend(bitmap, cliprect); // fills screen
+	for (i = 0; i <= 7; i++)
+	{
+		draw_bitmap(bitmap, cliprect, i);
+
+		draw_sprites(bitmap, cliprect, i); // When same priority bg's have higher pri
+
+		draw_background(bitmap, cliprect, i);
+
+		postlineblend(bitmap, cliprect, i); // assume this has highest priority at same priority level
 	}
 	return 0;
 }

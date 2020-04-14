@@ -45,7 +45,10 @@ public:
 	void init_ps3();
 	void init_ps5();
 
-private:
+protected:
+	virtual void machine_start() override;
+	virtual void video_start() override;
+
 	/* memory pointers */
 	required_shared_ptr<u32> m_spriteram;
 	required_shared_ptr<u32> m_zoomram;
@@ -70,10 +73,11 @@ private:
 		u16 colr;
 		u8 dpth;
 		s16 alpha;
+		u16 alphatable[8];
 	};
 
 	bitmap_ind8                 m_zoom_bitmap;
-	bitmap_ind16                m_z_bitmap;
+	bitmap_ind32                m_z_bitmap;
 	bitmap_rgb32                m_bg_bitmap;
 	std::unique_ptr<u16[]>      m_bg_zoom;
 	std::unique_ptr<u8[]>       m_alphatable;
@@ -89,12 +93,12 @@ private:
 
 	bool const FLIPSCREEN() { return ((m_vidregs[3] & 0x0000c000) == 0x0000c000); } // currently ignored
 
-	bool const BG_LARGE(u8 const n)        { return ((m_vidregs[7] << (4 * n)) & 0x00001000); }
+	virtual bool const BG_LARGE(u8 const n)        { return ((m_vidregs[7] << (4 * n)) & 0x00001000); }
 	bool const BG_DEPTH_8BPP(u8 const n)   { return ((m_vidregs[7] << (4 * n)) & 0x00004000); }
-	bool const BG_LAYER_ENABLE(u8 const n) { return ((m_vidregs[7] << (4 * n)) & 0x00008000); }
+	virtual bool const BG_LAYER_ENABLE(u8 const n) { return ((m_vidregs[7] << (4 * n)) & 0x00008000); }
 
-	u8 const BG_TYPE(u8 const n) { return ((m_vidregs[6] << (8 * n)) & 0x7f000000) >> 24; }
-	bool const BG_LINE(u8 const n)    { return ((m_vidregs[6] << (8 * n)) & 0x80000000); }
+	virtual u8 const BG_TYPE(u8 const n) { return ((m_vidregs[6] << (8 * n)) & 0x7f000000) >> 24; }
+	virtual bool const BG_LINE(u8 const n)    { return ((m_vidregs[6] << (8 * n)) & 0x80000000); }
 
 	u8 const SPRITE_PRI(u8 const n) { return ((m_vidregs[2] << (4 * n)) & 0xf0000000) >> 28; }
 
@@ -102,25 +106,87 @@ private:
 	void vidregs_w(offs_t offset, u32 data, u32 mem_mask);
 	u32 mjgtaste_input_r();
 	void eeprom_w(u8 data);
-	virtual void machine_start() override;
-	virtual void video_start() override;
-	u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	virtual u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank);
 	INTERRUPT_GEN_MEMBER(interrupt);
 	void draw_scanline32_alpha(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr, int alpha);
 	void draw_scanline32_argb(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr);
 	void draw_scanline32_transpen(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr);
-	void draw_bglayer(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
-	void cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const size, u8 const tilebank, s16 const alpha, u8 *last_bank);
-	void draw_bglayerscroll(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
-	void draw_background(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
-	void draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
-	void get_sprites();
-	void prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect );
-	void postlineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	virtual void draw_bglayer(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	virtual void cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const size, u8 const tilebank, s16 const alpha, u8 *last_bank);
+	virtual void draw_bglayerscroll(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	virtual void draw_background(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	virtual void draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	virtual void get_sprites();
+	virtual void prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect );
+	virtual void postlineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
 	void psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangle &clip, gfx_element *gfx,
 	u32 const code, u16 const color, u8 const flipx, u8 const flipy, s32 const offsx, s32 const offsy,
-	s16 const alpha, u32 const zoomx, u32 const zoomy, u8 const wide, u8 const high, u16 const z);
+	s16 const alpha, u32 const zoomx, u32 const zoomy, u8 const wide, u8 const high, u32 const z);
+	void ps3v1_map(address_map &map);
+	void ps5_map(address_map &map);
+	void ps5_mahjong_map(address_map &map);
+};
+
+class psikyosh6_state : public psikyosh_state
+{
+public:
+	psikyosh6_state(const machine_config &mconfig, device_type type, const char *tag) :
+		psikyosh_state(mconfig, type, tag),
+		m_gfxram(*this, "gfxram"),
+		m_dma_regs(*this, "dma_regs")
+	{ }
+
+	void psikyo3v1(machine_config &config);
+	void psikyo5(machine_config &config);
+	void psikyo5_mahjong(machine_config &config);
+	void psikyo5_240(machine_config &config);
+
+	void init_ps3();
+	void init_ps5();
+
+protected:
+	virtual void machine_start() override;
+	virtual void video_start() override;
+
+private:
+	/* memory pointers */
+	required_shared_ptr<u32> m_gfxram;
+	required_shared_ptr<u32> m_dma_regs;
+
+	bool const FLIPSCREEN() { return ((m_vidregs[3] & 0x0000c000) == 0x0000c000); } // currently ignored
+
+	virtual bool const BG_LINE(u8 const n) override         { return ((m_vidregs[7] << (1 * n)) & 0x00000080); }
+	virtual bool const BG_LAYER_ENABLE(u8 const n) override { return ((m_vidregs[7] << (1 * n)) & 0x00000008); }
+
+	virtual u8 const BG_TYPE(u8 const n) override { return ((m_vidregs[6] << (8 * n)) & 0xff000000) >> 24; }
+
+	u8 const SPRITE_LIST_BANK() { return (m_vidregs[0] & 0xff000000) >> 24; }
+	u8 const PALETTE_BANK() { return (m_vidregs[0] & 0x00ff0000) >> 16; }
+	u8 const BITMAP_BANK() { return (m_vidregs[0] & 0x0000ff00) >> 8; }
+
+	void irqctrl_w(u32 data);
+	void vidregs_w(offs_t offset, u32 data, u32 mem_mask);
+	u32 mjgtaste_input_r();
+	void eeprom_w(u8 data);
+	virtual u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect) override;
+	DECLARE_WRITE_LINE_MEMBER(screen_vblank);
+	INTERRUPT_GEN_MEMBER(interrupt);
+	void draw_scanline32_alpha(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr, int alpha);
+	void draw_scanline32_argb(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr);
+	void draw_scanline32_transpen(bitmap_rgb32 &bitmap, s32 destx, s32 desty, s32 length, const u32 *srcptr);
+	virtual void draw_bglayer(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri) override;
+	virtual void cache_bitmap(s16 const scanline, gfx_element *gfx, u8 const size, u8 const tilebank, s16 const alpha, u8 *last_bank) override;
+	virtual void draw_bglayerscroll(u8 const layer, bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri) override;
+	virtual void draw_background(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri) override;
+	virtual void draw_sprites(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri) override;
+	virtual void get_sprites() override;
+	virtual void prelineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect ) override;
+	virtual void postlineblend(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri) override;
+	void draw_bitmap(bitmap_rgb32 &bitmap, const rectangle &cliprect, u8 const req_pri);
+	void psikyosh_drawgfxzoom(bitmap_rgb32 &dest_bmp, const rectangle &clip, gfx_element *gfx,
+	u32 const code, u16 const color, u8 const flipx, u8 const flipy, s32 const offsx, s32 const offsy,
+	s16 const alpha, u32 const zoomx, u32 const zoomy, u8 const wide, u8 const high, u32 const z);
 	void ps3v1_map(address_map &map);
 	void ps5_map(address_map &map);
 	void ps5_mahjong_map(address_map &map);
