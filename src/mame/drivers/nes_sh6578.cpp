@@ -5,18 +5,28 @@
     SH6578 NES clone hardware
     enhanced NES, different to VT / OneBus systems
 
-	video rendering is changed significantly compared to NES so not using NES PPU device
-	has 256x256 pixel pages, attributes are stored next to tile numbers (not in their own table after them) etc.
-	
+    video rendering is changed significantly compared to NES so not using NES PPU device
+    has 256x256 pixel pages, attributes are stored next to tile numbers (not in their own table after them) etc.
+
 */
 
 #include "emu.h"
-#include "cpu/m6502/n2a03.h"
+#include "video/ppu2c0x_sh6578.h"
+#include "cpu/m6502/m6502.h"
+#include "sound/nes_apu.h"
 #include "emupal.h"
 #include "screen.h"
 #include "speaker.h"
 #include "machine/bankdev.h"
 #include "machine/timer.h"
+
+#define LOG_DMA       (1U << 2)
+#define LOG_PPU       (1U << 1)
+
+//#define VERBOSE             (LOG_PPU)
+#define VERBOSE             (0)
+
+#include "logmacro.h"
 
 class nes_sh6578_state : public driver_device
 {
@@ -24,14 +34,17 @@ public:
 	nes_sh6578_state(const machine_config& mconfig, device_type type, const char* tag) :
 		driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
+		m_ppu(*this, "ppu"),
 		m_bank(*this, "cartbank"),
 		m_fullrom(*this, "fullrom"),
-		m_vram(*this, "vram"),
 		m_screen(*this, "screen"),
-		m_palette(*this, "palette")
+		m_apu(*this, "nesapu"),
+		m_timer(*this, "timer"),
+		m_in(*this, "IN%u", 0U)
 	{ }
-	
+
 	void nes_sh6578(machine_config& config);
+	void nes_sh6578_pal(machine_config& config);
 
 	void init_nes_sh6578();
 
@@ -43,14 +56,13 @@ protected:
 	WRITE8_MEMBER(sprite_dma_w);
 
 private:
-	required_device<n2a03_device> m_maincpu;
+	required_device<cpu_device> m_maincpu;
+	required_device<ppu_sh6578_device> m_ppu;
 	required_memory_bank m_bank;
 	required_device<address_map_bank_device> m_fullrom;
-	required_device<address_map_bank_device> m_vram;
 	required_device<screen_device> m_screen;
-	required_device<palette_device> m_palette;
-
-	rgb_t nespal_to_RGB(int color_intensity, int color_num);
+	required_device<nesapu_device> m_apu;
+	required_device<timer_device> m_timer;
 
 	DECLARE_READ8_MEMBER(bankswitch_r);
 	DECLARE_WRITE8_MEMBER(bankswitch_w);
@@ -80,14 +92,24 @@ private:
 
 	DECLARE_WRITE8_MEMBER(timing_setting_control_w);
 	DECLARE_WRITE8_MEMBER(initial_startup_w);
+	DECLARE_READ8_MEMBER(irq_status_r);
+	DECLARE_WRITE8_MEMBER(irq_mask_w);
+	DECLARE_WRITE8_MEMBER(timer_config_w);
+	DECLARE_WRITE8_MEMBER(timer_value_w);
 
-	DECLARE_WRITE8_MEMBER(write_ppu);
-	DECLARE_READ8_MEMBER(read_ppu);
-	DECLARE_WRITE8_MEMBER(write_palette);
-	DECLARE_READ8_MEMBER(read_palette);
+	DECLARE_READ8_MEMBER(io0_r);
+	DECLARE_READ8_MEMBER(io1_r);
+	DECLARE_WRITE8_MEMBER(io_w);
+
+	DECLARE_READ8_MEMBER(psg1_4014_r);
+	DECLARE_READ8_MEMBER(psg1_4015_r);
+	DECLARE_WRITE8_MEMBER(psg1_4015_w);
+	DECLARE_WRITE8_MEMBER(psg1_4017_w);
+	DECLARE_READ8_MEMBER(apu_read_mem);
+
+	DECLARE_WRITE_LINE_MEMBER(apu_irq);
 
 	int m_iniital_startup_state;
-	std::vector<uint8_t> m_palette_ram;
 
 	uint8_t m_bankswitch[8];
 
@@ -97,31 +119,27 @@ private:
 	uint8_t m_dma_dest[2];
 	uint8_t m_dma_length[2];
 
-	uint8_t m_2000;
-	uint8_t m_colsel_pntstart;
-	TIMER_DEVICE_CALLBACK_MEMBER(scanline);
+	uint8_t m_irqmask;
 
 	void do_dma();
 
 	void rom_map(address_map& map);
-	void vram_map(address_map& map);
 	void nes_sh6578_map(address_map& map);
 
+	//uint16_t get_tileaddress(uint8_t x, uint8_t y, bool ishigh);
+
 	uint32_t screen_update(screen_device& screen, bitmap_rgb32& bitmap, const rectangle& cliprect);
+
+	TIMER_DEVICE_CALLBACK_MEMBER(timer_expired);
+	int m_timerval;
+
+	// this might be game specific
+	uint8_t m_previo;
+	uint8_t m_iolatch[2];
+	bool m_isbanked;
+	required_ioport_array<2> m_in;
 };
 
-TIMER_DEVICE_CALLBACK_MEMBER(nes_sh6578_state::scanline)
-{
-	int scanline = param;
-
-	if (scanline == 240)
-	{
-		if (m_2000 & 0x80)
-		{
-			m_maincpu->pulse_input_line(INPUT_LINE_NMI, attotime::zero);
-		}
-	}
-}
 
 
 uint8_t nes_sh6578_state::bank_r(int bank, uint16_t offset)
@@ -137,12 +155,12 @@ void nes_sh6578_state::bank_w(int bank, uint16_t offset, uint8_t data)
 	uint32_t address;
 	address = offset & 0x00fff;                   // 0x00fff part of address
 	address |= (m_bankswitch[bank] & 0xff) << 12; // 0xff000 part of address
-	return m_fullrom->write8(address, data);
+	m_fullrom->write8(address, data);
 }
 
 WRITE8_MEMBER(nes_sh6578_state::sprite_dma_w)
 {
-	//	int source = (data & 7);
+	m_ppu->spriteram_dma(space, data);
 }
 
 READ8_MEMBER(nes_sh6578_state::bankswitch_r)
@@ -159,27 +177,28 @@ READ8_MEMBER(nes_sh6578_state::dma_r)
 {
 	switch (offset)
 	{
-	case 0x00: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Control :  %02x\n", machine().describe_context(), offset); return m_dma_control;
-	case 0x01: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Bank Select : %02x\n", machine().describe_context(), offset); return m_dma_bank;
-	case 0x02: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Source Address Low : %02x\n", machine().describe_context(), offset); return m_dma_source[0];
-	case 0x03: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Source Address High : %02x\n", machine().describe_context(), offset); return m_dma_source[1];
-	case 0x04: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Destination Address Low : %02x\n", machine().describe_context(), offset); return m_dma_dest[0];
-	case 0x05: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Destination Address High : %02x\n", machine().describe_context(), offset); return m_dma_dest[1];
-	case 0x06: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Length Low : %02x\n", machine().describe_context(), offset); return m_dma_length[0];
-	case 0x07: logerror("%s: nes_sh6578_state::dma_r offset %01x : DMA Length High : %02x\n", machine().describe_context(), offset); return m_dma_length[1];
+	case 0x00: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Control : %02x\n", machine().describe_context(), offset, m_dma_control); return m_dma_control & 0x7f;
+	case 0x01: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Bank Select\n", machine().describe_context(), offset); return m_dma_bank;
+	case 0x02: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Source Address Low\n", machine().describe_context(), offset); return m_dma_source[0];
+	case 0x03: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Source Address High\n", machine().describe_context(), offset); return m_dma_source[1];
+	case 0x04: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Destination Address Low\n", machine().describe_context(), offset); return m_dma_dest[0];
+	case 0x05: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Destination Address High\n", machine().describe_context(), offset); return m_dma_dest[1];
+	case 0x06: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Length Low\n", machine().describe_context(), offset); return m_dma_length[0];
+	case 0x07: LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_r offset %01x : DMA Length High\n", machine().describe_context(), offset); return m_dma_length[1];
 	}
 	return 0x00;
 }
 
 void nes_sh6578_state::do_dma()
 {
+
 	if (m_dma_control & 0x80)
 	{
 		uint16_t dma_source = m_dma_source[0] | (m_dma_source[1] << 8);
 		uint16_t dma_dest = m_dma_dest[0] | (m_dma_dest[1] << 8);
 		uint16_t dma_length = m_dma_length[0] | (m_dma_length[1] << 8);
 
-		logerror("Doing DMA :%02x bank:%02x: source:%04x dest:%04x length:%04x\n", m_dma_control, m_dma_bank, dma_source, dma_dest, dma_length);
+		LOGMASKED(LOG_DMA, "Doing DMA :%02x bank:%02x: source:%04x dest:%04x length:%04x\n", m_dma_control, m_dma_bank, dma_source, dma_dest, dma_length);
 
 		uint16_t realsourceaddress = dma_source;
 		uint16_t realdestaddress = dma_dest;
@@ -208,14 +227,17 @@ void nes_sh6578_state::do_dma()
 			}
 			else
 			{
-				m_vram->write8(realdestaddress, readdat);
+				m_ppu->space(AS_PROGRAM).write_byte(realdestaddress, readdat);
 			}
 
 			realsourceaddress++;
 			realdestaddress++;
 		}
-
 	}
+
+	// but games seem to be making quite a few DMA writes with lengths that seem too large? buggy code?
+	//m_dma_length[0] = 0;
+	//m_dma_length[1] = 0;
 }
 
 WRITE8_MEMBER(nes_sh6578_state::dma_w)
@@ -223,43 +245,43 @@ WRITE8_MEMBER(nes_sh6578_state::dma_w)
 	switch (offset)
 	{
 	case 0x0:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Control : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Control : %02x\n", machine().describe_context(), offset, data);
 		m_dma_control = data;
 		do_dma();
 		break;
 
 	case 0x1:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Bank Select : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Bank Select : %02x\n", machine().describe_context(), offset, data);
 		m_dma_bank = data;
 		break;
 
 	case 0x2:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Source Address Low : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Source Address Low : %02x\n", machine().describe_context(), offset, data);
 		m_dma_source[0] = data;
 		break;
 
 	case 0x3:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Source Address High : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Source Address High : %02x\n", machine().describe_context(), offset, data);
 		m_dma_source[1] = data;
 		break;
 
 	case 0x4:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Destination Address Low : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Destination Address Low : %02x\n", machine().describe_context(), offset, data);
 		m_dma_dest[0] = data;
 		break;
 
 	case 0x5:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Destination Address High : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Destination Address High : %02x\n", machine().describe_context(), offset, data);
 		m_dma_dest[1] = data;
 		break;
 
 	case 0x6:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Length Low : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Length Low : %02x\n", machine().describe_context(), offset, data);
 		m_dma_length[0] = data;
 		break;
 
 	case 0x7:
-		logerror("%s: nes_sh6578_state::dma_w offset %01x : DMA Length High : %02x\n", machine().describe_context(), offset, data);
+		LOGMASKED(LOG_DMA, "%s: nes_sh6578_state::dma_w offset %01x : DMA Length High : %02x\n", machine().describe_context(), offset, data);
 		m_dma_length[1] = data;
 		break;
 	}
@@ -306,163 +328,142 @@ WRITE8_MEMBER(nes_sh6578_state::initial_startup_w)
 	}
 }
 
+READ8_MEMBER(nes_sh6578_state::irq_status_r)
+{
+	logerror("%s: nes_sh6578_state::irq_status_r\n", machine().describe_context());
+	return machine().rand();
+}
+
+WRITE8_MEMBER(nes_sh6578_state::irq_mask_w)
+{
+	m_irqmask = data;
+
+	if (m_irqmask & 0x80)
+		m_maincpu->set_input_line(0, CLEAR_LINE);
+}
+
+WRITE8_MEMBER(nes_sh6578_state::timer_config_w)
+{
+	logerror("%s: nes_sh6578_state::timer_config_w : %02x (at pos y: %d x: %d )\n", machine().describe_context(), data, m_screen->vpos(), m_screen->hpos() );
+
+	if ((data & 0x80) && (data & 0x20))
+	{
+		m_timer->adjust(m_screen->scan_period() * m_timerval);
+	}
+	else
+	{
+		m_timer->adjust(attotime::never);
+	}
+}
+
+WRITE8_MEMBER(nes_sh6578_state::timer_value_w)
+{
+	logerror("%s: nes_sh6578_state::timer_value_w : %02x\n", machine().describe_context(), data);
+	m_timerval = data;
+}
+
+
 WRITE8_MEMBER(nes_sh6578_state::timing_setting_control_w)
 {
 	logerror("%s: nes_sh6578_state::timing_setting_control_w : %02x\n", machine().describe_context(), data);
 }
 
-// borrowed from ppu2c0x.cpp, doesn't currently handle color emphasis!
-rgb_t nes_sh6578_state::nespal_to_RGB(int color_intensity, int color_num)
+
+READ8_MEMBER(nes_sh6578_state::io0_r)
 {
-	const double tint = 0.22; /* adjust to taste */
-	const double hue = 287.0;
+	uint8_t ret = m_iolatch[0] & 0x01;
+	m_iolatch[0] >>= 1;
+	return ret;
+}
 
-	const double Kr = 0.2989;
-	const double Kb = 0.1145;
-	const double Ku = 2.029;
-	const double Kv = 1.140;
+READ8_MEMBER(nes_sh6578_state::io1_r)
+{
+	uint8_t ret = m_iolatch[1] & 0x01;
+	m_iolatch[1] >>= 1;
+	return ret;
+}
 
-	static const double brightness[3][4] =
+WRITE8_MEMBER(nes_sh6578_state::io_w)
+{
+	if ((data != 0x00) && (data != 0x01) && (data != 0x02) && (data != 0x03))
+		logerror("%s: io_w : unexpected value : %02x\n", machine().describe_context(), data);
+
+	if ((m_previo & 0x01) != (data & 0x01))
 	{
-		{ 0.50, 0.75, 1.0, 1.0 },
-		{ 0.29, 0.45, 0.73, 0.9 },
-		{ 0, 0.24, 0.47, 0.77 }
-	};
-
-	double sat;
-	double y, u, v;
-	double rad;
-
-	switch (color_num)
-	{
-	case 0:
-		sat = 0; rad = 0;
-		y = brightness[0][color_intensity];
-		break;
-
-	case 13:
-		sat = 0; rad = 0;
-		y = brightness[2][color_intensity];
-		break;
-
-	case 14:
-	case 15:
-		sat = 0; rad = 0; y = 0;
-		break;
-
-	default:
-		sat = tint;
-		rad = M_PI * ((color_num * 30 + hue) / 180.0);
-		y = brightness[1][color_intensity];
-		break;
+		// latch on rising or falling?
+		if (!(data & 0x01))
+		{
+			m_iolatch[0] = m_in[0]->read();
+			m_iolatch[1] = m_in[1]->read();
+		}
 	}
 
-	u = sat * cos(rad);
-	v = sat * sin(rad);
-
-	/* Transform to RGB */
-	double R = (y + Kv * v) * 255.0;
-	double G = (y - (Kb * Ku * u + Kr * Kv * v) / (1 - Kb - Kr)) * 255.0;
-	double B = (y + Ku * u) * 255.0;
-
-	/* Clipping, in case of saturation */
-	if (R < 0)
-		R = 0;
-	if (R > 255)
-		R = 255;
-	if (G < 0)
-		G = 0;
-	if (G > 255)
-		G = 255;
-	if (B < 0)
-		B = 0;
-	if (B > 255)
-		B = 255;
-
-	return rgb_t(floor(R + .5), floor(G + .5), floor(B + .5));
-}
-
-
-READ8_MEMBER(nes_sh6578_state::read_palette)
-{
-	logerror("%s: nes_sh6578_state::read_ppu : Palette Entry %02x\n", machine().describe_context(), offset);
-	return m_palette_ram[offset];
-}
-
-WRITE8_MEMBER(nes_sh6578_state::write_palette)
-{
-	logerror("%s: nes_sh6578_state::write_ppu : Palette Entry %02x : %02x\n", machine().describe_context(), offset, data);
-	m_palette_ram[offset] = data;
-
-	rgb_t col = nespal_to_RGB((data & 0x30) >> 4, data & 0x0f);
-	m_palette->set_pen_color(offset, col);
-}
-
-
-READ8_MEMBER(nes_sh6578_state::read_ppu)
-{
-	switch (offset)
+	if (m_isbanked)
 	{
-	case 0x08:
-		logerror("%s: nes_sh6578_state::read_ppu : Color Select & PNT Start Address\n", machine().describe_context());
-		return m_colsel_pntstart;
-
-	case 0x00:
-		return m_2000;
-
-	case 0x02:
-	{
-		uint8_t ret = 0x00;
-		int vblank = m_screen->vpos() > 239 ? 1 : 0;
-
-		if (vblank) ret |= 0x80;
-
-		return ret;
+		m_bank->set_entry((data>>1)&1);
 	}
 
-	default:
-		//return ppu2c0x_device::read(space, offset);
-		return 0x00;
-	}
+	m_previo = data;
 }
 
-WRITE8_MEMBER(nes_sh6578_state::write_ppu)
+
+READ8_MEMBER(nes_sh6578_state::psg1_4014_r)
 {
-	switch (offset)
-	{
-	case 0x08:
-		logerror("%s: nes_sh6578_state::write_ppu : Color Select & PNT Start Address : %02x\n", machine().describe_context(), data);
-		m_colsel_pntstart = data;
-		break;
-
-	case 0x00:
-		m_2000 = data;
-		break;
-
-	default:
-		break;
-		//ppu2c0x_device::write(space, offset, data);
-	}
+	return m_apu->read(0x14);
 }
+
+READ8_MEMBER(nes_sh6578_state::psg1_4015_r)
+{
+	return m_apu->read(0x15);
+}
+
+WRITE8_MEMBER(nes_sh6578_state::psg1_4015_w)
+{
+	m_apu->write(0x15, data);
+}
+
+WRITE8_MEMBER(nes_sh6578_state::psg1_4017_w)
+{
+	m_apu->write(0x17, data);
+}
+
+WRITE_LINE_MEMBER(nes_sh6578_state::apu_irq)
+{
+	// unimplemented
+}
+
+READ8_MEMBER(nes_sh6578_state::apu_read_mem)
+{
+	return m_maincpu->space(AS_PROGRAM).read_byte(offset);
+}
+
 
 
 void nes_sh6578_state::nes_sh6578_map(address_map& map)
 {
 	map(0x0000, 0x1fff).ram();
-	map(0x2000, 0x2008).rw(FUNC(nes_sh6578_state::read_ppu), FUNC(nes_sh6578_state::write_ppu));
-	
-	map(0x2040, 0x207f).rw(FUNC(nes_sh6578_state::read_palette), FUNC(nes_sh6578_state::write_palette));
-	
-	map(0x4014, 0x4014).w(FUNC(nes_sh6578_state::sprite_dma_w));
+	map(0x2000, 0x2007).rw(m_ppu, FUNC(ppu2c0x_device::read), FUNC(ppu2c0x_device::write));
+	map(0x2008, 0x2008).rw(m_ppu, FUNC(ppu_sh6578_device::read_extended), FUNC(ppu_sh6578_device::write_extended));
+
+	map(0x2040, 0x207f).rw(m_ppu, FUNC(ppu_sh6578_device::palette_read), FUNC(ppu_sh6578_device::palette_write));
+
+	map(0x4000, 0x4013).rw(m_apu, FUNC(nesapu_device::read), FUNC(nesapu_device::write));
+	map(0x4014, 0x4014).rw(FUNC(nes_sh6578_state::psg1_4014_r), FUNC(nes_sh6578_state::sprite_dma_w));
+	map(0x4015, 0x4015).rw(FUNC(nes_sh6578_state::psg1_4015_r), FUNC(nes_sh6578_state::psg1_4015_w));
+	map(0x4016, 0x4016).rw(FUNC(nes_sh6578_state::io0_r), FUNC(nes_sh6578_state::io_w));
+	map(0x4017, 0x4017).rw(FUNC(nes_sh6578_state::io1_r), FUNC(nes_sh6578_state::psg1_4017_w));
 
 	map(0x4020, 0x4020).w(FUNC(nes_sh6578_state::timing_setting_control_w));
 
 	map(0x4031, 0x4031).w(FUNC(nes_sh6578_state::initial_startup_w));
+	map(0x4032, 0x4032).w(FUNC(nes_sh6578_state::irq_mask_w));
+	map(0x4033, 0x4033).r(FUNC(nes_sh6578_state::irq_status_r));
+	map(0x4034, 0x4034).w(FUNC(nes_sh6578_state::timer_config_w));
+	map(0x4035, 0x4035).w(FUNC(nes_sh6578_state::timer_value_w));
 
 	map(0x4040, 0x4047).rw(FUNC(nes_sh6578_state::bankswitch_r), FUNC(nes_sh6578_state::bankswitch_w));
 
 	map(0x4048, 0x404f).rw(FUNC(nes_sh6578_state::dma_r), FUNC(nes_sh6578_state::dma_w));
-
 
 	map(0x5000, 0x57ff).ram();
 
@@ -479,6 +480,18 @@ void nes_sh6578_state::nes_sh6578_map(address_map& map)
 }
 
 static INPUT_PORTS_START(nes_sh6578)
+	PORT_START("IN0")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(1)
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(1)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_SELECT ) PORT_PLAYER(1)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START ) PORT_PLAYER(1)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_PLAYER(1) PORT_8WAY
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN ) PORT_PLAYER(1) PORT_8WAY
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_PLAYER(1) PORT_8WAY
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_PLAYER(1) PORT_8WAY
+
+	PORT_START("IN1")
+	PORT_BIT( 0xff, IP_ACTIVE_HIGH, IPT_UNUSED )
 INPUT_PORTS_END
 
 void nes_sh6578_state::video_start()
@@ -490,18 +503,27 @@ void nes_sh6578_state::machine_reset()
 	for (int i = 0; i < 8; i++)
 		m_bankswitch[i] = i;
 
-	m_palette_ram.resize(0x40);
-
-	for (int i = 0; i < 0x40; i++)
-		m_palette_ram[i] = 0x00;
-
 	m_iniital_startup_state = 0;
+	m_bank->set_entry(0);
+
+	m_irqmask = 0xff;
+	m_timerval = 0x00;
 }
 
 void nes_sh6578_state::machine_start()
 {
 	m_bank->configure_entry(0, memregion("maincpu")->base() + 0x0000000);
 	m_bank->set_entry(0);
+
+	if (memregion("maincpu")->bytes() == 0x200000)
+	{
+		m_isbanked = true;
+		m_bank->configure_entry(1, memregion("maincpu")->base() + 0x100000);
+	}
+	else
+	{
+		m_isbanked = false;
+	}
 }
 
 // SH6578 can address 20-bit address space (1MB of ROM)
@@ -510,93 +532,81 @@ void nes_sh6578_state::rom_map(address_map& map)
 	map(0x00000, 0xfffff).bankr("cartbank");
 }
 
-void nes_sh6578_state::vram_map(address_map& map)
+TIMER_DEVICE_CALLBACK_MEMBER(nes_sh6578_state::timer_expired)
 {
-	map(0x0000, 0x27ff).ram();
-	map(0x8000, 0xffff).ram();
+	if (!(m_irqmask & 0x80))
+	{
+		//printf("timer expired on line %d\n", m_screen->vpos());
+		m_maincpu->set_input_line(0, ASSERT_LINE);
+	}
+
+	m_timer->adjust(attotime::never);
 }
 
 
+// from n2a03.h verify that it actually uses these
+#define N2A03_NTSC_XTAL           XTAL(21'477'272)
+#define N2A03_PAL_XTAL            XTAL(26'601'712)
+#define NTSC_APU_CLOCK      (N2A03_NTSC_XTAL/12) /* 1.7897726666... MHz */
+#define PAL_APU_CLOCK       (N2A03_PAL_XTAL/16) /* 1.662607 MHz */
+#define PALC_APU_CLOCK      (N2A03_PAL_XTAL/15) /* 1.77344746666... MHz */
+
 uint32_t nes_sh6578_state::screen_update(screen_device& screen, bitmap_rgb32& bitmap, const rectangle& cliprect)
 {
-	// nametable base depends on bits in 0x2008, it isn't fixed at 0x2000 as it is on a NES
-	int address = 0;
-	const pen_t *paldata = m_palette->pens();
-
-	// pages are 32 tiles high, not 30 as on NES
-	for (int y = 0; y < 32; y++)
-	{
-		for (int x = 0; x < 32; x++)
-		{
-			// character gfx pointer and palette select are encoded in a pair of bytes, not using separate attribute table for palette
-			uint16_t tileaddr;
-			tileaddr = (m_vram->read8(address) << 0);
-			address++;
-			tileaddr |= (m_vram->read8(address) << 8);
-			address++;
-
-			uint8_t pal = (tileaddr & 0xf000) >> 12;
-			tileaddr &= 0x0fff;
-			tileaddr <<= 4;
-
-			for (int yy = 0; yy < 8; yy++)
-			{
-				uint32_t* destptr = &bitmap.pix32((y*8)+ yy);
-
-				uint8_t plane0 = m_vram->read8(tileaddr+0);
-				uint8_t plane1 = m_vram->read8(tileaddr+8);
-				uint8_t plane2 = m_vram->read8(tileaddr+16);
-				uint8_t plane3 = m_vram->read8(tileaddr+24);
-
-				for (int xx = 0; xx < 8; xx++)
-				{
-					uint8_t pixval = ((plane0 >> (7-xx)) & 1) << 0;
-					pixval |= ((plane1 >> (7-xx)) & 1) << 1;
-					pixval |= ((plane2 >> (7-xx)) & 1) << 2;
-					pixval |= ((plane3 >> (7-xx)) & 1) << 3;
-
-					pixval |= ((pal & 0xc) << 2);
-
-					destptr[(x * 8) + xx] = paldata[pixval];
-				}
-
-				tileaddr++;
-
-			}
-
-		}
-	}
-
-	return 0;
+	return m_ppu->screen_update(screen, bitmap, cliprect);
 }
 
 void nes_sh6578_state::nes_sh6578(machine_config& config)
 {
 	/* basic machine hardware */
-	N2A03(config, m_maincpu, NTSC_APU_CLOCK);
+	M6502(config, m_maincpu, NTSC_APU_CLOCK); // regular M6502 core, not N2A03?
 	m_maincpu->set_addrmap(AS_PROGRAM, &nes_sh6578_state::nes_sh6578_map);
 
 	ADDRESS_MAP_BANK(config, m_fullrom).set_map(&nes_sh6578_state::rom_map).set_options(ENDIANNESS_NATIVE, 8, 20, 0x100000);
 
-	ADDRESS_MAP_BANK(config, m_vram).set_map(&nes_sh6578_state::vram_map).set_options(ENDIANNESS_NATIVE, 8, 16, 0x10000);
-
-	TIMER(config, "scantimer").configure_scanline(FUNC(nes_sh6578_state::scanline), "screen", 0, 1);
+	PPU_SH6578(config, m_ppu, N2A03_NTSC_XTAL);
+	m_ppu->set_cpu_tag(m_maincpu);
+	m_ppu->int_callback().set_inputline(m_maincpu, INPUT_LINE_NMI);
 
 	/* video hardware */
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
-	m_screen->set_refresh_hz(60);
-	m_screen->set_size(32 * 8, 262);
-	m_screen->set_visarea(0 * 8, 32 * 8 - 1, 0 * 8, 30 * 8 - 1);
+	m_screen->set_refresh_hz(60.0988);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC((113.66/(NTSC_APU_CLOCK.dvalue()/1000000)) *
+							 (ppu2c0x_device::VBLANK_LAST_SCANLINE_NTSC-ppu2c0x_device::VBLANK_FIRST_SCANLINE+1+2)));
+	m_screen->set_size(32*8, 262);
+	m_screen->set_visarea(0*8, 32*8-1, 0*8, 30*8-1);
 	m_screen->set_screen_update(FUNC(nes_sh6578_state::screen_update));
 
-	PALETTE(config, m_palette).set_entries(0x40);
+	TIMER(config, m_timer).configure_periodic(FUNC(nes_sh6578_state::timer_expired), attotime::never);
 
 	/* sound hardware */
 	SPEAKER(config, "mono").front_center();
-	m_maincpu->add_route(ALL_OUTPUTS, "mono", 0.50);
+
+	// have to add the APU separately due to using M6502
+	NES_APU(config, m_apu, NTSC_APU_CLOCK);
+	m_apu->irq().set(FUNC(nes_sh6578_state::apu_irq));
+	m_apu->mem_read().set(FUNC(nes_sh6578_state::apu_read_mem));
+	m_apu->add_route(ALL_OUTPUTS, "mono", 0.50);
 }
 
+void nes_sh6578_state::nes_sh6578_pal(machine_config& config)
+{
+	nes_sh6578(config);
 
+	m_maincpu->set_clock(PALC_APU_CLOCK);
+	m_apu->set_clock(PALC_APU_CLOCK);
+
+	PPU_SH6578PAL(config.replace(), m_ppu, N2A03_PAL_XTAL);
+	m_ppu->set_cpu_tag(m_maincpu);
+	m_ppu->int_callback().set_inputline(m_maincpu, INPUT_LINE_NMI);
+
+	m_screen->set_refresh_hz(50.0070);
+	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC((113.66 / (PALC_APU_CLOCK.dvalue() / 1000000)) *
+		(ppu2c0x_device::VBLANK_LAST_SCANLINE_PAL - ppu2c0x_device::VBLANK_FIRST_SCANLINE_PALC + 1 + 2)));
+	m_screen->set_size(32 * 8, 312);
+	m_screen->set_visarea(0 * 8, 32 * 8 - 1, 0 * 8, 30 * 8 - 1);
+
+}
 
 void nes_sh6578_state::init_nes_sh6578()
 {
@@ -608,6 +618,13 @@ ROM_START( bandgpad )
 	ROM_REGION( 0x100000, "maincpu", 0 )
 	ROM_LOAD( "gamepad.bin", 0x00000, 0x100000, CRC(e2fbb532) SHA1(e9170a7739a8355acbf263fe2b1d291951dc07f0) )
 ROM_END
+
+ROM_START( bandggcn )
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "gogoconniechan.bin", 0x00000, 0x100000, CRC(715d66ae) SHA1(9326c227bad86eea85194a90f746c60dc032a323) )
+ROM_END
+
+
 
 ROM_START( ts_handy11 )
 	ROM_REGION( 0x100000, "maincpu", 0 )
@@ -625,12 +642,13 @@ ROM_START( ablwikid )
 ROM_END
 
 
-CONS( 1997, bandgpad,  0,  0,  nes_sh6578,    nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Bandai", "Multi Game Player Gamepad", MACHINE_NOT_WORKING )
+CONS( 1997, bandgpad,    0,  0,  nes_sh6578,     nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Bandai", "Multi Game Player Gamepad", MACHINE_NOT_WORKING )
+CONS( 1997, bandggcn,    0,  0,  nes_sh6578,     nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Bandai", "Go! Go! Connie-chan! Asobou Mouse", MACHINE_NOT_WORKING )
 
 // possibly newer than 2001
-CONS( 2001, ts_handy11,  0,  0,  nes_sh6578,    nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Techno Source", "Handy Boy 11-in-1 (TV Play Power)", MACHINE_NOT_WORKING )
+CONS( 2001, ts_handy11,  0,  0,  nes_sh6578,     nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Techno Source", "Handy Boy 11-in-1 (TV Play Power)", MACHINE_NOT_WORKING )
 
-CONS( 200?, cpatrolm,  0,  0,  nes_sh6578,    nes_sh6578, nes_sh6578_state, init_nes_sh6578, "<unknown>", "City Patrolman", MACHINE_NOT_WORKING )
+CONS( 200?, cpatrolm,    0,  0,  nes_sh6578_pal, nes_sh6578, nes_sh6578_state, init_nes_sh6578, "TimeTop", "City Patrolman", MACHINE_NOT_WORKING )
 
-// this writes the 0x65 0x76 startup code to 0x4031, but the ROM is larger than expected, extra banking?
-CONS( 200?, ablwikid,   0,        0,  nes_sh6578, nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Advance Bright Ltd.",         "Wikid Joystick", MACHINE_NOT_WORKING ) // or Wik!d Joystick
+// ROM is banked
+CONS( 200?, ablwikid,    0,  0,  nes_sh6578_pal, nes_sh6578, nes_sh6578_state, init_nes_sh6578, "Advance Bright Ltd.", "Wikid Joystick", MACHINE_NOT_WORKING ) // or Wik!d Joystick
