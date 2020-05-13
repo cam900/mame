@@ -16,13 +16,16 @@
  *  Netlist Macros
  * ---------------------------------------------------------------------------*/
 
-#ifndef NL_AUTO_DEVICES
+#if !NL_AUTO_DEVICES
 
 #define MB3614_DIP(name)                                                       \
 		NET_REGISTER_DEV(MB3614_DIP, name)
 
 #define LM324_DIP(name)                                                        \
 		NET_REGISTER_DEV(LM324_DIP, name)
+
+#define TL081_DIP(name)                                                        \
+		NET_REGISTER_DEV(TL081_DIP, name)
 
 #define TL084_DIP(name)                                                        \
 		NET_REGISTER_DEV(TL084_DIP, name)

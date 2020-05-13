@@ -1,10 +1,7 @@
 // license:GPL-2.0+
 // copyright-holders:Couriersud
-#include "nlm_ttl74xx.h"
 
-#include "netlist/devices/nld_schmitt.h"
-#include "netlist/devices/nld_system.h"
-
+#include "netlist/devices/net_lib.h"
 
 /*
  *  DM7400: Quad 2-Input NAND Gates
@@ -117,6 +114,37 @@ static NETLIST_START(TTL_7404_DIP)
 		C.A,  /*    A3 |5           10| Y5   */ E.Q,
 		C.Q,  /*    Y3 |6            9| A4   */ D.A,
 		A.GND,/*   GND |7            8| Y4   */ D.Q
+			  /*       +--------------+      */
+	)
+NETLIST_END()
+
+/*
+ *   DM7406: Hex Inverting Buffers with
+ *           High Voltage Open-Collector Outputs
+ *
+ *  Naming conventions follow Fairchild Semiconductor datasheet
+ *
+ */
+
+static NETLIST_START(TTL_7406_DIP)
+	TTL_7406_GATE(A)
+	TTL_7406_GATE(B)
+	TTL_7406_GATE(C)
+	TTL_7406_GATE(D)
+	TTL_7406_GATE(E)
+	TTL_7406_GATE(F)
+
+	NET_C(A.VCC, B.VCC, C.VCC, D.VCC, E.VCC, F.VCC)
+	NET_C(A.GND, B.GND, C.GND, D.GND, E.GND, F.GND)
+
+	DIPPINS(  /*       +--------------+      */
+		A.A,  /*    A1 |1     ++    14| VCC  */ A.VCC,
+		A.Y,  /*    Y1 |2           13| A6   */ F.A,
+		B.A,  /*    A2 |3           12| Y6   */ F.Y,
+		B.Y,  /*    Y2 |4    7406   11| A5   */ E.A,
+		C.A,  /*    A3 |5           10| Y5   */ E.Y,
+		C.Y,  /*    Y3 |6            9| A4   */ D.A,
+		A.GND,/*   GND |7            8| Y4   */ D.Y
 			  /*       +--------------+      */
 	)
 NETLIST_END()
@@ -769,11 +797,13 @@ NETLIST_END()
  *
  */
 
+#if !NL_AUTO_DEVICES
 #ifndef __PLIB_PREPROCESSOR__
 #define TTL_74279A(name)                                                         \
 		NET_REGISTER_DEV(TTL_74279A, name)
 #define TTL_74279B(name)                                                         \
 		NET_REGISTER_DEV(TTL_74279B, name)
+#endif
 #endif
 
 static NETLIST_START(TTL_74279_DIP)
@@ -944,6 +974,14 @@ NETLIST_START(TTL74XX_lib)
 		TT_LINE(" 0 | 1 |22")
 		TT_LINE(" 1 | 0 |15")
 		TT_FAMILY("74XX")
+	TRUTHTABLE_END()
+
+	TRUTHTABLE_START(TTL_7406_GATE, 1, 1, "")
+		TT_HEAD("A|Y ")
+		TT_LINE("0|1|15")
+		TT_LINE("1|0|23")
+		/* Open Collector */
+		TT_FAMILY("74XXOC")
 	TRUTHTABLE_END()
 
 	TRUTHTABLE_START(TTL_7408_GATE, 2, 1, "")
@@ -1370,6 +1408,7 @@ NETLIST_START(TTL74XX_lib)
 	LOCAL_LIB_ENTRY(TTL_7400_DIP)
 	LOCAL_LIB_ENTRY(TTL_7402_DIP)
 	LOCAL_LIB_ENTRY(TTL_7404_DIP)
+	LOCAL_LIB_ENTRY(TTL_7406_DIP)
 	LOCAL_LIB_ENTRY(TTL_7408_DIP)
 	LOCAL_LIB_ENTRY(TTL_7410_DIP)
 	LOCAL_LIB_ENTRY(TTL_7411_DIP)

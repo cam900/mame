@@ -28,6 +28,7 @@ project "netlist"
 
 	defines {
 		"__STDC_CONSTANT_MACROS",
+		"NL_USE_ACADEMIC_SOLVERS=0",
 	}
 
 	includedirs {
@@ -70,6 +71,7 @@ project "netlist"
 		MAME_DIR .. "src/lib/netlist/plib/ppmf.h",
 		MAME_DIR .. "src/lib/netlist/plib/ppreprocessor.cpp",
 		MAME_DIR .. "src/lib/netlist/plib/ppreprocessor.h",
+		MAME_DIR .. "src/lib/netlist/plib/prandom.h",
 		MAME_DIR .. "src/lib/netlist/plib/pstate.h",
 		MAME_DIR .. "src/lib/netlist/plib/pstonum.h",
 		MAME_DIR .. "src/lib/netlist/plib/pstring.cpp",
@@ -176,6 +178,8 @@ project "netlist"
 		MAME_DIR .. "src/lib/netlist/devices/nld_74193.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_74194.cpp",
 		MAME_DIR .. "src/lib/netlist/devices/nld_74194.h",
+		MAME_DIR .. "src/lib/netlist/devices/nld_74393.cpp",
+		MAME_DIR .. "src/lib/netlist/devices/nld_74393.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_74365.cpp",
 		MAME_DIR .. "src/lib/netlist/devices/nld_74365.h",
 		MAME_DIR .. "src/lib/netlist/devices/nld_74ls629.cpp",
@@ -234,5 +238,5 @@ project "netlist"
 		MAME_DIR .. "src/lib/netlist/macro/nlm_other.cpp",
 		MAME_DIR .. "src/lib/netlist/macro/nlm_other.h",
 
-    MAME_DIR .. "src/lib/netlist/generated/static_solvers.cpp",
+		MAME_DIR .. "src/lib/netlist/generated/static_solvers.cpp",
 	}

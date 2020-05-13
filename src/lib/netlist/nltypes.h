@@ -14,21 +14,57 @@
 
 #include "nl_config.h"
 #include "plib/pchrono.h"
+#include "plib/pdynlib.h"
 #include "plib/pfmtlog.h"
 #include "plib/pmempool.h"
 #include "plib/pstate.h"
 #include "plib/pstring.h"
 #include "plib/ptime.h"
 #include "plib/putil.h"
-#include "plib/pdynlib.h"
 
 #include <unordered_map>
 
 namespace netlist
 {
-	/// \brief plib::constants struct specialized for nl_fptype.
+	/// \brief Constants and const calculations for the library
 	///
-	struct nlconst : public plib::constants<nl_fptype>
+	template<typename T>
+	struct nlconst_base : public plib::constants<T>
+	{
+		using BC = plib::constants<T>;
+
+		static inline constexpr T np_VT(T n=BC::one(), T temp=BC::T0()) noexcept
+		{ return n * temp * BC::k_b() / BC::Q_e(); }
+
+		static inline constexpr T np_Is() noexcept { return static_cast<T>(1e-15); } // NOLINT
+
+		static inline constexpr std::size_t max_queue_size() { return 512; } // NOLINT
+
+		/// \brief constant startup gmin
+		///
+		/// This should be used during object creation to initialize
+		/// conductivities with a reasonable value.
+		/// During reset, the object should than make use of exec().gmin()
+		/// to use the actual gmin() value.
+		static inline constexpr T cgmin() noexcept { return BC::magic(1e-9); } // NOLINT
+
+		// FIXME: Some objects used 1e-15 for initial gmin. Needs to be
+		//        aligned with cgmin
+		static inline constexpr T cgminalt() noexcept { return BC::magic(1e-15); } // NOLINT
+
+		/// \brief Multiplier applied to VT in np diode models to determine range for constant model
+		///
+		static inline constexpr T diode_min_cutoff_mult() noexcept { return BC::magic(-5.0); } // NOLINT
+
+		/// \brief Startup voltage used by np diode models
+		///
+		static inline constexpr T diode_start_voltage() noexcept { return BC::magic(0.7); } // NOLINT
+
+	};
+
+	/// \brief nlconst_base struct specialized for nl_fptype.
+	///
+	struct nlconst : public nlconst_base<nl_fptype>
 	{
 	};
 
@@ -52,13 +88,18 @@ namespace netlist
 		callbacks_t() = default;
 		virtual ~callbacks_t() = default;
 
-		COPYASSIGNMOVE(callbacks_t, default)
+		PCOPYASSIGNMOVE(callbacks_t, default)
 
 		/// \brief logging callback.
 		///
 		virtual void vlog(const plib::plog_level &l, const pstring &ls) const noexcept = 0;
 
 		/// \brief provide library with static solver implementations.
+		///
+		/// By default no static solvers are provided since these are
+		/// determined by the specific use case. It is up to the implementor
+		/// of a callbacks_t implementation to optionally provide such a collection
+		/// of symbols.
 		///
 		virtual plib::unique_ptr<plib::dynlib_base> static_solver_lib() const;
 	};
@@ -123,13 +164,5 @@ namespace netlist
 
 } // namespace netlist
 
-namespace plib {
-
-	template<>
-	inline void state_manager_t::save_item(const void *owner, netlist::netlist_time &state, const pstring &stname)
-	{
-		save_state_ptr(owner, stname, datatype_t(sizeof(netlist::netlist_time::internal_type), true, false), 1, state.get_internaltype_ptr());
-	}
-} // namespace plib
 
 #endif // NLTYPES_H_

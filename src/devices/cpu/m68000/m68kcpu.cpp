@@ -735,14 +735,14 @@ void m68000_base_device::set_irq_line(int irqline, int state)
 		m_nmi_pending = true;
 }
 
-void m68000_base_device::presave()
+void m68000_base_device::device_pre_save()
 {
 	m_save_sr = m68ki_get_sr();
 	m_save_stopped = (m_stopped & STOP_LEVEL_STOP) != 0;
 	m_save_halted  = (m_stopped & STOP_LEVEL_HALT) != 0;
 }
 
-void m68000_base_device::postload()
+void m68000_base_device::device_post_load()
 {
 	m68ki_set_sr_noint_nosp(m_save_sr);
 	//fprintf(stderr, "Reloaded, pc=%x\n", REG_PC(m68k));
@@ -763,7 +763,7 @@ void m68000_base_device::m68k_cause_bus_error()
 		return;
 	}
 
-	u32 sr = m68ki_init_exception();
+	u32 sr = m68ki_init_exception(EXCEPTION_BUS_ERROR);
 
 	m_run_mode = RUN_MODE_BERR_AERR_RESET_WSF;
 
@@ -951,7 +951,7 @@ void m68000_base_device::execute_run()
 						}
 					}
 
-					sr = m68ki_init_exception();
+					sr = m68ki_init_exception(EXCEPTION_BUS_ERROR);
 
 					m_run_mode = RUN_MODE_BERR_AERR_RESET;
 
@@ -1078,13 +1078,8 @@ void m68000_base_device::init_cpu_common(void)
 	save_item(NAME(m_mmu_last_page_entry));
 	save_item(NAME(m_mmu_last_page_entry_addr));
 
-	for (int i=0; i<MMU_ATC_ENTRIES;i++) {
-		save_item(NAME(m_mmu_atc_tag[i]), i);
-		save_item(NAME(m_mmu_atc_data[i]), i);
-	}
-
-	machine().save().register_presave(save_prepost_delegate(FUNC(m68000_base_device::presave), this));
-	machine().save().register_postload(save_prepost_delegate(FUNC(m68000_base_device::postload), this));
+	save_item(NAME(m_mmu_atc_tag));
+	save_item(NAME(m_mmu_atc_data));
 
 	set_icountptr(m_icount);
 	m_icount = 0;
@@ -2283,7 +2278,7 @@ void m68000_base_device::m68ki_exception_interrupt(u32 int_level)
 		vector = m_cpu_space->read_word(0xfffffff0 | (int_level << 1)) & 0xff;
 
 	/* Start exception processing */
-	sr = m68ki_init_exception();
+	sr = m68ki_init_exception(vector);
 
 	/* Set the interrupt mask to the level of the one being serviced */
 	m_int_mask = int_level<<8;

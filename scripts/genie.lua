@@ -1101,6 +1101,11 @@ end
 					"-Wno-class-memaccess", -- many instances in ImGui and BGFX
 				}
 			end
+			if (version >= 100000) then
+				buildoptions {
+					"-Wno-return-local-addr", -- sqlite3.c in GCC 10
+				}
+			end
 		end
 	end
 
@@ -1156,6 +1161,8 @@ configuration { "asmjs" }
 	}
 	buildoptions_cpp {
 		"-std=c++14",
+		"-s DISABLE_EXCEPTION_CATCHING=2",
+		"-s EXCEPTION_CATCHING_WHITELIST=\"['_ZN15running_machine17start_all_devicesEv','_ZN12cli_frontend7executeEiPPc','_ZN8chd_file11open_commonEb','_ZN8chd_file13read_metadataEjjRNSt3__212basic_stringIcNS0_11char_traitsIcEENS0_9allocatorIcEEEE','_ZN8chd_file13read_metadataEjjRNSt3__26vectorIhNS0_9allocatorIhEEEE']\"",
 	}
 	linkoptions {
 		"-Wl,--start-group",
@@ -1253,8 +1260,8 @@ configuration { "mingw*" }
 				"-static",
 			}
 		end
-		linkoptions {
-			"-Wl,--start-group",
+		flags {
+			"LinkSupportCircularDependencies",
 		}
 		links {
 			"user32",

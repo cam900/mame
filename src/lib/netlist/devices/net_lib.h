@@ -12,12 +12,6 @@
 
 #include "netlist/nl_setup.h"
 
-//#define NL_AUTO_DEVICES 1
-
-#ifdef NL_AUTO_DEVICES
-#include "nld_devinc.h"
-
-// FIXME: copied from nld_twoterm.h
 #ifdef RES_R
 #warning "Do not include rescap.h in a netlist environment"
 #endif
@@ -26,12 +20,16 @@
 #define RES_K(res) ((res) * 1e3)
 #define RES_M(res) ((res) * 1e6)
 #define CAP_U(cap) ((cap) * 1e-6)
+//#define CAP_U(cap) ((cap) * 1μ)
 #define CAP_N(cap) ((cap) * 1e-9)
 #define CAP_P(cap) ((cap) * 1e-12)
 #define IND_U(ind) ((ind) * 1e-6)
 #define IND_N(ind) ((ind) * 1e-9)
 #define IND_P(ind) ((ind) * 1e-12)
 #endif
+
+#if NL_AUTO_DEVICES
+#include "nld_devinc.h"
 
 #include "netlist/macro/nlm_cd4xxx.h"
 #include "netlist/macro/nlm_opamp.h"
@@ -52,6 +50,7 @@
 #include "nld_4006.h"
 #include "nld_4020.h"
 #include "nld_4066.h"
+#include "nld_4316.h"
 #include "nld_74107.h"
 #include "nld_74123.h"
 #include "nld_74153.h"
@@ -65,6 +64,7 @@
 #include "nld_74193.h"
 #include "nld_74194.h"
 #include "nld_74365.h"
+#include "nld_74393.h"
 #include "nld_7448.h"
 #include "nld_7450.h"
 #include "nld_7473.h"
