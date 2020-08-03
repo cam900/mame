@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+license:CC0
+-->
+<mamelayout version="2">
+	<view name="With debug">
+		<screen index="0">
+			<bounds x="0" y="0" width="320" height="240" />
+		</screen>
+		<screen index="1">
+			<bounds x="0" y="240" width="512" height="512" />
+		</screen>
+	</view>
+</mamelayout>

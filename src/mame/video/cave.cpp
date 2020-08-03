@@ -1366,6 +1366,56 @@ u32 cave_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const
 	return 0;
 }
 
+u32 cave_state::screen_update_debug(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+{
+		int w = m_debug_width, a = m_debug_addr, c = m_debug_color;
+
+		if (machine().input().code_pressed_once(KEYCODE_O))        w += m_spr_gfxdecode[0]->gfx(0)->width();
+		if (machine().input().code_pressed_once(KEYCODE_I))        w -= m_spr_gfxdecode[0]->gfx(0)->width();
+
+		if (machine().input().code_pressed_once(KEYCODE_U))        w += m_spr_gfxdecode[0]->gfx(0)->width() * 4;
+		if (machine().input().code_pressed_once(KEYCODE_Y))        w -= m_spr_gfxdecode[0]->gfx(0)->width() * 4;
+
+		if (machine().input().code_pressed_once(KEYCODE_T))        c += 1;
+		if (machine().input().code_pressed_once(KEYCODE_R))        c -= 1;
+
+		if (machine().input().code_pressed_once(KEYCODE_E))        c += 8;
+		if (machine().input().code_pressed_once(KEYCODE_W))        c -= 8;
+
+		if (machine().input().code_pressed_once(KEYCODE_RIGHT))    a += 1 * 16;
+		if (machine().input().code_pressed_once(KEYCODE_LEFT))     a -= 1 * 16;
+
+		if (machine().input().code_pressed_once(KEYCODE_DOWN))     a += w;
+		if (machine().input().code_pressed_once(KEYCODE_UP))       a -= w;
+
+		if (machine().input().code_pressed_once(KEYCODE_PGDN))     a += w * 512;
+		if (machine().input().code_pressed_once(KEYCODE_PGUP))     a -= w * 512;
+
+		a %= m_spr_gfxdecode[0]->gfx(0)->elements();
+		c %= m_spr_gfxdecode[0]->gfx(0)->colors();
+
+		if (w <= 0)     w = 0;
+		if (w > 512)   w = 512;
+
+		bitmap.fill(m_spr_gfxdecode[0]->palette().pen(m_spr_gfxdecode[0]->gfx(0)->colorbase() + (c * m_spr_gfxdecode[0]->gfx(0)->granularity())), cliprect);
+
+		int code = a;
+		for (int yy = 0, yyy = 0; yyy < 512; yy++, yyy += m_spr_gfxdecode[0]->gfx(0)->height())
+		{
+			for (int xx = 0, xxx = 0; xxx < w; xx++, xxx += m_spr_gfxdecode[0]->gfx(0)->width())
+			{
+				code %= m_spr_gfxdecode[0]->gfx(0)->elements();
+				m_spr_gfxdecode[0]->gfx(0)->opaque(bitmap, cliprect, code++, c, false, false, xxx,yyy);
+			}
+		}
+
+		popmessage("a: %08X w: %03X c: %04X",a,w,c);
+		m_debug_addr = a;
+		m_debug_width = w;
+		m_debug_color = c;
+	return 0;
+}
+
 
 
 /**************************************************************/

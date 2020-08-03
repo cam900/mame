@@ -99,6 +99,8 @@ Versions known to exist but not dumped:
 #include <algorithm>
 
 #include "ppsatan.lh"
+#include "cavedebug.lh"
+#include "cavedebugv.lh"
 
 
 /***************************************************************************
@@ -2046,6 +2048,14 @@ void cave_state::dfeveron(machine_config &config)
 	EEPROM_93C46_16BIT(config, m_eeprom);
 
 	/* video hardware */
+	SCREEN(config, m_screen[1], SCREEN_TYPE_RASTER);
+	m_screen[1]->set_refresh_hz(60);
+	m_screen[1]->set_size(512, 512);
+	m_screen[1]->set_visarea_full();
+	m_screen[1]->set_screen_update(FUNC(cave_state::screen_update_debug));
+
+	config.set_default_layout(layout_cavedebugv);
+
 	GFXDECODE(config, m_gfxdecode[0], m_palette[0], gfx_dfeveron);
 	m_palette[0]->set_entries(0x1000/2);
 
@@ -2070,6 +2080,14 @@ void cave_state::ddonpach(machine_config &config)
 	EEPROM_93C46_16BIT(config, m_eeprom);
 
 	/* video hardware */
+	SCREEN(config, m_screen[1], SCREEN_TYPE_RASTER);
+	m_screen[1]->set_refresh_hz(60);
+	m_screen[1]->set_size(512, 512);
+	m_screen[1]->set_visarea_full();
+	m_screen[1]->set_screen_update(FUNC(cave_state::screen_update_debug));
+
+	config.set_default_layout(layout_cavedebugv);
+
 	m_spr_gfxdecode[0]->set_info(gfx_ddonpach_spr);
 	GFXDECODE(config, m_gfxdecode[0], m_palette[0], gfx_ddonpach);
 
@@ -2130,6 +2148,14 @@ void cave_state::esprade(machine_config &config)
 	EEPROM_93C46_16BIT(config, m_eeprom);
 
 	/* video hardware */
+	SCREEN(config, m_screen[1], SCREEN_TYPE_RASTER);
+	m_screen[1]->set_refresh_hz(60);
+	m_screen[1]->set_size(512, 512);
+	m_screen[1]->set_visarea_full();
+	m_screen[1]->set_screen_update(FUNC(cave_state::screen_update_debug));
+
+	config.set_default_layout(layout_cavedebugv);
+
 	m_spr_gfxdecode[0]->set_info(gfx_esprade_spr);
 	GFXDECODE(config, m_gfxdecode[0], m_palette[0], gfx_esprade);
 
@@ -2179,6 +2205,14 @@ void cave_state::guwange(machine_config &config)
 	EEPROM_93C46_16BIT(config, m_eeprom);
 
 	/* video hardware */
+	SCREEN(config, m_screen[1], SCREEN_TYPE_RASTER);
+	m_screen[1]->set_refresh_hz(60);
+	m_screen[1]->set_size(512, 512);
+	m_screen[1]->set_visarea_full();
+	m_screen[1]->set_screen_update(FUNC(cave_state::screen_update_debug));
+
+	config.set_default_layout(layout_cavedebugv);
+
 	m_spr_gfxdecode[0]->set_info(gfx_esprade_spr);
 	GFXDECODE(config, m_gfxdecode[0], m_palette[0], gfx_esprade);
 

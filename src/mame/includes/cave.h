@@ -159,6 +159,7 @@ private:
 	void sailormn_palette(palette_device &palette);
 	void ppsatan_palette(palette_device &palette);
 	u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	u32 screen_update_debug(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	u32 screen_update_ppsatan_core (screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect, int chip);
 	u32 screen_update_ppsatan_top  (screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	u32 screen_update_ppsatan_left (screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
@@ -280,6 +281,11 @@ private:
 	int       m_hopper;
 	// ppsatan
 	u16       m_ppsatan_io_mux;
+
+
+	int m_debug_addr;
+	int m_debug_width;
+	int m_debug_color;
 
 	/* devices */
 	required_device<cpu_device> m_maincpu;
