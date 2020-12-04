@@ -149,6 +149,9 @@ class hd6309e_device : public hd6309_device
 public:
 	// construction/destruction
 	hd6309e_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	// HD6309E has LIC line to indicate opcode/data fetch
+	auto lic() { return m_lic_func.bind(); }
 };
 
 #define HD6309_IRQ_LINE  M6809_IRQ_LINE   /* 0 - IRQ line number */
