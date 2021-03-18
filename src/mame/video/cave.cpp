@@ -261,7 +261,7 @@ void cave_state::get_sprite_info_cave(int chip)
 			y = source[1] << 2;
 		}
 		const u16 attr  = source[2];
-		u32 code        = source[3] + ((attr & 3) << 16);
+		u32 code        = (source[3] + ((attr & 3) << 16)) & (m_sprite_gfx_mask[chip] >> 8);
 		int zoomx       = source[4];
 		int zoomy       = source[5];
 		const u16 size  = source[6];
@@ -346,6 +346,32 @@ void cave_state::get_sprite_info_cave(int chip)
 		if (flipx)  sprite->flags |= SPRITE_FLIPX_CAVE;
 		if (flipy)  sprite->flags |= SPRITE_FLIPY_CAVE;
 
+		if ((!m_sprite_gfx_writed[chip][code]) || (m_sprite_gfx_width[chip][code] != sprite->tile_width) || (m_sprite_gfx_height[chip][code] != sprite->tile_height))
+		{
+			int w = sprite->tile_width >> 4;
+			int h = sprite->tile_height >> 4;
+			for (int r = 0; r < sprite->tile_height; r += 16)
+			{
+				int rowout = (code + ((r >> 4) * w)) & (m_sprite_gfx_mask[chip] >> 8);
+				int colout = (code + (r >> 4)) & (m_sprite_gfx_mask[chip] >> 8);
+				for (int c = 0; c < sprite->tile_width; c += 16)
+				{
+					for (int rp = 0; rp < 16; rp++)
+					{
+						const uint8_t *pix = gfx->get_data(((code << 4) + ((r + rp) * w) + (c >> 4)) % gfx->elements());
+						std::copy_n(&pix[0], 16, &m_sprite_gfx_row[chip][(rowout << 8) + (rp << 4)]);
+						std::copy_n(&pix[0], 16, &m_sprite_gfx_col[chip][(colout << 8) + (rp << 4)]);
+					}
+					m_spr_gfxdecode[chip]->gfx(1)->mark_dirty(rowout);
+					m_spr_gfxdecode[chip]->gfx(2)->mark_dirty(colout);
+					rowout = (rowout + 1) & (m_sprite_gfx_mask[chip] >> 8);
+					colout = (colout + h) & (m_sprite_gfx_mask[chip] >> 8);
+				}
+			}
+			m_sprite_gfx_writed[chip][code] = true;
+			m_sprite_gfx_width[chip][code] = sprite->tile_width;
+			m_sprite_gfx_height[chip][code] = sprite->tile_height;
+		}
 		sprite++;
 	}
 	m_num_sprites[chip] = sprite - m_sprite[chip].get();
@@ -380,7 +406,7 @@ void cave_state::get_sprite_info_donpachi(int chip)
 		int y;
 
 		const u16 attr = source[0];
-		u32 code       = source[1] + ((attr & 3) << 16);
+		u32 code       = (source[1] + ((attr & 3) << 16)) & (m_sprite_gfx_mask[chip] >> 8);
 		int x          = source[2] & 0x3ff;
 
 		if (m_spritetype[0] & TYPE_ISPWRINST2)    /* pwrinst2 */
@@ -433,6 +459,32 @@ void cave_state::get_sprite_info_donpachi(int chip)
 		if (flipx)  sprite->flags |= SPRITE_FLIPX_CAVE;
 		if (flipy)  sprite->flags |= SPRITE_FLIPY_CAVE;
 
+		if ((!m_sprite_gfx_writed[chip][code]) || (m_sprite_gfx_width[chip][code] != sprite->tile_width) || (m_sprite_gfx_height[chip][code] != sprite->tile_height))
+		{
+			int w = sprite->tile_width >> 4;
+			int h = sprite->tile_height >> 4;
+			for (int r = 0; r < sprite->tile_height; r += 16)
+			{
+				int rowout = (code + ((r >> 4) * w)) & (m_sprite_gfx_mask[chip] >> 8);
+				int colout = (code + (r >> 4)) & (m_sprite_gfx_mask[chip] >> 8);
+				for (int c = 0; c < sprite->tile_width; c += 16)
+				{
+					for (int rp = 0; rp < 16; rp++)
+					{
+						const uint8_t *pix = gfx->get_data(((code << 4) + ((r + rp) * w) + (c >> 4)) % gfx->elements());
+						std::copy_n(&pix[0], 16, &m_sprite_gfx_row[chip][(rowout << 8) + (rp << 4)]);
+						std::copy_n(&pix[0], 16, &m_sprite_gfx_col[chip][(colout << 8) + (rp << 4)]);
+					}
+					m_spr_gfxdecode[chip]->gfx(1)->mark_dirty(rowout);
+					m_spr_gfxdecode[chip]->gfx(2)->mark_dirty(colout);
+					rowout = (rowout + 1) & (m_sprite_gfx_mask[chip] >> 8);
+					colout = (colout + h) & (m_sprite_gfx_mask[chip] >> 8);
+				}
+			}
+			m_sprite_gfx_writed[chip][code] = true;
+			m_sprite_gfx_width[chip][code] = sprite->tile_width;
+			m_sprite_gfx_height[chip][code] = sprite->tile_height;
+		}
 		sprite++;
 	}
 	m_num_sprites[chip] = sprite - m_sprite[chip].get();
@@ -482,6 +534,26 @@ void cave_state::sprite_init()
 			m_num_sprites[chip] = m_spriteram[chip].bytes() / 0x10 / 2;
 			m_sprite[chip] = std::make_unique<sprite_cave []>(m_num_sprites[chip]);
 			m_spr_gfxdecode[chip]->gfx(0)->set_granularity(m_sprite_granularity);
+
+			if ((m_sprite_gfx_row[chip] != nullptr) && (m_sprite_gfx_col[chip] != nullptr))
+			{
+				gfx_layout sprgfx =
+				{
+					16,16,
+					0,
+					8,
+					{STEP8(0,1)},
+					{STEP16(0,8)},
+					{STEP16(0,8*16)},
+					16*16*8
+				};
+				sprgfx.total = (m_sprite_gfx_mask[chip] + 1) >> 8;
+
+				m_spr_gfxdecode[chip]->set_gfx(1, std::make_unique<gfx_element>(m_palette[chip], sprgfx, m_sprite_gfx_row[chip].get(), 0, m_spr_gfxdecode[chip]->gfx(0)->colors(), m_spr_gfxdecode[chip]->gfx(0)->colorbase()));
+				m_spr_gfxdecode[chip]->set_gfx(2, std::make_unique<gfx_element>(m_palette[chip], sprgfx, m_sprite_gfx_col[chip].get(), 0, m_spr_gfxdecode[chip]->gfx(0)->colors(), m_spr_gfxdecode[chip]->gfx(0)->colorbase()));
+				m_spr_gfxdecode[chip]->gfx(1)->set_granularity(m_spr_gfxdecode[chip]->gfx(0)->granularity());
+				m_spr_gfxdecode[chip]->gfx(2)->set_granularity(m_spr_gfxdecode[chip]->gfx(0)->granularity());
+			}
 		}
 		else
 		{

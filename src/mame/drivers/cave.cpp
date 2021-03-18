@@ -2779,6 +2779,11 @@ void cave_state::unpack_sprites(int chip)
 		m_sprite_gfx_mask[chip] <<= 1;
 	}
 	m_sprite_gfx[chip] = make_unique_clear<u8[]>(m_sprite_gfx_mask[chip]);
+	m_sprite_gfx_row[chip] = make_unique_clear<u8[]>(m_sprite_gfx_mask[chip]);
+	m_sprite_gfx_col[chip] = make_unique_clear<u8[]>(m_sprite_gfx_mask[chip]);
+	m_sprite_gfx_writed[chip] = make_unique_clear<u8[]>(m_sprite_gfx_mask[chip] / 16 / 16);
+	m_sprite_gfx_width[chip] = make_unique_clear<u32[]>(m_sprite_gfx_mask[chip] / 16 / 16);
+	m_sprite_gfx_height[chip] = make_unique_clear<u32[]>(m_sprite_gfx_mask[chip] / 16 / 16);
 
 	u8 *dst = m_sprite_gfx[chip].get();
 	for (int e = 0; e < gfx->elements(); e++)
@@ -2794,6 +2799,12 @@ void cave_state::unpack_sprites(int chip)
 			data += gfx->rowbytes();
 		}
 	}
+	save_pointer(NAME(m_sprite_gfx_row[chip]), m_sprite_gfx_mask[chip], chip);
+	save_pointer(NAME(m_sprite_gfx_col[chip]), m_sprite_gfx_mask[chip], chip);
+	save_pointer(NAME(m_sprite_gfx_writed[chip]), m_sprite_gfx_mask[chip] / 16 / 16, chip);
+	save_pointer(NAME(m_sprite_gfx_width[chip]), m_sprite_gfx_mask[chip] / 16 / 16, chip);
+	save_pointer(NAME(m_sprite_gfx_height[chip]), m_sprite_gfx_mask[chip] / 16 / 16, chip);
+
 	m_sprite_gfx_mask[chip]--;
 }
 

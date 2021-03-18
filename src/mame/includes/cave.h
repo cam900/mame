@@ -240,6 +240,12 @@ private:
 	std::unique_ptr<u8[]> m_sprite_gfx[4];
 	offs_t                m_sprite_gfx_mask[4];
 
+	std::unique_ptr<u8[]> m_sprite_gfx_row[4];
+	std::unique_ptr<u8[]> m_sprite_gfx_col[4];
+	std::unique_ptr<u8[]> m_sprite_gfx_writed[4];
+	std::unique_ptr<u8[]> m_sprite_gfx_width[4];
+	std::unique_ptr<u8[]> m_sprite_gfx_height[4];
+
 	int       m_num_sprites[4];
 
 	int       m_spriteram_bank[4];
