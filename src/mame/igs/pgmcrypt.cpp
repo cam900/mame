@@ -4,7 +4,7 @@
 
   the IGS027 chips are typically used with encrypted ROMs.
 
-  Games with an External ARM Rom usually have that ROM encrypted
+  Games with an External ARM ROM usually have that ROM encrypted
   otherwise (in the case of PGM) the 68k ROM ends up encrypted
   instead.  The encryption is controlled by a set of registers
   mapped to ARM space where the table and some additional values
@@ -87,12 +87,12 @@ static const uint8_t kov_tab[256] = {
 void pgm_kov_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -133,12 +133,12 @@ static const uint8_t kovsh_tab[256] = {
 void pgm_kovsh_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT2
@@ -178,12 +178,12 @@ static const uint8_t photoy2k_tab[256] = {
 void pgm_photoy2k_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT3
@@ -222,12 +222,12 @@ static const uint8_t pstar[256] = {
 void pgm_pstar_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x100000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT3_ALT2
@@ -264,12 +264,12 @@ static const uint8_t dfront_tab[256] = {
 void pgm_dfront_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2
@@ -309,12 +309,12 @@ static const uint8_t ddp2_tab[256] = {
 void pgm_ddp2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT2
 		// NO CRYPT2
@@ -353,13 +353,12 @@ static const uint8_t mm_tab[256] = {
 
 void pgm_mm_decrypt(running_machine &machine) // and dw2001
 {
-	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
-	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+	for(int i=0; i<rom_size/2; i++) {
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -398,12 +397,12 @@ static const uint8_t kov2_tab[256] = {
 void pgm_kov2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		// NO CRYPT2
@@ -442,12 +441,12 @@ static const uint8_t kov2p_tab[256] = {
 void pgm_kov2p_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT
@@ -486,12 +485,12 @@ static const uint8_t puzzli2_tab[256] = {
 void pgm_puzzli2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x100000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT
@@ -530,12 +529,12 @@ static const uint8_t theglad_tab[256] = {
 void pgm_theglad_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2
@@ -575,12 +574,12 @@ static const uint8_t oldsplus_tab[256] = {
 void pgm_oldsplus_decrypt(running_machine &machine)
 {
 	int i;
-	unsigned short *src = (unsigned short *)(machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *)(machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		unsigned short x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -620,12 +619,12 @@ static const uint8_t kovshp_tab[256] = {
 void pgm_kovshp_decrypt(running_machine &machine)
 {
 	int i;
-	unsigned short *src = (unsigned short *)(machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *)(machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++) {
-		unsigned short x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT2
@@ -665,12 +664,12 @@ static const uint8_t killbldp_tab[256] = {
 void pgm_killbldp_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2
@@ -691,12 +690,12 @@ void pgm_killbldp_decrypt(running_machine &machine)
 void pgm_svg_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x800000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2_ALT
@@ -733,12 +732,12 @@ static const unsigned char svgpcb_tab[0x100] = {
 void pgm_svgpcb_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x800000;
 
 	for (i = 0; i < rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT; // ok?
 		IGS27_CRYPT2 // ok?
@@ -778,13 +777,13 @@ static const uint8_t py2k2_tab[256] = {
 void pgm_py2k2_decrypt(running_machine &machine) // and ddpdoj/ddpdojbl
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT3
@@ -824,13 +823,13 @@ static const unsigned char ket_tab[256] = {
 void pgm_ket_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base());
+	u16 *src = (u16 *) (machine.root_device().memregion("maincpu")->base());
 
-	int rom_size = 0x400000;
+	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -870,13 +869,13 @@ static const unsigned char espgal_tab[256] = {
 void pgm_espgal_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base());
+	u16 *src = (u16 *) (machine.root_device().memregion("maincpu")->base());
 
-	int rom_size = 0x400000;
+	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT3
@@ -917,13 +916,13 @@ static const uint8_t happy6in1_tab[256] = { // IGS0008RD1031215
 void pgm_happy6_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *) (machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2
@@ -964,13 +963,13 @@ static const uint8_t sdwx_tab[] =
 void sdwx_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT2
 		IGS27_CRYPT2_ALT
@@ -1010,12 +1009,12 @@ static const uint8_t hauntedh_tab[0x100] = {
 void hauntedh_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x080000;
 
 	for(i=0; i<rom_size/2; i++) {
-			uint16_t x = src[i];
+			u16 x = src[i];
 
 		IGS27_CRYPT1
 	//  IGS27_CRYPT2
@@ -1055,12 +1054,12 @@ static const uint8_t chessc2_tab[0x100] = {
 void chessc2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1100,12 +1099,12 @@ static const uint8_t klxyj_tab[0x100] = {
 void klxyj_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1144,12 +1143,12 @@ static const uint8_t zhongguo_tab[0x100] = {
 void zhongguo_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1188,12 +1187,12 @@ static const uint8_t gonefsh2_tab[0x100] = {
 void gonefsh2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1232,12 +1231,12 @@ static const uint8_t sddz_tab[0x100] = {
 void sddz_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT;
 		IGS27_CRYPT2_ALT
@@ -1276,12 +1275,12 @@ static const uint8_t lhzb3_tab[0x100] = {
 void lhzb3_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1320,12 +1319,12 @@ static const uint8_t mgfx_tab[0x100] = {
 void mgfx_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 	//  IGS27_CRYPT2
@@ -1364,12 +1363,12 @@ static const uint8_t lhzb4_tab[0x100] = {
 void lhzb4_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 	//  IGS27_CRYPT2
@@ -1409,13 +1408,13 @@ static const uint8_t fearless_tab[256] = {
 void fearless_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		// might not be 100% correct...
 		IGS27_CRYPT1
@@ -1456,13 +1455,13 @@ static unsigned char pgm3in1_tab[256] = {
 void pgm_decrypt_pgm3in1(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) (machine.root_device().memregion("maincpu")->base()+0x100000);
+	u16 *src = (u16 *) (machine.root_device().memregion("cart")->base());
 
 	int rom_size = 0x400000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2
@@ -1503,12 +1502,12 @@ static const uint8_t slqz3_tab[0x100] = {
 void slqz3_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x200000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		// not 100% verified
 		IGS27_CRYPT1
@@ -1548,14 +1547,14 @@ static const uint8_t fruitpar_tab[0x100] = {
 void fruitpar_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	// not 100% verified
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 //      IGS27_CRYPT2
@@ -1594,12 +1593,12 @@ static uint8_t amazonia_tab[0x100] = {
 void amazonia_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1
 		IGS27_CRYPT2_ALT
@@ -1640,13 +1639,13 @@ static const uint8_t amazoni2_tab[0x100] = {
 void amazoni2_decrypt(running_machine &machine)
 {
 	int i;
-	uint16_t *src = (uint16_t *) machine.root_device().memregion("user1")->base();
+	u16 *src = (u16 *) machine.root_device().memregion("user1")->base();
 
 	int rom_size = 0x80000;
 
 	for(i=0; i<rom_size/2; i++)
 	{
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		// should be correct
 		IGS27_CRYPT1
@@ -1666,12 +1665,12 @@ void amazoni2_decrypt(running_machine &machine)
 
 void pgm_dwpc_decrypt(running_machine &machine)
 {
-	uint16_t *src = (uint16_t *)(machine.root_device().memregion("user1")->base());
+	u16 *src = (u16 *)(machine.root_device().memregion("user1")->base());
 
 	int rom_size = 0x80000;
 
 	for(int i=0; i<rom_size/2; i++) {
-		uint16_t x = src[i];
+		u16 x = src[i];
 
 		IGS27_CRYPT1_ALT
 		IGS27_CRYPT2

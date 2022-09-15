@@ -16,6 +16,12 @@
 #include "pgm.h"
 #include "pgmprot_orlegend.h"
 
+void pgm_asic3_state::pgm_asic3_map(address_map &map)
+{
+	pgm_basic_mem(map);
+	map(0xc04000, 0xc0400f).rw(FUNC(pgm_asic3_state::pgm_asic3_r), FUNC(pgm_asic3_state::pgm_asic3_w));
+}
+
 void pgm_asic3_state::asic3_compute_hold(int y, int z)
 {
 	const u16 old = m_asic3_hold;
@@ -156,7 +162,7 @@ void pgm_asic3_state::pgm_asic3_w(offs_t offset, u16 data)
 		break;
 
 		default:
-			logerror("ASIC3 W: CMD %2.2X DATA: %4.4x %s\n", m_asic3_reg, data, machine().describe_context());
+			LOGMASKED(LOG_PROT, "ASIC3 W: CMD %2.2X DATA: %4.4x %s\n", m_asic3_reg, data, machine().describe_context());
 	}
 }
 
@@ -165,9 +171,6 @@ void pgm_asic3_state::pgm_asic3_w(offs_t offset, u16 data)
 void pgm_asic3_state::init_orlegend()
 {
 	pgm_basic_init();
-
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xc04000, 0xc0400f, read16smo_delegate(*this, FUNC(pgm_asic3_state::pgm_asic3_r)));
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0xc04000, 0xc0400f, write16sm_delegate(*this, FUNC(pgm_asic3_state::pgm_asic3_w)));
 
 	m_asic3_reg = 0;
 	m_asic3_latch[0] = 0;
@@ -225,4 +228,5 @@ INPUT_PORTS_END
 void pgm_asic3_state::pgm_asic3(machine_config &config)
 {
 	pgmbase(config);
+	m_maincpu->set_addrmap(AS_PROGRAM, &pgm_asic3_state::pgm_asic3_map);
 }

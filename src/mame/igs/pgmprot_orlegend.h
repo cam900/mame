@@ -23,6 +23,8 @@ private:
 	void asic3_compute_hold(int,int);
 	u16 pgm_asic3_r();
 	void pgm_asic3_w(offs_t offset, u16 data);
+
+	void pgm_asic3_map(address_map &map);
 };
 
 INPUT_PORTS_EXTERN( orlegend );

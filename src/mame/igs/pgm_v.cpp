@@ -469,6 +469,9 @@ void pgm_state::draw_sprites(bitmap_ind16& spritebitmap, const rectangle &clipre
 	while (sprite_ptr != m_spritelist.get())
 	{
 		sprite_ptr--;
+		// disable high priority sprites
+		if (BIT(m_videoreg_e000, 13) && (!sprite_ptr->pri))
+			continue;
 
 		m_boffset = sprite_ptr->offs;
 		if ((!sprite_ptr->xzoom) && (!sprite_ptr->yzoom))
@@ -497,6 +500,8 @@ void pgm_state::draw_sprites(bitmap_ind16& spritebitmap, const rectangle &clipre
            fedcba98 76543210
     00     x------- -------- Horizontal Zoom/Shrink mode select
            -xxxx--- -------- Horizontal Zoom/Shrink table select
+           01111--- -------- Hardcoded value (0x00000001) if set?
+           10001--- -------- ""
            -----xxx xxxxxxxx X position (11 bit signed)
 
     02     x------- -------- Vertical Zoom/Shrink mode select
@@ -519,13 +524,12 @@ void pgm_state::get_sprites()
 {
 	m_sprite_ptr_pre = m_spritelist.get();
 
-	u16 *sprite_source = &m_mainram[0];
-	const u16 *finish = &m_mainram[0xa00 / 2];
-	const u16* sprite_zoomtable = &m_videoregs[0x1000 / 2];
+	u16 *sprite_source = &m_sprite_buffer[0];
+	const u16 *finish = &m_sprite_buffer[0x1000 / 2];
 
 	while (sprite_source < finish)
 	{
-		if (!sprite_source[4]) break; /* is this right? */
+		if ((sprite_source[4] & 0x7fff) == 0) break; // verified on real hardware
 
 		int xzom =                 (sprite_source[0] & 0x7800) >> 11;
 		const bool xgrow =         (sprite_source[0] & 0x8000) >> 15;
@@ -537,30 +541,24 @@ void pgm_state::get_sprites()
 
 		m_sprite_ptr_pre->flip =   (sprite_source[2] & 0x6000) >> 13;
 		m_sprite_ptr_pre->color =  (sprite_source[2] & 0x1f00) >> 8;
-		m_sprite_ptr_pre->pri =    (sprite_source[2] & 0x0080) >>  7;
+		m_sprite_ptr_pre->pri =    (sprite_source[2] & 0x0080) >> 7;
 		m_sprite_ptr_pre->offs =  ((sprite_source[2] & 0x007f) << 16) | (sprite_source[3] & 0xffff);
 
 		m_sprite_ptr_pre->width =  (sprite_source[4] & 0x7e00) >> 9;
 		m_sprite_ptr_pre->height =  sprite_source[4] & 0x01ff;
 
 		if (xgrow)
-		{
-		//  xzom = 0xf - xzom; // would make more sense but everything gets zoomed slightly in dragon world 2 ?!
-			xzom = 0x10 - xzom; // this way it doesn't but there is a bad line when zooming after the level select?
-		}
+			xzom = 0x10 - xzom;
 
 		if (ygrow)
-		{
-		//  yzom = 0xf - yzom; // see comment above
 			yzom = 0x10 - yzom;
-		}
 
-		m_sprite_ptr_pre->xzoom = (sprite_zoomtable[xzom * 2] << 16) | sprite_zoomtable[xzom * 2 + 1];
-		m_sprite_ptr_pre->yzoom = (sprite_zoomtable[yzom * 2] << 16) | sprite_zoomtable[yzom * 2 + 1];
+		m_sprite_ptr_pre->xzoom = (xzom > 0xf) ? 0 : ((xzom == 0xf) ? 1 : ((m_zoomram[xzom * 2] << 16) | m_zoomram[xzom * 2 + 1]));
+		m_sprite_ptr_pre->yzoom = (yzom > 0xf) ? 0 : ((yzom == 0xf) ? 1 : ((m_zoomram[yzom * 2] << 16) | m_zoomram[yzom * 2 + 1]));
 		m_sprite_ptr_pre->xgrow = xgrow;
 		m_sprite_ptr_pre->ygrow = ygrow;
 		m_sprite_ptr_pre++;
-		sprite_source += 5;
+		sprite_source += 8;
 	}
 }
 
@@ -570,6 +568,33 @@ void pgm_state::tx_videoram_w(offs_t offset, u16 data, u16 mem_mask)
 	m_tx_videoram[offset] = data;
 	m_tx_tilemap->mark_tile_dirty(offset / 2);
 }
+
+
+u16 pgm_state::tx_scrollx_r()
+{
+	return m_tx_scrollx;
+}
+
+
+void pgm_state::tx_scrollx_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	COMBINE_DATA(&m_tx_scrollx);
+	m_tx_tilemap->set_scrollx(0, m_tx_scrollx);
+}
+
+
+u16 pgm_state::tx_scrolly_r()
+{
+	return m_tx_scrolly;
+}
+
+
+void pgm_state::tx_scrolly_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	COMBINE_DATA(&m_tx_scrolly);
+	m_tx_tilemap->set_scrolly(0, m_tx_scrolly);
+}
+
 
 TILE_GET_INFO_MEMBER(pgm_state::get_tx_tile_info)
 {
@@ -602,6 +627,31 @@ void pgm_state::bg_videoram_w(offs_t offset, u16 data, u16 mem_mask)
 	m_bg_tilemap->mark_tile_dirty(offset / 2);
 }
 
+
+u16 pgm_state::bg_scrollx_r()
+{
+	return m_bg_scrollx;
+}
+
+
+void pgm_state::bg_scrollx_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	COMBINE_DATA(&m_bg_scrollx);
+}
+
+
+u16 pgm_state::bg_scrolly_r()
+{
+	return m_bg_scrolly;
+}
+
+
+void pgm_state::bg_scrolly_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	COMBINE_DATA(&m_bg_scrolly);
+}
+
+
 TILE_GET_INFO_MEMBER(pgm_state::get_bg_tile_info)
 {
 	/* pretty much the same as tx layer */
@@ -613,6 +663,60 @@ TILE_GET_INFO_MEMBER(pgm_state::get_bg_tile_info)
 	tileinfo.set(1,tileno,colour,TILE_FLIPYX(flipyx));
 }
 
+
+// Video registers
+/*
+	Video registers
+
+	Register  Bits               Descriptions
+	          fedcba98 76543210 
+	0xb04000  xxxxx--- --------  Unknown writes - unknown purpose
+	          -----x-- --------  Unknown - interrupt related? killbld toggle this during several scenes
+	          ------10 00001000  Always set? - unknown purpose
+
+	0xb0e000  xx---x-- -----x--  Unknown writes - unknown purpose
+	          --x----- --------  Disable high priority sprites
+	          ---x---- --------  Disable background layer
+	          ----x--- --------  Disable text layer
+	          ------x- --------  Disable all but background layer
+	          -------x --------  Show garbage for all but background
+	          -------- x-------  Changes frequency refresh rate?
+	          -------- -xx-----  All games except Cave single PCB game set? - unknown purpose
+			  -------- ---1--1-  Always set? - unknown purpose
+			  -------- ----x---  Video RAM access enable?
+	          -------- -------x  Sprite DMA enable
+*/
+
+u16 pgm_state::videoreg_4000_r()
+{
+	return m_videoreg_4000;
+}
+
+
+void pgm_state::videoreg_4000_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	LOGMASKED(LOG_VIDEO, "%s: videoreg_4000_w: %04x & %04x\n", machine().describe_context(), data, mem_mask);
+	COMBINE_DATA(&m_videoreg_4000);
+}
+
+
+u16 pgm_state::videoreg_e000_r()
+{
+	return m_videoreg_e000;
+}
+
+
+void pgm_state::videoreg_e000_w(offs_t offset, u16 data, u16 mem_mask)
+{
+	LOGMASKED(LOG_VIDEO, "%s: videoreg_e000_w: %04x & %04x\n", machine().describe_context(), data, mem_mask);
+	COMBINE_DATA(&m_videoreg_e000);
+}
+
+
+u16 pgm_state::scanline_r()
+{
+	return m_screen->vpos();
+}
 
 
 /*** Video - Start / Update ****************************************************/
@@ -636,6 +740,13 @@ void pgm_state::video_start()
 	m_bg_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(pgm_state::get_bg_tile_info)), TILEMAP_SCAN_ROWS, 32, 32, 64, 16);
 	m_bg_tilemap->set_transparent_pen(31);
 	m_bg_tilemap->set_scroll_rows(16 * 32);
+
+	save_item(NAME(m_bg_scrollx));
+	save_item(NAME(m_bg_scrolly));
+	save_item(NAME(m_tx_scrollx));
+	save_item(NAME(m_tx_scrolly));
+	save_item(NAME(m_videoreg_4000));
+	save_item(NAME(m_videoreg_e000));
 }
 
 u32 pgm_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
@@ -644,19 +755,22 @@ u32 pgm_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const 
 
 	screen.priority().fill(0, cliprect);
 
-	m_bg_tilemap->set_scrolly(0, m_videoregs[0x2000/2]);
+	// background
+	if (BIT(~m_videoreg_e000, 12))
+	{
+		m_bg_tilemap->set_scrolly(0, m_bg_scrolly);
 
-	for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
-		m_bg_tilemap->set_scrollx((y + m_videoregs[0x2000 / 2]) & 0x1ff, m_videoregs[0x3000 / 2] + m_rowscrollram[y]);
+		for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
+			m_bg_tilemap->set_scrollx((y + m_bg_scrolly) & 0x1ff, m_bg_scrollx + m_rowscrollram[y]);
 
-	m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 2);
+		m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 2);
+	}
 
 	draw_sprites(bitmap, cliprect, screen.priority());
 
-	m_tx_tilemap->set_scrolly(0, m_videoregs[0x5000/2]);
-	m_tx_tilemap->set_scrollx(0, m_videoregs[0x6000/2]); // Check
-
-	m_tx_tilemap->draw(screen, bitmap, cliprect, 0, 0);
+	// foreground
+	if (BIT(~m_videoreg_e000, 11))
+		m_tx_tilemap->draw(screen, bitmap, cliprect, 0, 0);
 
 	return 0;
 }
@@ -666,7 +780,19 @@ WRITE_LINE_MEMBER(pgm_state::screen_vblank)
 	// rising edge
 	if (state)
 	{
-		/* first 0xa00 of main ram = sprites, seems to be buffered, DMA? */
+		// first 0xa00 of main ram = sprites, copied to buffer via DMA
+		if (BIT(m_videoreg_e000, 0)) // sprite update
+		{
+			u16 *src = m_mainram.target();
+			for (int i = 0; i < 0x1000/2; i += 0x10/2)
+			{
+				std::copy(&src[0], &src[5], &m_sprite_buffer[i]);
+				if ((src[4] & 0x7fff) == 0) // verified on real hardware
+					break;
+
+				src += 5;
+			}
+		}
 		get_sprites();
 
 		// vblank start interrupt

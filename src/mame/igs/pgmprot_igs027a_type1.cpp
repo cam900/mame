@@ -100,8 +100,7 @@ u16 pgm_arm_type1_state::arm7_type1_ram_r(offs_t offset, u16 mem_mask)
 {
 	const u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("M68K: ARM7 Shared RAM Read: %04x = %04x (%08x) %s\n", BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask, machine().describe_context());
+	LOGMASKED(LOG_PROT, "M68K: ARM7 Shared RAM Read: %04x = %04x (%08x) %s\n", BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask, machine().describe_context());
 	return share16[BYTE_XOR_LE(offset << 1)];
 }
 
@@ -109,8 +108,7 @@ void pgm_arm_type1_state::arm7_type1_ram_w(offs_t offset, u16 data, u16 mem_mask
 {
 	u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("M68K: ARM7 Shared RAM Write: %04x = %04x (%04x) %s\n", BYTE_XOR_LE(offset), data, mem_mask, machine().describe_context());
+	LOGMASKED(LOG_PROT, "M68K: ARM7 Shared RAM Write: %04x = %04x (%04x) %s\n", BYTE_XOR_LE(offset), data, mem_mask, machine().describe_context());
 	COMBINE_DATA(&share16[BYTE_XOR_LE(offset << 1)]);
 }
 
@@ -130,15 +128,13 @@ u32 pgm_arm_type1_state::arm7_type1_exrom_r()
 
 u32 pgm_arm_type1_state::arm7_type1_shareram_r(offs_t offset, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x) %s\n", offset << 2, m_arm7_shareram[offset], mem_mask, machine().describe_context());
+	LOGMASKED(LOG_PROT, "ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x) %s\n", offset << 2, m_arm7_shareram[offset], mem_mask, machine().describe_context());
 	return m_arm7_shareram[offset];
 }
 
 void pgm_arm_type1_state::arm7_type1_shareram_w(offs_t offset, u32 data, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x) %s\n", offset << 2, data, mem_mask, machine().describe_context());
+	LOGMASKED(LOG_PROT, "ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x) %s\n", offset << 2, data, mem_mask, machine().describe_context());
 	COMBINE_DATA(&m_arm7_shareram[offset]);
 }
 
@@ -147,10 +143,11 @@ void pgm_arm_type1_state::arm7_type1_shareram_w(offs_t offset, u32 data, u32 mem
 /*  no execute only space? */
 void pgm_arm_type1_state::kov_map(address_map &map)
 {
-	pgm_mem(map);
-	map(0x100000, 0x4effff).bankr("bank1"); /* Game ROM */
+	pgm_basic_mem(map);
 	map(0x4f0000, 0x4f003f).rw(FUNC(pgm_arm_type1_state::arm7_type1_ram_r), FUNC(pgm_arm_type1_state::arm7_type1_ram_w)); /* ARM7 Shared RAM */
-	map(0x500000, 0x500003).rw(FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_r), FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_w)); /* ARM7 Latch */
+	map(0x500000, 0x500003).mirror(0x0ffff8).rw(FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_r), FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_w)); /* ARM7 Latch */
+	// mirrored
+	map(0x600000, 0x600003).mirror(0x0ffff8).rw(FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_r), FUNC(pgm_arm_type1_state::arm7_type1_68k_protlatch_w));
 }
 
 void pgm_arm_type1_state::_55857E_arm7_map(address_map &map)
@@ -161,7 +158,7 @@ void pgm_arm_type1_state::_55857E_arm7_map(address_map &map)
 	map(0x40000000, 0x40000003).rw(FUNC(pgm_arm_type1_state::arm7_type1_protlatch_r), FUNC(pgm_arm_type1_state::arm7_type1_protlatch_w));
 	map(0x40000008, 0x4000000b).nopw(); // ?
 	map(0x4000000c, 0x4000000f).r(FUNC(pgm_arm_type1_state::arm7_type1_unk_r));
-	map(0x50800000, 0x5080003f).rw(FUNC(pgm_arm_type1_state::arm7_type1_shareram_r), FUNC(pgm_arm_type1_state::arm7_type1_shareram_w)).share("arm7_shareram");
+	map(0x50800000, 0x5080003f).rw(FUNC(pgm_arm_type1_state::arm7_type1_shareram_r), FUNC(pgm_arm_type1_state::arm7_type1_shareram_w)).share(m_arm7_shareram);
 	map(0x50000000, 0x500003ff).ram(); // uploads xor table to decrypt 68k rom here
 }
 
@@ -170,20 +167,20 @@ void pgm_arm_type1_state::_55857E_arm7_map(address_map &map)
 
 void pgm_arm_type1_state::kov_sim_map(address_map &map)
 {
-	pgm_mem(map);
-	map(0x100000, 0x4effff).bankr("bank1"); /* Game ROM */
+	pgm_basic_mem(map);
 }
 
 void pgm_arm_type1_state::cavepgm_mem(address_map &map)
 {
 	pgm_base_mem(map);
-	map(0x000000, 0x3fffff).rom();
+	map(0x000000, 0x3fffff).rom().region("maincpu", 0);
 	/* protection devices installed (simulated) later */
 }
 
 
 void pgm_arm_type1_state::machine_start()
 {
+	pgm_state::machine_start();
 	save_item(NAME(m_value0));
 	save_item(NAME(m_value1));
 	save_item(NAME(m_valuekey));
@@ -381,7 +378,7 @@ void pgm_arm_type1_state::pgm_decode_kovlsqh2_samples()
 
 void pgm_arm_type1_state::pgm_decode_kovqhsgs_program()
 {
-	u16 *src = (u16 *)(memregion("maincpu")->base() + 0x100000);
+	u16 *src = (u16 *)(memregion("cart")->base());
 	std::vector<u16> dst(0x400000);
 
 	for (int i = 0; i < 0x400000 / 2; i++)
@@ -396,7 +393,7 @@ void pgm_arm_type1_state::pgm_decode_kovqhsgs_program()
 
 void pgm_arm_type1_state::pgm_decode_kovqhsgs2_program()
 {
-	u16 *src = (u16 *)(memregion("maincpu")->base() + 0x100000);
+	u16 *src = (u16 *)(memregion("cart")->base());
 	std::vector<u16> dst(0x400000);
 
 	for (int i = 0; i < 0x400000 / 2; i++)
@@ -1817,7 +1814,7 @@ u16 pgm_arm_type1_state::pstars_arm7_type1_sim_protram_r(offs_t offset)
 
 void pgm_arm_type1_state::init_ddp3()
 {
-	pgm_basic_init(false);
+	pgm_basic_init();
 	pgm_py2k2_decrypt(machine()); // yes, it's the same as photo y2k2
 	arm_sim_handler = &pgm_arm_type1_state::command_handler_ddp3;
 	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0x500000, 0x500005, read16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_r)), write16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_w)));
@@ -1825,7 +1822,7 @@ void pgm_arm_type1_state::init_ddp3()
 
 void pgm_arm_type1_state::init_ket()
 {
-	pgm_basic_init(false);
+	pgm_basic_init();
 	pgm_ket_decrypt(machine());
 	arm_sim_handler = &pgm_arm_type1_state::command_handler_ddp3;
 	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0x400000, 0x400005, read16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_r)), write16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_w)));
@@ -1833,7 +1830,7 @@ void pgm_arm_type1_state::init_ket()
 
 void pgm_arm_type1_state::init_espgal()
 {
-	pgm_basic_init(false);
+	pgm_basic_init();
 	pgm_espgal_decrypt(machine());
 	arm_sim_handler = &pgm_arm_type1_state::command_handler_ddp3;
 	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0x400000, 0x400005, read16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_r)), write16sm_delegate(*this, FUNC(pgm_arm_type1_state::arm7_type1_sim_w)));
@@ -2132,7 +2129,7 @@ void pgm_arm_type1_state::init_puzzli2()
 
 //#define PUZZLI2_LEVEL_STRUCTURE_LOG
 #ifdef PUZZLI2_LEVEL_STRUCTURE_LOG
-	u8 *src2 = (u8 *) (machine().root_device().memregion("maincpu")->base());
+	u8 *src2 = (u8 *) (machine().root_device().memregion("cart")->base());
 
 	int offset;
 	int limit;
@@ -2141,12 +2138,12 @@ void pgm_arm_type1_state::init_puzzli2()
 
 	if (!strcmp(machine().system().name,"puzzli2"))
 	{
-		offset = 0x17ab66;
+		offset = 0x7ab66;
 			limit = 476;
 	}
 	else
 	{
-			offset = 0x16c3ca;
+			offset = 0x6c3ca;
 			limit = 500;
 	}
 
@@ -2215,19 +2212,19 @@ void pgm_arm_type1_state::init_puzzli2()
 #if 0
 	if (!strcmp(machine().system().name,"puzzli2"))
 	{
-	u8 *src3 = (u8 *) (machine().root_device().memregion("maincpu")->base());
-	printf("how to play data pointer %02x %02x %02x %02x\n", src3[0x17b28e ^1], src3[0x17b28f ^1], src3[0x17b290 ^1], src3[0x17b291 ^1]);
-	src3[0x17b28e ^1] = 0x00;
-	src3[0x17b28f ^1] = 0x11;
-	src3[0x17b290 ^1] = 0x42;
-	src3[0x17b291 ^1] = 0x40;
+	u8 *src3 = (u8 *) (machine().root_device().memregion("cart")->base());
+	printf("how to play data pointer %02x %02x %02x %02x\n", src3[0x7b28e ^1], src3[0x7b28f ^1], src3[0x7b290 ^1], src3[0x7b291 ^1]);
+	src3[0x7b28e ^1] = 0x00;
+	src3[0x7b28f ^1] = 0x11;
+	src3[0x7b290 ^1] = 0x42;
+	src3[0x7b291 ^1] = 0x40;
 	}
 
 
 	pgm_puzzli2_decrypt(machine());
 
 	{
-		u8 *ROM = (u8*)memregion("maincpu")->base();
+		u8 *ROM = (u8*)memregion("cart")->base();
 
 		FILE *fp;
 		char filename[256];
@@ -2235,7 +2232,7 @@ void pgm_arm_type1_state::init_puzzli2()
 		fp=fopen(filename, "w+b");
 		if (fp)
 		{
-			fwrite(ROM+0x100000, 0x200000, 1, fp);
+			fwrite(ROM, 0x200000, 1, fp);
 			fclose(fp);
 		}
 	}

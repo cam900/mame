@@ -20,9 +20,20 @@
 #include "machine/v3021.h"
 #include "sound/ics2115.h"
 #include "emupal.h"
+#include "screen.h"
 #include "tilemap.h"
 
-#define PGMARM7LOGERROR 0
+#define LOG_Z80        (1U << 1)
+#define LOG_Z80RAM     (1U << 2)
+#define LOG_VIDEO      (1U << 3)
+#define LOG_VIDEORAM   (1U << 4)
+#define LOG_PROT       (1U << 5)
+
+#define LOG_ALL      (LOG_Z80 | LOG_Z80RAM | LOG_VIDEO | LOG_VIDEORAM | LOG_PROT)
+
+//#define VERBOSE (LOG_ALL)
+#define VERBOSE (LOG_VIDEO)
+#include "logmacro.h"
 
 class pgm_state : public driver_device
 {
@@ -34,13 +45,15 @@ public:
 		, m_regionhack(*this, "RegionHack")
 		, m_maincpu(*this, "maincpu")
 		, m_videoregs(*this, "videoregs")
+		, m_sprite_buffer(*this, "sprite_buffer")
+		, m_zoomram(*this, "zoomram")
 		, m_videoram(*this, "videoram")
 		, m_z80_mainram(*this, "z80_mainram")
 		, m_soundcpu(*this, "soundcpu")
+		, m_screen(*this, "screen")
 		, m_gfxdecode(*this, "gfxdecode")
 		, m_palette(*this, "palette")
-		, m_soundlatch(*this, "soundlatch")
-		, m_soundlatch3(*this, "soundlatch3")
+		, m_soundlatch(*this, "soundlatch%u", 1U)
 		, m_ics(*this, "ics")
 		, m_adata(*this, "sprcol")
 		, m_bdata(*this, "sprmask")
@@ -50,11 +63,12 @@ public:
 
 	void init_pgm();
 
-	void pgm_basic_init(bool set_bank = true);
+	void pgm_basic_init();
 	void pgm(machine_config &config);
 	void pgmbase(machine_config &config);
 
 protected:
+	virtual void machine_start() override;
 	virtual void machine_reset() override;
 	virtual void video_start() override;
 
@@ -71,11 +85,14 @@ protected:
 	int m_irq4_disabled = 0;
 
 	void pgm_base_mem(address_map &map);
+	void pgm_basic_mem(address_map &map);
 	void pgm_mem(address_map &map);
 
 private:
 	/* memory pointers */
 	required_shared_ptr<u16> m_videoregs;
+	required_shared_ptr<u16> m_sprite_buffer;
+	required_shared_ptr<u16> m_zoomram;
 	required_shared_ptr<u16> m_videoram;
 	required_shared_ptr<u8>  m_z80_mainram;
 	u16 *                    m_bg_videoram = nullptr;
@@ -99,12 +116,12 @@ private:
 	tilemap_t     *m_tx_tilemap = nullptr;
 
 	/* devices */
-	required_device<cpu_device>             m_soundcpu;
-	required_device<gfxdecode_device>       m_gfxdecode;
-	required_device<palette_device>         m_palette;
-	required_device<generic_latch_8_device> m_soundlatch;
-	required_device<generic_latch_8_device> m_soundlatch3;
-	required_device<ics2115_device>         m_ics;
+	required_device<cpu_device>                      m_soundcpu;
+	required_device<screen_device>                   m_screen;
+	required_device<gfxdecode_device>                m_gfxdecode;
+	required_device<palette_device>                  m_palette;
+	required_device_array<generic_latch_8_device, 3> m_soundlatch;
+	required_device<ics2115_device>                  m_ics;
 
 	/* used by rendering */
 	required_region_ptr<u16> m_adata;
@@ -113,8 +130,23 @@ private:
 	u8 m_abit = 0;
 	u32 m_boffset = 0;
 
+	u16 m_bg_scrollx = 0;
+	u16 m_bg_scrolly = 0;
+	u16 m_tx_scrollx = 0;
+	u16 m_tx_scrolly = 0;
+	u16 m_videoreg_4000 = 0;
+	u16 m_videoreg_e000 = 0;
+
+	bool m_z80_bus_connect = true;
+	bool m_z80_reset = true;
+
 	u16 videoram_r(offs_t offset);
 	void videoram_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	u16 videoreg_4000_r();
+	void videoreg_4000_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	u16 videoreg_e000_r();
+	void videoreg_e000_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	u16 scanline_r();
 	void coin_counter_w(u16 data);
 	u8 z80_ram_r(offs_t offset);
 	void z80_ram_w(offs_t offset, u8 data);
@@ -124,6 +156,14 @@ private:
 	void z80_l3_w(u8 data);
 	void tx_videoram_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 	void bg_videoram_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	u16 bg_scrollx_r();
+	u16 bg_scrolly_r();
+	u16 tx_scrollx_r();
+	u16 tx_scrolly_r();
+	void bg_scrollx_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	void bg_scrolly_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	void tx_scrollx_w(offs_t offset, u16 data, u16 mem_mask = ~0);
+	void tx_scrolly_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 
 	TILE_GET_INFO_MEMBER(get_tx_tile_info);
 	TILE_GET_INFO_MEMBER(get_bg_tile_info);
@@ -141,7 +181,6 @@ private:
 	void draw_sprite_new_basic(int wide, int high, int xpos, int ypos, int palt, int flip, bitmap_ind16 &bitmap, const rectangle &cliprect, bitmap_ind8 &priority_bitmap, int pri);
 	void draw_sprites(bitmap_ind16& spritebitmap, const rectangle &cliprect, bitmap_ind8& priority_bitmap);
 	void get_sprites();
-	void pgm_basic_mem(address_map &map);
 	void pgm_z80_io(address_map &map);
 	void pgm_z80_mem(address_map &map);
 };

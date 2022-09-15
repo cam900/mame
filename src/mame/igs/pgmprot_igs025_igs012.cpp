@@ -25,9 +25,9 @@
 
 void pgm_012_025_state::pgm_drgw2_decrypt()
 {
-	u16 *src = (u16 *) (memregion("maincpu")->base() + 0x100000);
+	u16 *src = (u16 *) (memregion("cart")->base());
 
-	int rom_size = 0x80000;
+	int rom_size = 0x100000;
 
 	for (int i = 0; i < rom_size / 2; i++)
 	{
@@ -107,8 +107,6 @@ static const u8 drgw2_source_data[0x08][0xec] =
 
 void pgm_012_025_state::drgw2_common_init()
 {
-	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xd80000, 0xd80003, read16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_r)), write16sm_delegate(*m_igs025, FUNC(igs025_device::drgw2_d80000_protection_w)));
-
 	m_igs025->m_kb_source_data = drgw2_source_data;
 
 	pgm_basic_init();
@@ -117,9 +115,9 @@ void pgm_012_025_state::drgw2_common_init()
 
 void pgm_012_025_state::drgw2_mem(address_map &map)
 {
-	pgm_mem(map);
-	map(0x100000, 0x1fffff).bankr("bank1"); /* Game ROM */
+	pgm_basic_mem(map);
 	map(0xd00000, 0xd00fff).noprw(); // Written, but never read back? Related to the protection device? - IGS012?
+	map(0xd80000, 0xd80003).rw(m_igs025, FUNC(igs025_device::killbld_igs025_prot_r), FUNC(igs025_device::drgw2_d80000_protection_w));
 }
 
 void pgm_012_025_state::pgm_012_025_drgw2(machine_config &config)
@@ -136,7 +134,7 @@ void pgm_012_025_state::pgm_012_025_drgw2(machine_config &config)
 void pgm_012_025_state::init_drgw2()
 {
 	/* incomplete? */
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
+	u16 *mem16 = (u16 *)memregion("cart")->base();
 
 	drgw2_common_init();
 
@@ -144,14 +142,14 @@ void pgm_012_025_state::init_drgw2()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	mem16[0x131098 / 2] = 0x4e93;
-	mem16[0x13113e / 2] = 0x4e93;
-	mem16[0x1311ce / 2] = 0x4e93;
+	mem16[0x031098 / 2] = 0x4e93;
+	mem16[0x03113e / 2] = 0x4e93;
+	mem16[0x0311ce / 2] = 0x4e93;
 }
 
 void pgm_012_025_state::init_dw2v100x()
 {
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
+	u16 *mem16 = (u16 *)memregion("cart")->base();
 
 	drgw2_common_init();
 
@@ -159,14 +157,14 @@ void pgm_012_025_state::init_dw2v100x()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	mem16[0x131084 / 2] = 0x4e93;
-	mem16[0x13112a / 2] = 0x4e93;
-	mem16[0x1311ba / 2] = 0x4e93;
+	mem16[0x031084 / 2] = 0x4e93;
+	mem16[0x03112a / 2] = 0x4e93;
+	mem16[0x0311ba / 2] = 0x4e93;
 }
 
 void pgm_012_025_state::init_drgw2c()
 {
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
+	u16 *mem16 = (u16 *)memregion("cart")->base();
 
 	drgw2_common_init();
 
@@ -174,14 +172,14 @@ void pgm_012_025_state::init_drgw2c()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	mem16[0x1303bc / 2] = 0x4e93;
-	mem16[0x130462 / 2] = 0x4e93;
-	mem16[0x1304f2 / 2] = 0x4e93;
+	mem16[0x0303bc / 2] = 0x4e93;
+	mem16[0x030462 / 2] = 0x4e93;
+	mem16[0x0304f2 / 2] = 0x4e93;
 }
 
 void pgm_012_025_state::init_drgw2c101()
 {
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
+	u16 *mem16 = (u16 *)memregion("cart")->base();
 
 	drgw2_common_init();
 
@@ -189,14 +187,14 @@ void pgm_012_025_state::init_drgw2c101()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	mem16[0x1306e4 / 2] = 0x4e93;
-	mem16[0x13078a / 2] = 0x4e93;
-	mem16[0x13081a / 2] = 0x4e93;
+	mem16[0x0306e4 / 2] = 0x4e93;
+	mem16[0x03078a / 2] = 0x4e93;
+	mem16[0x03081a / 2] = 0x4e93;
 }
 
 void pgm_012_025_state::init_drgw2j()
 {
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
+	u16 *mem16 = (u16 *)memregion("cart")->base();
 
 	drgw2_common_init();
 
@@ -204,13 +202,15 @@ void pgm_012_025_state::init_drgw2j()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	mem16[0x1302c0 / 2] = 0x4e93;
-	mem16[0x130366 / 2] = 0x4e93;
-	mem16[0x1303f6 / 2] = 0x4e93;
+	mem16[0x0302c0 / 2] = 0x4e93;
+	mem16[0x030366 / 2] = 0x4e93;
+	mem16[0x0303f6 / 2] = 0x4e93;
 }
 
 void pgm_012_025_state::init_drgw2hk()
 {
+	u16 *mem16 = (u16 *)memregion("cart")->base();
+
 	drgw2_common_init();
 
 	// todo, correct protection sequence for this region?
@@ -218,8 +218,7 @@ void pgm_012_025_state::init_drgw2hk()
 	m_igs025->m_kb_region = region;
 	m_igs025->m_kb_game_id = region | (region << 8) | (region << 16) | (region << 24);
 
-	u16 *mem16 = (u16 *)memregion("maincpu")->base();
-	mem16[0x12f520 / 2] = 0x4e93;
-	mem16[0x12f5c6 / 2] = 0x4e93;
-	mem16[0x12f656 / 2] = 0x4e93;
+	mem16[0x02f520 / 2] = 0x4e93;
+	mem16[0x02f5c6 / 2] = 0x4e93;
+	mem16[0x02f656 / 2] = 0x4e93;
 }
