@@ -138,6 +138,7 @@ void pgm_arm_type3_state::_55857G_arm7_map(address_map &map)
 	map(0x08000000, 0x087fffff).rom().region("user1", 0);
 	map(0x10000000, 0x100003ff).ram().share(m_arm_ram2);
 	map(0x18000000, 0x1803ffff).ram().share(m_arm_ram);
+	//map(0x28000000, 0x28000003) Unknown writes
 	map(0x38000000, 0x3801ffff).rw(FUNC(pgm_arm_type3_state::svg_arm7_shareram_r), FUNC(pgm_arm_type3_state::svg_arm7_shareram_w));
 	map(0x48000000, 0x48000003).rw(FUNC(pgm_arm_type3_state::svg_latch_arm_r), FUNC(pgm_arm_type3_state::svg_latch_arm_w)); /* 68k Latch */
 	map(0x40000018, 0x4000001b).w(FUNC(pgm_arm_type3_state::svg_arm7_ram_sel_w)); /* RAM SEL */
