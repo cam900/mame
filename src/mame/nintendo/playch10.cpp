@@ -137,7 +137,7 @@ However, this is effective ONLY if 7 other DSWB (I-O) are OFF !
 I add the 32 combinations for coinage.
 
 As I don't know what is the default value for timer speed, and I don't want to write
-the 64 combinaisons, I only put some values ... Feel free to add the other ones ...
+the 64 combinations, I only put some values ... Feel free to add the other ones ...
 
  DSW A    DSW B
 HGFEDCBA PONMLKJI    coin A  coin B
@@ -291,7 +291,7 @@ Notes & Todo:
 #include "emu.h"
 
 #include "bus/nes_ctrl/zapper_sensor.h"
-#include "cpu/m6502/n2a03.h"
+#include "cpu/m6502/rp2a03.h"
 #include "cpu/z80/z80.h"
 #include "machine/74259.h"
 #include "machine/rp5h01.h"
@@ -439,7 +439,7 @@ private:
 	u32 screen_update_playch10_single(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
 	required_device<cpu_device> m_maincpu;
-	required_device<n2a03_device> m_cartcpu;
+	required_device<rp2a03_device> m_cartcpu;
 	required_device<ppu2c0x_device> m_ppu;
 	optional_device<rp5h01_device> m_rp5h01;
 
@@ -1906,7 +1906,7 @@ void playch10_state::playch10(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &playch10_state::bios_map);
 	m_maincpu->set_addrmap(AS_IO, &playch10_state::bios_io_map);
 
-	N2A03G(config, m_cartcpu, NTSC_APU_CLOCK);
+	RP2A03G(config, m_cartcpu, NTSC_APU_CLOCK); // really RP2A03E
 	m_cartcpu->set_addrmap(AS_PROGRAM, &playch10_state::cart_map);
 
 	ls259_device &outlatch1(LS259(config, "outlatch1")); // 7D
