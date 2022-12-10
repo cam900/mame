@@ -100,8 +100,7 @@ u16 pgm_arm_type1_state::arm7_type1_ram_r(offs_t offset, u16 mem_mask)
 {
 	const u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("M68K: ARM7 Shared RAM Read: %04x = %04x (%08x) %s\n", BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask, machine().describe_context());
+	LOGPROT("M68K: ARM7 Shared RAM Read: %04x = %04x (%08x) %s\n", BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask, machine().describe_context());
 	return share16[BYTE_XOR_LE(offset << 1)];
 }
 
@@ -109,8 +108,7 @@ void pgm_arm_type1_state::arm7_type1_ram_w(offs_t offset, u16 data, u16 mem_mask
 {
 	u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("M68K: ARM7 Shared RAM Write: %04x = %04x (%04x) %s\n", BYTE_XOR_LE(offset), data, mem_mask, machine().describe_context());
+	LOGPROT("M68K: ARM7 Shared RAM Write: %04x = %04x (%04x) %s\n", BYTE_XOR_LE(offset), data, mem_mask, machine().describe_context());
 	COMBINE_DATA(&share16[BYTE_XOR_LE(offset << 1)]);
 }
 
@@ -130,15 +128,13 @@ u32 pgm_arm_type1_state::arm7_type1_exrom_r()
 
 u32 pgm_arm_type1_state::arm7_type1_shareram_r(offs_t offset, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x) %s\n", offset << 2, m_arm7_shareram[offset], mem_mask, machine().describe_context());
+	LOGPROT("ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x) %s\n", offset << 2, m_arm7_shareram[offset], mem_mask, machine().describe_context());
 	return m_arm7_shareram[offset];
 }
 
 void pgm_arm_type1_state::arm7_type1_shareram_w(offs_t offset, u32 data, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x) %s\n", offset << 2, data, mem_mask, machine().describe_context());
+	LOGPROT("ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x) %s\n", offset << 2, data, mem_mask, machine().describe_context());
 	COMBINE_DATA(&m_arm7_shareram[offset]);
 }
 
@@ -163,6 +159,7 @@ void pgm_arm_type1_state::_55857E_arm7_map(address_map &map)
 	map(0x4000000c, 0x4000000f).r(FUNC(pgm_arm_type1_state::arm7_type1_unk_r));
 	map(0x50800000, 0x5080003f).rw(FUNC(pgm_arm_type1_state::arm7_type1_shareram_r), FUNC(pgm_arm_type1_state::arm7_type1_shareram_w)).share("arm7_shareram");
 	map(0x50000000, 0x500003ff).ram(); // uploads xor table to decrypt 68k rom here
+	//map(0xf0000004, 0xf0000007) unknown writes, decrypt related?
 }
 
 

@@ -22,7 +22,19 @@
 #include "emupal.h"
 #include "tilemap.h"
 
-#define PGMARM7LOGERROR 0
+#define LOG_SOUND     (1U << 1)
+#define LOG_SOUNDRAM  (1U << 1)
+#define LOG_PROT      (1U << 2)
+
+#define LOG_ALL (LOG_GENERAL | LOG_SOUND | LOG_SOUNDRAM | LOG_PROT)
+
+#define VERBOSE (0)
+
+#include "logmacro.h"
+
+#define LOGSOUND(...)     LOGMASKED(LOG_SOUND, __VA_ARGS__)
+#define LOGSOUNDRAM(...)  LOGMASKED(LOG_SOUNDRAM, __VA_ARGS__)
+#define LOGPROT(...)      LOGMASKED(LOG_PROT,  __VA_ARGS__)
 
 class pgm_state : public driver_device
 {
@@ -33,7 +45,14 @@ public:
 		, m_region(*this, "Region")
 		, m_regionhack(*this, "RegionHack")
 		, m_maincpu(*this, "maincpu")
-		, m_videoregs(*this, "videoregs")
+		, m_spritebuffer(*this, "spritebuffer")
+		, m_zoomtable(*this, "zoomtable")
+		, m_bg_xscroll(*this, "bg_xscroll")
+		, m_bg_yscroll(*this, "bg_xscroll")
+		, m_tx_xscroll(*this, "tx_yscroll")
+		, m_tx_yscroll(*this, "tx_yscroll")
+		, m_videoreg_4000(*this, "videoreg_4000")
+		, m_videoreg_e000(*this, "videoreg_e000")
 		, m_videoram(*this, "videoram")
 		, m_z80_mainram(*this, "z80_mainram")
 		, m_soundcpu(*this, "soundcpu")
@@ -75,7 +94,14 @@ protected:
 
 private:
 	/* memory pointers */
-	required_shared_ptr<u16> m_videoregs;
+	required_shared_ptr<u16> m_spritebuffer;
+	required_shared_ptr<u16> m_zoomtable;
+	required_shared_ptr<u16> m_bg_xscroll;
+	required_shared_ptr<u16> m_bg_yscroll;
+	required_shared_ptr<u16> m_tx_xscroll;
+	required_shared_ptr<u16> m_tx_yscroll;
+	required_shared_ptr<u16> m_videoreg_4000;
+	required_shared_ptr<u16> m_videoreg_e000;
 	required_shared_ptr<u16> m_videoram;
 	required_shared_ptr<u8>  m_z80_mainram;
 	u16 *                    m_bg_videoram = nullptr;
@@ -97,6 +123,7 @@ private:
 	struct sprite_t *m_sprite_ptr_pre = nullptr;
 	tilemap_t     *m_bg_tilemap = nullptr;
 	tilemap_t     *m_tx_tilemap = nullptr;
+
 
 	/* devices */
 	required_device<cpu_device>             m_soundcpu;

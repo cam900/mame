@@ -27,7 +27,7 @@ void pgm_012_025_state::pgm_drgw2_decrypt()
 {
 	u16 *src = (u16 *) (memregion("maincpu")->base() + 0x100000);
 
-	int rom_size = 0x80000;
+	int rom_size = 0x100000;
 
 	for (int i = 0; i < rom_size / 2; i++)
 	{
@@ -107,8 +107,6 @@ static const u8 drgw2_source_data[0x08][0xec] =
 
 void pgm_012_025_state::drgw2_common_init()
 {
-	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xd80000, 0xd80003, read16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_r)), write16sm_delegate(*m_igs025, FUNC(igs025_device::drgw2_d80000_protection_w)));
-
 	m_igs025->m_kb_source_data = drgw2_source_data;
 
 	pgm_basic_init();
@@ -120,6 +118,7 @@ void pgm_012_025_state::drgw2_mem(address_map &map)
 	pgm_mem(map);
 	map(0x100000, 0x1fffff).bankr("bank1"); /* Game ROM */
 	map(0xd00000, 0xd00fff).noprw(); // Written, but never read back? Related to the protection device? - IGS012?
+	map(0xd80000, 0xd80003).rw(m_igs025, FUNC(igs025_device::killbld_igs025_prot_r), FUNC(igs025_device::drgw2_d80000_protection_w));
 }
 
 void pgm_012_025_state::pgm_012_025_drgw2(machine_config &config)

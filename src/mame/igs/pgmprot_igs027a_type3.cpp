@@ -57,13 +57,13 @@ void pgm_arm_type3_state::svg_arm7_ram_sel_w(u32 data)
 u32 pgm_arm_type3_state::svg_arm7_shareram_r(offs_t offset)
 {
 	const u32 retdata = m_svg_shareram[m_svg_ram_sel & 1][offset];
-//  logerror("%s ARM7: shared read (bank %02x) offset - %08x retdata - %08x mask - %08x\n", machine().describe_context(), m_svg_ram_sel, offset*4, retdata, mem_mask );
+//  LOGPROT("%s ARM7: shared read (bank %02x) offset - %08x retdata - %08x mask - %08x\n", machine().describe_context(), m_svg_ram_sel, offset*4, retdata, mem_mask );
 	return retdata;
 }
 
 void pgm_arm_type3_state::svg_arm7_shareram_w(offs_t offset, u32 data, u32 mem_mask)
 {
-//  logerror("%s ARM7: shared write (bank %02x) offset - %08x retdata - %08x mask - %08x\n", machine().describe_context(), m_svg_ram_sel, offset*4, data, mem_mask );
+//  LOGPROT("%s ARM7: shared write (bank %02x) offset - %08x retdata - %08x mask - %08x\n", machine().describe_context(), m_svg_ram_sel, offset*4, data, mem_mask );
 	COMBINE_DATA(&m_svg_shareram[m_svg_ram_sel & 1][offset]);
 }
 
@@ -95,31 +95,27 @@ void pgm_arm_type3_state::svg_68k_nmi_w(u16 data)
 
 void pgm_arm_type3_state::svg_latch_68k_w(offs_t offset, u16 data, u16 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("M68K: Latch write: %04x (%04x) %s\n", data & 0x0000ffff, mem_mask, machine().describe_context());
+	LOGPROT("M68K: Latch write: %04x (%04x) %s\n", data & 0x0000ffff, mem_mask, machine().describe_context());
 	COMBINE_DATA(&m_svg_latchdata_68k_w);
 }
 
 
 u16 pgm_arm_type3_state::svg_latch_68k_r(offs_t offset, u16 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("M68K: Latch read: %04x (%04x) %s\n", m_svg_latchdata_arm_w & 0x0000ffff, mem_mask, machine().describe_context());
+	LOGPROT("M68K: Latch read: %04x (%04x) %s\n", m_svg_latchdata_arm_w & 0x0000ffff, mem_mask, machine().describe_context());
 	return m_svg_latchdata_arm_w;
 }
 
 
 u32 pgm_arm_type3_state::svg_latch_arm_r(offs_t offset, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: Latch read: %08x (%08x) %s\n", m_svg_latchdata_68k_w, mem_mask, machine().describe_context());
+	LOGPROT("ARM7: Latch read: %08x (%08x) %s\n", m_svg_latchdata_68k_w, mem_mask, machine().describe_context());
 	return m_svg_latchdata_68k_w;
 }
 
 void pgm_arm_type3_state::svg_latch_arm_w(offs_t offset, u32 data, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("ARM7: Latch write: %08x (%08x) %s\n", data, mem_mask, machine().describe_context());
+	LOGPROT("ARM7: Latch write: %08x (%08x) %s\n", data, mem_mask, machine().describe_context());
 
 	COMBINE_DATA(&m_svg_latchdata_arm_w);
 }
@@ -130,9 +126,9 @@ void pgm_arm_type3_state::svg_latch_arm_w(offs_t offset, u32 data, u32 mem_mask)
 void pgm_arm_type3_state::svg_68k_mem(address_map &map)
 {
 	pgm_mem(map);
-	map(0x100000, 0x1fffff).bankr("bank1");  /* Game ROM */
+	map(0x100000, 0x4fffff).bankr("bank1");  /* Game ROM */
 
-	map(0x500000, 0x50ffff).rw(FUNC(pgm_arm_type3_state::svg_m68k_ram_r), FUNC(pgm_arm_type3_state::svg_m68k_ram_w));    /* ARM7 Shared RAM */
+	map(0x500000, 0x51ffff).rw(FUNC(pgm_arm_type3_state::svg_m68k_ram_r), FUNC(pgm_arm_type3_state::svg_m68k_ram_w));    /* ARM7 Shared RAM */
 	map(0x5c0000, 0x5c0001).rw(FUNC(pgm_arm_type3_state::svg_68k_nmi_r), FUNC(pgm_arm_type3_state::svg_68k_nmi_w));      /* ARM7 FIQ */
 	map(0x5c0300, 0x5c0301).rw(FUNC(pgm_arm_type3_state::svg_latch_68k_r), FUNC(pgm_arm_type3_state::svg_latch_68k_w)); /* ARM7 Latch */
 }
@@ -141,13 +137,14 @@ void pgm_arm_type3_state::svg_68k_mem(address_map &map)
 void pgm_arm_type3_state::_55857G_arm7_map(address_map &map)
 {
 	map(0x00000000, 0x00003fff).rom();
-	map(0x08000000, 0x087fffff).rom().region("user1", 0);
+	map(0x08000000, 0x087fffff).rom().region("prot_data", 0);
 	map(0x10000000, 0x100003ff).ram().share("arm_ram2");
 	map(0x18000000, 0x1803ffff).ram().share("arm_ram");
-	map(0x38000000, 0x3800ffff).rw(FUNC(pgm_arm_type3_state::svg_arm7_shareram_r), FUNC(pgm_arm_type3_state::svg_arm7_shareram_w));
+	map(0x38000000, 0x3801ffff).rw(FUNC(pgm_arm_type3_state::svg_arm7_shareram_r), FUNC(pgm_arm_type3_state::svg_arm7_shareram_w));
 	map(0x48000000, 0x48000003).rw(FUNC(pgm_arm_type3_state::svg_latch_arm_r), FUNC(pgm_arm_type3_state::svg_latch_arm_w)); /* 68k Latch */
 	map(0x40000018, 0x4000001b).w(FUNC(pgm_arm_type3_state::svg_arm7_ram_sel_w)); /* RAM SEL */
-	map(0x50000000, 0x500003ff).ram();
+	map(0x50000000, 0x500003ff).ram(); // uploads xor table to decrypt ARM rom here
+	//map(0xf0000004, 0xf0000007) unknown writes, decrypt related?
 }
 
 
@@ -227,12 +224,12 @@ void pgm_arm_type3_state::pgm_arm_type3_33_8688m(machine_config &config) // ARM7
 void pgm_arm_type3_state::svg_basic_init()
 {
 	pgm_basic_init();
-	m_svg_shareram[0] = std::make_unique<u32[]>(0x20000 / 4);
-	m_svg_shareram[1] = std::make_unique<u32[]>(0x20000 / 4);
+	m_svg_shareram[0] = std::make_unique<u32[]>(0x20000 / 2);
+	m_svg_shareram[1] = std::make_unique<u32[]>(0x20000 / 2);
 	m_svg_ram_sel = 0;
 
-	save_pointer(NAME(m_svg_shareram[0]), 0x20000 / 4);
-	save_pointer(NAME(m_svg_shareram[1]), 0x20000 / 4);
+	save_pointer(NAME(m_svg_shareram[0]), 0x20000 / 2);
+	save_pointer(NAME(m_svg_shareram[1]), 0x20000 / 2);
 	save_item(NAME(m_svg_ram_sel));
 }
 
@@ -559,7 +556,7 @@ void pgm_arm_type3_state::pgm_patch_external_arm_rom_jumptable_theglada(int base
 		0x3050, 0x30A4, 0x30F8, 0x3120, 0x249C, 0x24C0, 0x27BC, 0x2B40,
 		0x2BF4, 0x2CD8, 0x2E2C
 	};
-	u16 *extprot = (u16 *)memregion("user1")->base();
+	u16 *extprot = (u16 *)memregion("prot_data")->base();
 	/*
 	0x00C8,0x00B4,0x00DC,0x011C,0x0160,0x02DC,0x0330,0x033C,
 	0x0348,0x0354,0x0398,0x03A8,0x0410,0x0454,0x0480,0x059C,

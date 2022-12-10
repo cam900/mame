@@ -12,8 +12,6 @@ class igs028_device : public device_t
 public:
 	igs028_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	uint16_t* m_sharedprotram = nullptr;
-
 	void IGS028_handle(void);
 
 protected:
@@ -24,6 +22,10 @@ protected:
 	uint32_t olds_read_reg(uint16_t addr);
 	void olds_write_reg( uint16_t addr, uint32_t val );
 	void IGS028_do_dma(uint16_t src, uint16_t dst, uint16_t size, uint16_t mode);
+
+private:
+	optional_shared_ptr<u16> m_sharedprotram;
+	required_memory_region m_rom;
 };
 
 

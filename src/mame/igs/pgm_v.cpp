@@ -1,7 +1,7 @@
 // license:BSD-3-Clause
 // copyright-holders:David Haywood, ElSemi
 /*** Video *******************************************************************/
-/* see drivers/pgm.c for notes on where improvements can be made */
+// see igs/pgm.cpp for notes on where improvements can be made
 
 #include "emu.h"
 #include "pgm.h"
@@ -30,7 +30,7 @@ inline void pgm_state::pgm_draw_pix(int xdrawpos, int pri, u16* dest, u8* destpr
 	{
 		if (!(destpri[xdrawpos] & 1))
 		{
-			if (!pri)
+			if ((!pri) && BIT(~(*m_videoreg_e000), 13))
 			{
 				dest[xdrawpos] = srcdat;
 			}
@@ -135,7 +135,7 @@ void pgm_state::draw_sprite_line(int wide, u16* dest, u8* destpri, const rectang
 					}
 					else if (xzoombit && (!xgrow))
 					{
-						/* skip this column */
+						// skip this column
 					}
 					else //normal column
 					{
@@ -178,7 +178,7 @@ void pgm_state::draw_sprite_new_zoomed(int wide, int high, int xpos, int ypos, i
 
 	m_boffset += 2;
 
-	/* precalculate where drawing will end, for flipped zoomed cases. */
+	// precalculate where drawing will end, for flipped zoomed cases.
 	/* if we're to avoid pre-decoding the data for each sprite each time we draw then we have to draw the sprite data
 	   in the order it is in ROM due to the nature of the compresson scheme.  This means drawing upwards from the end point
 	   in the case of flipped sprites */
@@ -210,7 +210,7 @@ void pgm_state::draw_sprite_new_zoomed(int wide, int high, int xpos, int ypos, i
 	}
 	realxsize--;
 
-	/* now draw it */
+	// now draw it
 	ycnt = 0;
 	ycntdraw = 0;
 
@@ -279,10 +279,10 @@ void pgm_state::draw_sprite_new_zoomed(int wide, int high, int xpos, int ypos, i
 		}
 		else if (yzoombit && (!ygrow))
 		{
-			/* skip this line */
+			// skip this line
 			draw_sprite_line(wide, nullptr, nullptr, cliprect, xzoom, xgrow, flip, xpos, pri, realxsize, palt, false);
 		}
-		else /* normal line */
+		else // normal line
 		{
 			if (!get_flipy(flip))
 				ydrawpos = ypos + ycntdraw;
@@ -490,10 +490,14 @@ void pgm_state::draw_sprites(bitmap_ind16& spritebitmap, const rectangle &clipre
            fedcba98 76543210
     00     x------- -------- Horizontal Zoom/Shrink mode select
            -xxxx--- -------- Horizontal Zoom/Shrink table select
+           01111--- -------- Use hardcoded table?
+           10001--- -------- ""
            -----xxx xxxxxxxx X position (11 bit signed)
 
     02     x------- -------- Vertical Zoom/Shrink mode select
            -xxxx--- -------- Vertical Zoom/Shrink table select
+           01111--- -------- Use hardcoded table?
+           10001--- -------- ""
            -----xxx xxxxxxxx Y position (10 bit signed)
 
     04     -x------ -------- Flip Y
@@ -512,13 +516,13 @@ void pgm_state::get_sprites()
 {
 	m_sprite_ptr_pre = m_spritelist.get();
 
-	u16 *sprite_source = &m_mainram[0];
-	const u16 *finish = &m_mainram[0xa00 / 2];
-	const u16* sprite_zoomtable = &m_videoregs[0x1000 / 2];
+	u16 *sprite_source = &m_spritebuffer[0];
+	const u16 *finish = &m_spritebuffer[0x1000 / 2];
+	const u16* sprite_zoomtable = &m_zoomtable[0];
 
 	while (sprite_source < finish)
 	{
-		if (!sprite_source[4]) break; /* is this right? */
+		if ((sprite_source[4] & 0x7fff) == 0) break; /* is this right? */
 
 		int xzom =                 (sprite_source[0] & 0x7800) >> 11;
 		const bool xgrow =         (sprite_source[0] & 0x8000) >> 15;
@@ -548,16 +552,16 @@ void pgm_state::get_sprites()
 			yzom = 0x10 - yzom;
 		}
 
-		m_sprite_ptr_pre->xzoom = (sprite_zoomtable[xzom * 2] << 16) | sprite_zoomtable[xzom * 2 + 1];
-		m_sprite_ptr_pre->yzoom = (sprite_zoomtable[yzom * 2] << 16) | sprite_zoomtable[yzom * 2 + 1];
+		m_sprite_ptr_pre->xzoom = (xzom >= 0x10) ? 0: (m_zoomtable[xzom * 2] << 16) | m_zoomtable[xzom * 2 + 1];
+		m_sprite_ptr_pre->yzoom = (yzom >= 0x10) ? 0: (m_zoomtable[yzom * 2] << 16) | m_zoomtable[yzom * 2 + 1];
 		m_sprite_ptr_pre->xgrow = xgrow;
 		m_sprite_ptr_pre->ygrow = ygrow;
 		m_sprite_ptr_pre++;
-		sprite_source += 5;
+		sprite_source += 8;
 	}
 }
 
-/* TX Layer */
+// TX Layer
 void pgm_state::tx_videoram_w(offs_t offset, u16 data, u16 mem_mask)
 {
 	m_tx_videoram[offset] = data;
@@ -587,7 +591,7 @@ TILE_GET_INFO_MEMBER(pgm_state::get_tx_tile_info)
 	tileinfo.set(0,tileno,colour,TILE_FLIPYX(flipyx));
 }
 
-/* BG Layer */
+// BG Layer
 
 void pgm_state::bg_videoram_w(offs_t offset, u16 data, u16 mem_mask)
 {
@@ -597,7 +601,7 @@ void pgm_state::bg_videoram_w(offs_t offset, u16 data, u16 mem_mask)
 
 TILE_GET_INFO_MEMBER(pgm_state::get_bg_tile_info)
 {
-	/* pretty much the same as tx layer */
+	// pretty much the same as tx layer
 
 	const u32 tileno = m_bg_videoram[tile_index *2] & 0xffff;
 	const u32 colour = (m_bg_videoram[tile_index * 2 + 1] & 0x3e) >> 1;
@@ -637,19 +641,25 @@ u32 pgm_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const 
 
 	screen.priority().fill(0, cliprect);
 
-	m_bg_tilemap->set_scrolly(0, m_videoregs[0x2000/2]);
+	if (BIT(~(*m_videoreg_e000), 12))
+	{
+		m_bg_tilemap->set_scrolly(0, *m_bg_yscroll);
 
-	for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
-		m_bg_tilemap->set_scrollx((y + m_videoregs[0x2000 / 2]) & 0x1ff, m_videoregs[0x3000 / 2] + m_rowscrollram[y]);
+		for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
+			m_bg_tilemap->set_scrollx((y + *m_bg_yscroll) & 0x1ff, *m_bg_xscroll + m_rowscrollram[y]);
 
-	m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 2);
+		m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 2);
+	}
 
 	draw_sprites(bitmap, cliprect, screen.priority());
 
-	m_tx_tilemap->set_scrolly(0, m_videoregs[0x5000/2]);
-	m_tx_tilemap->set_scrollx(0, m_videoregs[0x6000/2]); // Check
+	if (BIT(~(*m_videoreg_e000), 11))
+	{
+		m_tx_tilemap->set_scrolly(0, *m_tx_yscroll);
+		m_tx_tilemap->set_scrollx(0, *m_tx_xscroll); // Check
 
-	m_tx_tilemap->draw(screen, bitmap, cliprect, 0, 0);
+		m_tx_tilemap->draw(screen, bitmap, cliprect, 0, 0);
+	}
 
 	return 0;
 }
@@ -659,7 +669,18 @@ WRITE_LINE_MEMBER(pgm_state::screen_vblank)
 	// rising edge
 	if (state)
 	{
-		/* first 0xa00 of main ram = sprites, seems to be buffered, DMA? */
+		// first 0xa00 of main ram = sprites, seems to be buffered, DMA?
+		if (BIT(*m_videoreg_e000, 0))
+		{
+			for (int i = 0; i < 256; i++)
+			{
+				for (int j = 0; j < 5; j++)
+					m_spritebuffer[(i * 8) + j] = m_mainram[(i * 5) + j];
+
+				if ((m_mainram[(i * 5) + 4] & 0x7fff) == 0) // TODO: needs to check from hardware
+					break;
+			}
+		}
 		get_sprites();
 
 		// vblank start interrupt

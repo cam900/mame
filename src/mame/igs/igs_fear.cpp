@@ -52,7 +52,7 @@ uint32_t igs_fear_state::screen_update_igs_fear(screen_device &screen, bitmap_in
 void igs_fear_state::igs_igs_fear_map(address_map &map)
 {
 	map(0x00000000, 0x00003fff).rom(); /* Internal ROM */
-	map(0x08000000, 0x0807ffff).rom().region("user1", 0);/* Game ROM */
+	map(0x08000000, 0x0807ffff).rom().region("prot_data", 0);/* Game ROM */
 }
 
 // debugging only, not tile based
@@ -111,7 +111,7 @@ ROM_START( fearless )
 	/* Internal rom of IGS027A ARM based MCU */
 	ROM_LOAD( "fearless_igs027a", 0x00000, 0x4000, NO_DUMP ) // sticker marked 'F1'
 
-	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
+	ROM_REGION32_LE( 0x80000, "prot_data", 0 ) // external ARM data / prg
 	ROM_LOAD( "fearlessp_v-101us.u37", 0x000000, 0x80000, CRC(2522873c) SHA1(8db709877311b6d2796353fc9a44a820937e35c2) )
 
 	ROM_REGION( 0x10000, "plcc", 0 )

@@ -166,8 +166,6 @@ void pgm_028_025_state::init_olds()
 {
 	pgm_basic_init();
 
-	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xdcb400, 0xdcb403, read16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_r)), write16sm_delegate(*m_igs025, FUNC(igs025_device::olds_w)));
-	m_igs028->m_sharedprotram = m_sharedprotram;
 	m_igs025->m_kb_source_data = m_olds_source_data;
 }
 
@@ -175,7 +173,8 @@ void pgm_028_025_state::olds_mem(address_map &map)
 {
 	pgm_mem(map);
 	map(0x100000, 0x3fffff).bankr("bank1"); /* Game ROM */
-	map(0x400000, 0x403fff).ram().share("sharedprotram"); // Shared with protection device
+	map(0x400000, 0x403fff).mirror(0x0fc000).ram().share("igs028:sharedprotram"); // Shared with protection device
+	map(0xdcb400, 0xdcb403).rw(m_igs025, FUNC(igs025_device::killbld_igs025_prot_r), FUNC(igs025_device::olds_w));
 }
 
 void pgm_028_025_state::igs025_to_igs028_callback( void )

@@ -13,24 +13,22 @@
 
 igs028_device::igs028_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: device_t(mconfig, IGS028, tag, owner, clock)
+	, m_sharedprotram(*this, "sharedprotram")
+	, m_rom(*this, DEVICE_SELF)
 {
 }
 
 void igs028_device::device_start()
 {
-	m_sharedprotram = nullptr;
-
-
 }
 
 void igs028_device::device_reset()
 {
 	//printf("igs028_device::device_reset()");
 
-
 	if (!m_sharedprotram)
 	{
-		logerror("m_sharedprotram was not set\n");
+		logerror("%s: IGS028 sharedprotram was not set!\n", machine().describe_context());
 		return;
 	}
 
@@ -81,7 +79,7 @@ void igs028_device::olds_write_reg( uint16_t addr, uint32_t val )
 void igs028_device::IGS028_do_dma(uint16_t src, uint16_t dst, uint16_t size, uint16_t mode)
 {
 	uint16_t param = mode >> 8;
-	uint16_t *PROTROM = (uint16_t*)memregion(":user1")->base();
+	uint16_t *PROTROM = (uint16_t*)m_rom->base();
 
 //  logerror ("mode: %2.2x, src: %4.4x, dst: %4.4x, size: %4.4x, data: %4.4x\n", (mode &0xf), src, dst, size, mode);
 

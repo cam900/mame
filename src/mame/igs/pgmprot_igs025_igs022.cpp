@@ -344,7 +344,6 @@ void pgm_022_025_state::init_killbld()
 	pgm_killbld_decrypt();
 
 	// install and configure protection device(s)
-	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xd40000, 0xd40003, read16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_r)), write16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_w)));
 	m_igs025->m_kb_source_data = killbld_source_data;
 }
 
@@ -354,12 +353,11 @@ void pgm_022_025_state::init_drgw3()
 	pgm_dw3_decrypt();
 
 	// install and configure protection device(s)
-	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xda5610, 0xda5613, read16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_r)), write16sm_delegate(*m_igs025, FUNC(igs025_device::killbld_igs025_prot_w)));
 	m_igs025->m_kb_source_data = dw3_source_data;
 }
 
 
-void pgm_022_025_state::killbld_mem(address_map &map)
+void pgm_022_025_state::pgm_022_025_mem(address_map &map)
 {
 	pgm_mem(map);
 	map(0x100000, 0x2fffff).bankr("bank1"); /* Game ROM */
@@ -367,11 +365,23 @@ void pgm_022_025_state::killbld_mem(address_map &map)
 }
 
 
+void pgm_022_025_state::killbld_mem(address_map &map)
+{
+	pgm_022_025_mem(map);
+	map(0xd40000, 0xd40003).rw(m_igs025, FUNC(igs025_device::killbld_igs025_prot_r), FUNC(igs025_device::killbld_igs025_prot_w));
+}
+
+
+void pgm_022_025_state::drgw3_mem(address_map &map)
+{
+	pgm_022_025_mem(map);
+	map(0xda5610, 0xda5613).rw(m_igs025, FUNC(igs025_device::killbld_igs025_prot_r), FUNC(igs025_device::killbld_igs025_prot_w));
+}
+
+
 void pgm_022_025_state::pgm_022_025(machine_config &config)
 {
 	pgmbase(config);
-
-	m_maincpu->set_addrmap(AS_PROGRAM, &pgm_022_025_state::killbld_mem);
 
 	IGS025(config, m_igs025, 0);
 	m_igs025->set_external_cb(FUNC(pgm_022_025_state::igs025_to_igs022_callback));
@@ -382,12 +392,16 @@ void pgm_022_025_state::pgm_022_025(machine_config &config)
 void pgm_022_025_state::pgm_022_025_dw3(machine_config &config)
 {
 	pgm_022_025(config);
+	m_maincpu->set_addrmap(AS_PROGRAM, &pgm_022_025_state::drgw3_mem);
+
 	MCFG_MACHINE_RESET_OVERRIDE(pgm_022_025_state, dw3)
 }
 
 void pgm_022_025_state::pgm_022_025_killbld(machine_config &config)
 {
 	pgm_022_025(config);
+	m_maincpu->set_addrmap(AS_PROGRAM, &pgm_022_025_state::killbld_mem);
+
 	MCFG_MACHINE_RESET_OVERRIDE(pgm_022_025_state, killbld)
 }
 

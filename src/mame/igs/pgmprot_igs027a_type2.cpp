@@ -41,44 +41,38 @@ u32 pgm_arm_type2_state::arm7_latch_arm_r(offs_t offset, u32 mem_mask)
 	if (!machine().side_effects_disabled())
 		m_prot->set_input_line(ARM7_FIRQ_LINE, CLEAR_LINE ); // guess
 
-	if (PGMARM7LOGERROR)
-		logerror("%s ARM7: Latch read: %08x (%08x)\n", machine().describe_context(), m_kov2_latchdata_68k_w, mem_mask);
+	LOGPROT("%s ARM7: Latch read: %08x (%08x)\n", machine().describe_context(), m_kov2_latchdata_68k_w, mem_mask);
 	return m_kov2_latchdata_68k_w;
 }
 
 void pgm_arm_type2_state::arm7_latch_arm_w(offs_t offset, u32 data, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("%s ARM7: Latch write: %08x (%08x)\n", machine().describe_context(), data, mem_mask);
+	LOGPROT("%s ARM7: Latch write: %08x (%08x)\n", machine().describe_context(), data, mem_mask);
 
 	COMBINE_DATA(&m_kov2_latchdata_arm_w);
 }
 
 u32 pgm_arm_type2_state::arm7_shareram_r(offs_t offset, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("%s ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x)\n", machine().describe_context(), offset << 2, m_arm7_shareram[offset], mem_mask);
+	LOGPROT("%s ARM7: ARM7 Shared RAM Read: %04x = %08x (%08x)\n", machine().describe_context(), offset << 2, m_arm7_shareram[offset], mem_mask);
 	return m_arm7_shareram[offset];
 }
 
 void pgm_arm_type2_state::arm7_shareram_w(offs_t offset, u32 data, u32 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("%s ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x)\n", machine().describe_context(), offset << 2, data, mem_mask);
+	LOGPROT("%s ARM7: ARM7 Shared RAM Write: %04x = %08x (%08x)\n", machine().describe_context(), offset << 2, data, mem_mask);
 	COMBINE_DATA(&m_arm7_shareram[offset]);
 }
 
 u16 pgm_arm_type2_state::arm7_latch_68k_r(offs_t offset, u16 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("%s M68K: Latch read: %04x (%04x)\n", machine().describe_context(), m_kov2_latchdata_arm_w & 0x0000ffff, mem_mask);
+	LOGPROT("%s M68K: Latch read: %04x (%04x)\n", machine().describe_context(), m_kov2_latchdata_arm_w & 0x0000ffff, mem_mask);
 	return m_kov2_latchdata_arm_w;
 }
 
 void pgm_arm_type2_state::arm7_latch_68k_w(offs_t offset, u16 data, u16 mem_mask)
 {
-	if (PGMARM7LOGERROR)
-		logerror("%s M68K: Latch write: %04x (%04x)\n", machine().describe_context(), data & 0x0000ffff, mem_mask);
+	LOGPROT("%s M68K: Latch write: %04x (%04x)\n", machine().describe_context(), data & 0x0000ffff, mem_mask);
 	COMBINE_DATA(&m_kov2_latchdata_68k_w);
 
 	m_prot->set_input_line(ARM7_FIRQ_LINE, ASSERT_LINE ); // guess
@@ -88,8 +82,7 @@ u16 pgm_arm_type2_state::arm7_ram_r(offs_t offset, u16 mem_mask)
 {
 	const u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("%s M68K: ARM7 Shared RAM Read: %04x = %04x (%08x)\n", machine().describe_context(), BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask);
+	LOGPROT("%s M68K: ARM7 Shared RAM Read: %04x = %04x (%08x)\n", machine().describe_context(), BYTE_XOR_LE(offset), share16[BYTE_XOR_LE(offset)], mem_mask);
 	return share16[BYTE_XOR_LE(offset)];
 }
 
@@ -97,8 +90,7 @@ void pgm_arm_type2_state::arm7_ram_w(offs_t offset, u16 data, u16 mem_mask)
 {
 	u16 *share16 = reinterpret_cast<u16 *>(m_arm7_shareram.target());
 
-	if (PGMARM7LOGERROR)
-		logerror("%s M68K: ARM7 Shared RAM Write: %04x = %04x (%04x)\n", machine().describe_context(), BYTE_XOR_LE(offset), data, mem_mask);
+	LOGPROT("%s M68K: ARM7 Shared RAM Write: %04x = %04x (%04x)\n", machine().describe_context(), BYTE_XOR_LE(offset), data, mem_mask);
 	COMBINE_DATA(&share16[BYTE_XOR_LE(offset)]);
 }
 
@@ -109,20 +101,21 @@ void pgm_arm_type2_state::kov2_mem(address_map &map)
 {
 	pgm_mem(map);
 	map(0x100000, 0x5fffff).bankr("bank1"); /* Game ROM */
-	map(0xd00000, 0xd0ffff).rw(FUNC(pgm_arm_type2_state::arm7_ram_r), FUNC(pgm_arm_type2_state::arm7_ram_w)); /* ARM7 Shared RAM */
-	map(0xd10000, 0xd10001).rw(FUNC(pgm_arm_type2_state::arm7_latch_68k_r), FUNC(pgm_arm_type2_state::arm7_latch_68k_w)); /* ARM7 Latch */
+	map(0xd00000, 0xd0ffff).mirror(0x0e0000).rw(FUNC(pgm_arm_type2_state::arm7_ram_r), FUNC(pgm_arm_type2_state::arm7_ram_w)); /* ARM7 Shared RAM */
+	map(0xd10000, 0xd10001).mirror(0x0e0000).rw(FUNC(pgm_arm_type2_state::arm7_latch_68k_r), FUNC(pgm_arm_type2_state::arm7_latch_68k_w)); /* ARM7 Latch */
 }
 
 
 void pgm_arm_type2_state::_55857F_arm7_map(address_map &map)
 {
 	map(0x00000000, 0x00003fff).rom();
-	map(0x08000000, 0x083fffff).rom().region("user1", 0);
+	map(0x08000000, 0x083fffff).rom().region("prot_data", 0);
 	map(0x10000000, 0x100003ff).ram();
 	map(0x18000000, 0x1800ffff).ram().share("arm_ram");
 	map(0x38000000, 0x38000003).rw(FUNC(pgm_arm_type2_state::arm7_latch_arm_r), FUNC(pgm_arm_type2_state::arm7_latch_arm_w)); /* 68k Latch */
 	map(0x48000000, 0x4800ffff).rw(FUNC(pgm_arm_type2_state::arm7_shareram_r), FUNC(pgm_arm_type2_state::arm7_shareram_w)).share("arm7_shareram");
-	map(0x50000000, 0x500003ff).ram();
+	map(0x50000000, 0x500003ff).ram(); // uploads xor table to decrypt ARM rom here
+	//map(0xf0000004, 0xf0000007) unknown writes, decrypt related?
 }
 
 /******* ARM 55857F *******/
