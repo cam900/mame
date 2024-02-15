@@ -16426,8 +16426,12 @@ galaxiac                        // (c) 1979
 quasar                          // (c) 1980 Zelco Games Italy
 quasara                         // (c) 1980 Zelco Games Italy
 
-@source:cxg/ch2001.cpp
+@source:cxg/chess2001.cpp
 ch2001
+
+@source:cxg/computachess.cpp
+scptchess
+scptchessa
 
 @source:cxg/dominator.cpp
 scmder
@@ -16436,9 +16440,8 @@ sgalaxy
 sgalaxya
 sgalaxyb
 
-@source:cxg/scptchess.cpp
-scptchess
-scptchessa
+@source:cxg/professor.cpp
+scprof
 
 @source:cxg/senterprise.cpp
 senterp
@@ -19478,6 +19481,9 @@ mk1forth                        // (c) 2003 Andrew Holme
 
 @source:homebrew/p112.cpp
 p112                            //
+
+@source:homebrew/pc532.cpp
+pc532
 
 @source:homebrew/phunsy.cpp
 phunsy                          //
@@ -27026,6 +27032,9 @@ act5a                           //
 @source:microterm/mt420.cpp
 mt420                           //
 
+@source:microterm/mt440.cpp
+mt440                           // (c) 1986 Micro-Term
+
 @source:microterm/mt5510.cpp
 mt5510                          //
 
@@ -30173,6 +30182,7 @@ ngolda                          // 198? Unknown
 ngoldb                          // 198? Unknown
 olym65bj                        // (c) 1989 Olympic Video Gaming PTY LTD
 olym65wc                        // (c) 1989 Olympic Video Gaming PTY LTD
+op5cards                        // (c) 1987 MNG
 pmpoker                         // (c) 1981 PlayMan
 poker91                         // 1991, Unknown
 pokerdub                        // 198?, Unknown
@@ -38525,6 +38535,9 @@ edames
 @source:saitek/exechess.cpp
 exechess
 
+@source:saitek/gk2000.cpp
+gk2000
+
 @source:saitek/intchess.cpp
 intchess
 
@@ -38587,6 +38600,9 @@ conquist
 t1850
 tmate
 turbo16k
+
+@source:saitek/turbos24k.cpp
+turbos24k
 
 @source:samcoupe/samcoupe.cpp
 samcoupe                        // 1989 Sam Coupe
@@ -40967,6 +40983,7 @@ funcube4                        // (c) 2001 Namco
 funcube5                        // (c) 2002 Namco
 grdians                         // (c) 1995 Banpresto
 grdiansa                        // (c) 1995 Banpresto
+grdiansbl                       // bootleg
 gundamex                        // (c) 1994 Banpresto
 mj4simai                        // (c) 1996 Maboroshi Ware
 myangel                         // (c) 1996 Namco
@@ -41066,6 +41083,7 @@ galeb                           //
 hr84                            //
 
 @source:sfrj/idpartner.cpp
+partnerw                        // Iskra Delta Partner
 partner1fg                      // Iskra Delta Partner 1F/G
 partnerwfg                      // Iskra Delta Partner WF/G
 
@@ -43528,9 +43546,10 @@ sidebsja                        // 1996.07 E23 (c) 1996 Taito Corporation (Japan
 sidebsjb                        // 1996.07 E23 (c) 1996 Taito Corporation (Japan) - Ver 2.5 J
 
 @source:taito/taitopjc.cpp
-optiger                         // 1998.09 E63 (c) 1998 Taito Corporation - Ver 2.14 O
+optiger                         // 1998.10 E63 (c) 1998 Taito Corporation - Ver 2.14 O
 optigera                        // 1998.09 E63 (c) 1998 Taito Corporation - Ver 2.10 O
 optigerj                        // 1998.09 E63 (c) 1998 Taito Corporation - Ver 2.09 J
+optigersm                       // 1999.02 E63 (c) 1998 Taito Corporation - Second Mission Ver 2.02 J
 
 @source:taito/taitosj.cpp
 alpine                          // RH  (c) 1982 Taito Corporation
@@ -46005,6 +46024,9 @@ dx100                           //
 
 @source:yamaha/ymmu5.cpp
 mu5                             // 1994 MU-5
+
+@source:yamaha/ymmu15.cpp
+mu15
 
 @source:yamaha/ymmu50.cpp
 mu50                            // 1995 MU-50
