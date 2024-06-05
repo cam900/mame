@@ -15,7 +15,7 @@ Hardware has similarities with that of various Nichibutsu games of the same era.
 
 TODO:
 - what is the 24-pin chip marked Z4? Same is present on Clash Road. Maybe some kind of protection?
-  Reads area $6000-$61ff on player life loss. Game seems to be working but left as MIP since it isn't
+  Reads area $6000-$61ff on player life loss. Game seems to be working but left as MUP since it isn't
   currently known what is affected, if anything.
 - input reading isn't correct (see weird coinage DIPs);
 - colors need checking on real hardware (available pics are possibly taken with wrong RGB hookup);
@@ -96,12 +96,6 @@ private:
 	void sound_map(address_map &map);
 };
 
-
-/***************************************************************************
-
-  Convert the color PROMs into a more useable format.
-
-***************************************************************************/
 
 void shettle_state::palette_init(palette_device &palette) const
 {
@@ -471,4 +465,4 @@ ROM_END
 } // anonymous namespace
 
 
-GAME( 1984, shettle, 0,      shettle, shettle, shettle_state, empty_init, ROT90, "New Digimatic", "Alone Shettle Crew", MACHINE_UNEMULATED_PROTECTION | MACHINE_IMPERFECT_COLORS | MACHINE_NO_COCKTAIL | MACHINE_SUPPORTS_SAVE )
+GAME( 1984, shettle, 0,      shettle, shettle, shettle_state, empty_init, ROT90, "New Digimatic", "Alone Shettle Crew", MACHINE_UNEMULATED_PROTECTION | MACHINE_NO_COCKTAIL | MACHINE_SUPPORTS_SAVE )

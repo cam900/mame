@@ -16146,6 +16146,9 @@ cncchess2
 @source:chess/conic_cchess3.cpp
 cncchess3
 
+@source:chess/krypton_regency.cpp
+regency
+
 @source:chess/regence.cpp
 regence
 
@@ -19435,6 +19438,7 @@ h19                             // Heath H19
 @source:heathzenith/h89.cpp
 h89                             // Heath H89 (WH89)
 h88                             // Heath H88 (with cassette tape)
+h89_mms                         // Heath H89 with Magnolia MicroSystems(MMS) hardware
 h89_sigmasoft                   // H89 with the SigmaSoft IGC card
 z90                             // Zenith Z-90
 
@@ -19804,6 +19808,9 @@ hp9845b_de                      //
 hp9845c_de                      //
 hp9845t_de                      //
 
+@source:hp/hp98x6.cpp
+hp9816a                         //
+
 @source:hp/hp9k.cpp
 hp9816                          //
 
@@ -19983,6 +19990,8 @@ cmtetrisd                       //
 cmtetriskr                      //
 cmv4                            // (c) 1992 Dyna Electronics
 cmv4a                           // (c) 1992 Dyna Electronics
+cmv4zg                          // hack
+cmv4zga                         // hack
 cmv801                          // (c) 198? Corsica
 cmwm                            // (c) 199? Dyna Electronics
 crazybon                        // (c) 199? Sang Ho
@@ -24435,6 +24444,7 @@ nyanpani                        // GX712 (c) 1988 (Japan)
 rf2                             // GX561 (c) 1985
 salamand                        // GX587 (c) 1986
 salamandj                       // GX587 (c) 1986
+salamandt                       // GX597 (c) 1986 (Tecfri)
 twinbee                         // GX412 (c) 1985
 twinbeeb                        // Bubble System
 
@@ -30166,6 +30176,7 @@ gtsers3                         // (c) 1984 Greyhound Electronics
 gtsers4                         // (c) 1984 Greyhound Electronics
 gtsers5                         // (c) 1985 Greyhound Electronics
 gtsers7                         // (c) 1985 Greyhound Electronics
+gtsers7a                        // (c) 1985 Greyhound Electronics
 gtsers8                         // (c) 1984 Greyhound Electronics
 gtsers8a                        // (c) 1984 Greyhound Electronics
 gtsers9                         // (c) 1984 Greyhound Electronics
@@ -34815,6 +34826,7 @@ bubl2000                        // (c) 1998 Tuning
 bubl2000a                       // (c) 1998 Tuning
 cactus                          // bootleg
 dolmen                          // (c) 1995
+dolmenk                         // (c) 1995
 firehawk                        // (c) 2001 ESD
 firehawkv                       // (c) 2001 ESD
 grdnstrm                        // (c) 1998 Apples Industries license
@@ -36791,6 +36803,7 @@ ind250cc                        //
 indunkgam                       //
 lapbylap                        //
 larana                          //
+larana2                         //
 mundial                         //
 pinclown                        //
 pinmoonl                        //
@@ -41834,6 +41847,7 @@ dual68                          //
 e100                            //
 
 @source:skeleton/easy_karaoke.cpp
+bkarast
 easykara
 karams
 karatvst
@@ -42091,7 +42105,10 @@ mtd1256                         //
 mw4pole                         // (c) 1995 Waldorf Electronics GmbH Germany
 
 @source:skeleton/mx2178.cpp
-mx2178                          //
+mx2178                          // (c) 1984 Memorex
+
+@source:skeleton/mx3210.cpp
+mx3210                          // (c) 1994 Xyplex Inc.
 
 @source:skeleton/mycom.cpp
 mycom                           //
@@ -42240,6 +42257,9 @@ squale                          //
 
 @source:skeleton/sterz80.cpp
 tongzi
+
+@source:skeleton/swunktarot.cpp
+unktarot
 
 @source:skeleton/swyft.cpp
 swyft                           //
@@ -42835,6 +42855,7 @@ treamary
 wtrnymph                        // (c) 1996 Subsino
 xiaoao
 xplan                           // (c) 2006 Subsino
+xreel
 xtrain                          // (c) 1999 Subsino
 
 @source:sun/sun1.cpp
@@ -44825,8 +44846,9 @@ wardnerjb                       // bootleg
 kisssite
 
 @source:tomy/tomy_princ.cpp
-princ                           // Tomy Prin-C (Japan)
-princnt                         // Tomy Prin-C (without touch-pad)
+princnt                         // Tomy Prin-C (Japan) Rev 1
+princnt3                        // Tomy Prin-C (Japan) Rev 3
+princ                           // Tomy Prin-C Tablet (Japan)
 
 @source:tomy/tutor.cpp
 pyuuta                          // 1982 Tomy Pyuuta
