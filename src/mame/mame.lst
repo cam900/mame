@@ -20177,6 +20177,7 @@ tjsb                            // (c) 1997
 
 @source:igs/igs_fear.cpp
 fearless                        // (c) 2006
+superkds
 
 @source:igs/igs_m027.cpp
 amazoni2                        // (c) 2002
@@ -38519,6 +38520,8 @@ vp111                           // 1977 Cosmac VIP VP-111
 
 @source:recfranco/rf51w14cg.cpp
 rf51w14cg                       // (c) 2003 Recreativos Franco
+rfsantafem                      // (c) 1995 Recreativos Franco
+rfsantafema                     // (c) 1995 Recreativos Franco
 
 @source:recfranco/rfjailbrk.cpp
 rfjailbrk                       // (c) 2000 Recreativos Franco
@@ -38823,6 +38826,9 @@ tstar432
 tstar432a
 tstar432b
 
+@source:saitek/tatrain.cpp
+tatrain
+
 @source:saitek/turbo16k.cpp
 compan3
 conquist
@@ -38928,10 +38934,6 @@ mineswpr4                       // [1977 Amutech]
 
 @source:sega/calcune.cpp
 calcune
-
-@source:sega/calorie.cpp
-calorie                         // (c) 1986 Sega
-calorieb                        // (c) 1986 Sega (but bootleg)
 
 @source:sega/chihiro.cpp
 ccfboxa                         // 2009.03.31 Firmware Update For Compact Flash Box (Rev A)
@@ -41653,6 +41655,9 @@ zx80                            // 1980 Sinclair ZX-80
 zx81                            // 1981 Sinclair ZX-81
 zx97                            //
 
+@source:sinclair/specnext.cpp
+tbblue                          // ZX Spectrum Next: TBBlue
+
 @source:skeleton/600cat.cpp
 600cat                          //
 
@@ -42029,6 +42034,9 @@ lilith                          //
 
 @source:skeleton/lms46.cpp
 lms46                           //
+
+@source:skeleton/madmoney2.cpp
+madmoney2                       // (c) 1988 Picmatic
 
 @source:skeleton/mes.cpp
 mes                             //
@@ -44267,6 +44275,8 @@ bombjack                        // (c) 1984 Tehkan
 bombjack2                       // (c) 1984 Tehkan
 bombjackbl                      // bootleg
 bombjackt                       // (c) 1984 Tehkan + Tecfri license
+calorie                         // (c) 1986 Sega
+calorieb                        // (c) 1986 Sega (but bootleg)
 
 @source:tecmo/gaiden.cpp
 drgnbowl                        // (c) 1992 Nics
