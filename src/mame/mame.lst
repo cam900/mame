@@ -1411,6 +1411,7 @@ arcadecl                        // (proto)          (c) 1992
 sparkz                          // (proto)          (c) 1992
 
 @source:atari/asteroid.cpp
+aerolitol                       // Pasatiempos Laguna bootleg
 aerolitos                       // Rodmar Elec. bootleg
 astdelux                        // 0351xx           (c) 1980
 astdelux1                       // 0351xx           (c) 1980
@@ -2371,6 +2372,7 @@ sv8000                          // Super Vision 8000
 tama                            // Bandai
 
 @source:bandai/wswan.cpp
+pockchv2                        // Benesse Pocket Challenge V2
 wscolor                         // Bandai WonderSwan Color Handheld
 wswan                           // Bandai WonderSwan Handheld
 
@@ -9151,6 +9153,12 @@ bebox2                          // BeBox Dual603-133
 
 @source:beehive/microb.cpp
 dm3270                          //
+
+@source:benesse/challenge_gear.cpp
+chalgear
+
+@source:benesse/pockchal.cpp
+pockchal
 
 @source:bfm/bfcobra.cpp
 beeline                         // 1991 BFM
@@ -18052,6 +18060,7 @@ feasglab                        //
 feag                            //
 feag2100                        //
 feag2100a                       //
+feagp                           //
 fpres                           //
 fpresa                          //
 fpresb                          //
@@ -21339,6 +21348,14 @@ xmultiplm72                     // (c) 1989 (Japan)
 @source:irem/m78.cpp
 bj92
 
+@source:irem/m80.cpp
+matchit                         // (c) 1989 Tamtex
+matchitb                        // bootleg
+shisen                          // (c) 1989 Tamtex
+shisena                         // (c) 1989 Tamtex
+sichuan2                        // bootleg
+sichuan2a                       // bootleg
+
 @source:irem/m90.cpp
 atompunk                        // (c) 1991 Irem America (licensed from Hudson Soft)
 bbmanw                          // (c) 1992 Irem (World)
@@ -21423,12 +21440,6 @@ demoneye                        // M27 (c) 1981
 panther                         // M27 no copyright notice
 redalert                        // M27 (c) 1981 + "GDI presents"
 ww3                             // M27 (c) 1981
-
-@source:irem/shisen.cpp
-matchit                         // (c) 1989 Tamtex
-shisen                          // (c) 1989 Tamtex
-sichuan2                        // (c) 1989 Tamtex
-sichuan2a                       // (c) 1989 Tamtex
 
 @source:irem/spartanxtec.cpp
 spartanxtec
@@ -30679,7 +30690,9 @@ spotty                          // (c) 2001 Prince Co.
 @source:misc/ltcasino.cpp
 ltcasin2                        // (c) 1984 Digital Controls Inc
 ltcasin2a                       // (c) 1984 Digital Controls Inc
+ltcasin2b                       // (c) 1984 Digital Controls Inc
 ltcasino                        // (c) 1982 Digital Controls Inc
+ltcasinoa                       // (c) 1982 Digital Controls Inc
 mv4in1                          // (c) 1983 Entertainment Enterprises
 
 @source:misc/luckybal.cpp
@@ -35807,6 +35820,9 @@ onlinertp                       // (c) 200? Comatel / Atata Systems
 @source:pc/ct486.cpp
 ct486                           // 1993? 486 with CS4031
 
+@source:pc/cuttherope.cpp
+cuttherope                      // (c) 2003 ICE
+
 @source:pc/dawg.cpp
 dawg
 
@@ -36403,16 +36419,17 @@ mnfb_c27                        //
 mnfb_c29                        //
 play_a24                        //
 poto_a29                        //
-poto_a32                        //
 poto_a31                        //
+poto_a32                        //
 robo_a29                        //
 robo_a30                        //
 robo_a34                        //
 simp_a20                        //
 simp_a27                        //
 ssvc_a26                        //
-ssvc_b26                        //
 ssvc_a42                        //
+ssvc_b26                        //
+ssvc_e40                        //
 tmac_a18                        //
 tmac_a24                        //
 tmac_g18                        //
@@ -38828,6 +38845,7 @@ tstar432b
 
 @source:saitek/tatrain.cpp
 tatrain
+tatraina
 
 @source:saitek/turbo16k.cpp
 compan3
@@ -42172,9 +42190,6 @@ plan80                          //
 @source:skeleton/pm68k.cpp
 pm68k                           //
 
-@source:skeleton/pockchal.cpp
-pockchal
-
 @source:skeleton/proteus3.cpp
 proteus3                        //
 
@@ -43153,6 +43168,7 @@ eto                             // (c) 1994 Visco (Japan)
 etoa                            // (c) 1994 Visco (Japan)
 galmedes                        // (c) 1992 Visco (Japan)
 jigkmgri                        // B41 (c) 1988 Taito Corporation (Japan)
+jigkmgria
 mofflott                        // C17 (c) 1989 Taito Corporation (Japan)
 
 @source:taito/bigevglf.cpp
@@ -43331,13 +43347,13 @@ lgpalt                          // (c) 1983 Taito
 @source:taito/lkage.cpp
 bygone                          // A53 (c) 1985 Taito Corporation - prototype ?
 lkage                           // A54 (c) 1984 Taito Corporation
-lkageb                          // bootleg
-lkageb2                         // bootleg
-lkageb3                         // bootleg
-lkageb4                         // bootleg
+lkagea                          // A54 (c) 1984 Taito Corporation
+lkageb                          // A54 (c) 1984 Taito Corporation
+lkagebl1                        // bootleg
+lkagebl2                        // bootleg
+lkagebl3                        // bootleg
+lkagebl4                        // bootleg
 lkagem                          //
-lkageo                          // A54 (c) 1984 Taito Corporation
-lkageo2                         // A54 (c) 1984 Taito Corporation
 
 @source:taito/lsasquad.cpp
 daikaiju                        // A74 (c) 1986 Taito
@@ -43390,7 +43406,7 @@ othunderj                       // B67 (c) 1988 Taito Corporation (Japan)
 othunderjsc                     // B67 (c) 1988 Taito Corporation (Japan)
 othundero                       // B67 (c) 1988 Taito Corporation Japan (World)
 othunderu                       // B67 (c) 1988 Taito America Corporation (US, rev 1)
-othunderuo                      // B67 (c) 1988 Taito America Corporation (US)
+othunderua                      // B67 (c) 1988 Taito America Corporation (US)
 
 @source:taito/pitnrun.cpp
 jumpkun                         // prototype
@@ -43405,10 +43421,10 @@ shun                            // D43
 @source:taito/qix.cpp
 complexx                        // CX  (c) 1984 Taito America Corporation
 elecyoyo                        // YY  (c) 1982 Taito America Corporation
-elecyoyo2                       // YY  (c) 1982 Taito America Corporation
+elecyoyoa                       // YY  (c) 1982 Taito America Corporation
 kram                            // KS  (c) 1982 Taito America Corporation
-kram2                           // KS  (c) 1982 Taito America Corporation
-kram3                           // KS  (c) 1982 Taito America Corporation
+krama                           // KS  (c) 1982 Taito America Corporation
+krame                           // KS  (c) 1982 Taito America Corporation
 qix                             // LK  (c) 1981 Taito America Corporation
 qix2                            // ??  (c) 1981 Taito America Corporation
 qixa                            // LK  (c) 1981 Taito America Corporation
@@ -43970,16 +43986,16 @@ topspeedu                       // B14 (c) 1987 Taito America Corporation (US)
 @source:taito/tsamurai.cpp
 alphaxz                         // AZ  (c) 1986 Ed/Wood Place
 ladymstr                        // A49 (c) 1985 Taito
-ladymstr2                       // A49 (c) 1985 Taito
+ladymstra                       // A49 (c) 1985 Taito
 m660                            // ??? (c) 1986 Taito America Corporation
 m660b                           // bootleg
 m660j                           // ??? (c) 1986 Taito Corporation (Japan)
 nunchaku                        // ??? (c) 1985 Taito
 ringfgt                         // (c) 1984 Taito
-ringfgt2                        // (c) 1984 Taito
+ringfgta                        // (c) 1984 Taito
 the26thz                        // A72 (c) 1986 Taito
 tsamurai                        // A35 (c) 1985 Taito
-tsamurai2                       // A35 (c) 1985 Taito
+tsamuraia                       // A35 (c) 1985 Taito
 tsamuraih                       // bootleg
 vsgongf                         // (c) 1984 Kaneko
 yamagchi                        // A38 (c) 1985 Taito
@@ -45240,6 +45256,7 @@ tmntbftc
 tmntmutm
 totspies
 tvsprt10                        //
+virtbb
 vtechtvsgr                      // (c) 2006 VTech
 vtechtvssp                      // (c) 2006 VTech
 wfcentro
@@ -46131,6 +46148,9 @@ inteladv
 @source:vtech/iqunlim.cpp
 iqunlim                         // (c) 1995 Vtech / Integrated Systems Inc.
 iqunlimgr                       // (c) 1995 VTech / Integrated Systems Inc.
+
+@source:vtech/kidsupstar.cpp
+kidsupstar                      // (c) 2016 VTech
 
 @source:vtech/laser3k.cpp
 las3000                         // 1983 Laser 3000
