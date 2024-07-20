@@ -936,6 +936,8 @@ maclc580                        // April 3, 1995 Apple Macintosh LC/Performa 580
 
 @source:apple/macquadra700.cpp
 macqd700                        // 1991 Apple Macintosh Quadra 700
+macqd900                        // 1991 Apple Macintosh Quadra 900
+macqd950                        // 1992 Apple Macintosh Quadra 950
 
 @source:apple/macquadra800.cpp
 macqd800                        // 1993 Apple Macintosh Quadra 800
@@ -1647,6 +1649,7 @@ atetb5205                       // (bootleg, with OKI M5205)
 atetrisbp                       //
 atetrisc                        // 136066           (c) 1989
 atetrisc2                       // 136066           (c) 1989
+link                            // (bootleg)
 
 @source:atari/avalnche.cpp
 avalnche                        // 030574           1978/04 [6502]
@@ -1992,8 +1995,11 @@ mcombata                        // bootleg
 mcombats                        // bootleg
 missile                         // 035820-035825    (c) 1980, 1 ROM update to rev 2 board
 missile1                        // 035820-035825    (c) 1980
+missile1a                       // 035808-035819    (c) 1980
 missile2                        // 035820-035825    (c) 1980
-missilea                        // bootleg (Ugames)
+missile2a                       // 035808-035819    (c) 1980
+missilea                        // 035808-035819    (c) 1980
+missilebl                       // bootleg (Ugames)
 missilem                        // hack
 suprmatk                        // (c) 1980 + (c) 1981 Gencomp
 suprmatkd                       // (c) 1980 + (c) 1981 Gencomp
@@ -15817,7 +15823,7 @@ wofabl                          // bootleg
 wofr1bl                         // bootleg
 
 @source:capcom/gng.cpp
-diamond                         // (c) 1989 KH Video (NOT A CAPCOM GAME but runs on GnG hardware)
+diamrun                         // (c) 1989 KH Video (NOT A CAPCOM GAME but runs on GnG hardware)
 gng                             // 9/1985 (c) 1985
 gnga                            // 9/1985 (c) 1985
 gngbl                           // bootleg
@@ -17792,11 +17798,12 @@ esp250c                         // 2005 Esprit Systems
 @source:esprit/executive10.cpp
 exe10102                        // 1983 Esprit Systems
 
-@source:excalibur/igor.cpp
-igor
-
 @source:excalibur/ivant.cpp
+igor
 ivant
+
+@source:excalibur/ivanto.cpp
+ivanto
 
 @source:excalibur/mirage.cpp
 emirage
@@ -23826,8 +23833,10 @@ popnmt                          // GQ976 (c) 2000 (Japan)
 popnmt2                         // GQ976 (c) 2000 (Japan)
 popnanm                         // GQ987 (c) 2000 (Japan)
 popnanma                        // GQ987 (c) 2000 (Japan)
-popnanm2                        // GEA02 (c) 2001 (Japan)
-popnanm2a                       // GEA02 (c) 2001 (Japan)
+popnanm2                        // GEA02 (c) 2001 (Japan JAC)
+popnanm2a                       // GEA02 (c) 2001 (Japan JAC)
+popnanm2ja                      // GEA02 (c) 2001 (Japan JAA)
+popnanm2jaa                     // GEA02 (c) 2001 (Japan JAA)
 ppd                             // GQ977 (c) 2000 (Korea)
 ppp                             // GQ977 (c) 2000 (Japan)
 ppp11                           // GQ977 (c) 2000 (Japan)
@@ -24811,7 +24820,6 @@ mocapglf                        // 2001
 p911                            // 2000
 p9112                           // 2001
 p911ac                          // 2000
-p911ea                          // 2000
 p911ed                          // 2000
 p911j                           // 2000
 p911k                           // 2000
@@ -24824,15 +24832,11 @@ sscopefh                        // 2002
 sscopex                         // 2001
 thrild2                         // 2001
 thrild2a                        // 2001
-thrild2ab                       // 2001
-thrild2ac                       // 2001
 thrild2c                        // 2001
 thrild2j                        // 2001
 tsurugi                         // 2001
-tsurugie                        // 2001
 tsurugij                        // 2001
 wcombat                         // 2002
-wcombatb                        // 2002
 wcombatj                        // 2002
 wcombatk                        // 2002
 wcombatu                        // 2002
@@ -27033,9 +27037,9 @@ chkndrawa                       // (c) 1984 Merit
 couple                          // (c) 1988 Merit
 couplei                         // (c) 1988 Merit
 couplep                         // (c) 1988 Merit
-dodgectya                       // (c) 1988 Merit
-dodgectyb                       // (c) 1989 Merit
-dodgectyc                       // (c) 1989 Merit
+dodgectyba                      // (c) 1988 Merit
+dodgectybb                      // (c) 1989 Merit
+dodgectybc                      // (c) 1989 Merit
 dtrvwz5                         // (c) 1987 Merit
 dtrvwz5v                        // (c) 1987 Merit
 housecard                       // (c) 1983 Merit
@@ -27090,11 +27094,13 @@ ma7551t                         // (c) 199? Merit
 ma7556                          // (c) 199? Merit
 ma7558                          // (c) 199? Merit
 ma8350                          // (c) 199? Merit
+ma9800                          // (c) 199? Merit
 
 @source:merit/meritm.cpp
 americna                        // (c) 1987 Merit
 americnaa                       // (c) 1987 Merit
 dodgecty                        // (c) 1988 Merit
+dodgectya                       // (c) 1988 Merit
 megat                           // (c) 1994 Merit
 megat2                          // (c) 1994 Merit
 megat2a                         // (c) 1994 Merit
@@ -33064,6 +33070,7 @@ gamsharao                       // 2002.08 Gamshara (10021 Ver.A)
 gegemdb                         // 2007.12 Gegege no Kitarō Yōkai Yokochō Matsuri de Battle Ja (GYM1 Ver.A)
 gjspace                         // 2001.12 GekiToride-Jong Space (10011 Ver.A)
 gunbalina                       // 2000.12 Gunbalina (GNN1 Ver.A)
+ippo2                           // 2002.01 Hard Puncher Hajime no Ippo 2 - The Fighting - Ouja e no chousen (VER.2.00J)
 kd2001                          // 2001.11 Knock Down 2001 (KD11 Ver.B)
 keroro                          // 2006.08 Keroro Gunsou: Pekopon Shinryaku Shirei...De Arimasu! (KRG1 Ver.A)
 knpuzzle                        // 2001.12 Kotoba no Puzzle Mojipittan (KPM1 Ver.A)
@@ -33332,7 +33339,8 @@ qncrasha                        // (c) 1999 Namco
 commsega                        // (c) 1983 Sega
 cottong                         // bootleg
 dngrtrck                        // Petaco bootleg
-gutangtn                        // GX359 (c) 1982 Konami + Sega license
+gutangtn                        // GX359 (c) 1982 Konami
+gutangtns                       // GX359 (c) 1982 Konami + Sega license
 jackler                         // 1 9 8 2 (Jungler Bootleg)
 jungler                         // GX327 (c) 1981 Konami
 junglero                        // Olympia license
@@ -35044,6 +35052,9 @@ supremo
 @source:novag/robotadv.cpp
 robotadv
 
+@source:novag/sapphire.cpp
+sapphire
+
 @source:novag/savant.cpp
 savant                          //
 savant2                         //
@@ -35106,7 +35117,7 @@ speedrs
 
 @source:olympia/monzagp.cpp
 monzagp                         // (c) 1981 Olympia
-monzagpb                        // bootleg
+monzagpa                        // (c) 1981 Olympia
 
 @source:olympia/portrait.cpp
 portrait                        // (c) 1983 Olympia
@@ -38927,9 +38938,12 @@ mbc55x                          // Sanyo MBC-550, MBC-555
 @source:sanyo/mbc200.cpp
 mbc200                          //
 
+@source:sanyo/phc20.cpp
+phc20                           // Sanyo PHC-20
+
 @source:sanyo/phc25.cpp
-phc25                           //
-phc25j                          //
+phc25                           // Sanyo PHC-25 (Europe)
+phc25j                          // Sanyo PHC-25 (Japan)
 
 @source:saturn/st17xx.cpp
 st1700h                         //
@@ -40355,6 +40369,7 @@ newufo_sonic                    //
 newufo_xmas                     //
 ufo21                           //
 ufo800                          //
+ufoalac                         //
 ufomini                         //
 
 @source:sega/segaufoh8.cpp
@@ -40864,9 +40879,10 @@ cshooter                        // (c) 1987 JKH (bootleg)
 failgate                        // (c) 1991 Seibu Kaihatsu
 
 @source:seibu/banprestoms.cpp
-marioun                         //
-tvdenwad                        //
-tvdenwam                        //
+marioun                         // (c) 1993
+tvdenwad                        // (c) 1991
+tvdenwam                        // (c) 1992
+tvdenwat                        // (c) 1992
 
 @source:seibu/bloodbro.cpp
 bloodbro                        // (c) 1990 Tad
@@ -41148,6 +41164,11 @@ prpht600                        // 1983 Sequential Circuits
 
 @source:seta/albazc.cpp
 hanaroku                        // (c) 1988 Alba
+
+@source:seta/champbwl.cpp
+champbwl                        // (c)1989 Romstar
+champbwla                       // (c)1989 Romstar
+doraemon                        // Sunsoft / Epoch / Fujiko - Shogakukan - TV Asahi (prototype)
 
 @source:seta/downtown.cpp
 arbalest                        // UK   (c) 1989 + Jordan, Romstar or Taito license (DSW)
@@ -41856,6 +41877,11 @@ ds348                           // Sigtron Daruma
 datacast                        //
 
 @source:skeleton/design.cpp
+azkoyent12                      // (c) Azkoyen
+azkoyent6                       // (c) Azkoyen
+azkoyent61                      // (c) Azkoyen
+azkoyent61a                     // (c) Azkoyen
+azkoyent8                       // (c) Azkoyen
 design6                         // (c) Azkoyen
 designe                         // (c) Azkoyen
 
@@ -42424,6 +42450,9 @@ vectrix                         // (c) 19?? Olympia?
 @source:skeleton/vp415.cpp
 vp415                           // (c) 1983 Philips
 
+@source:skeleton/webtouchone.cpp
+wto2840sp                       //
+
 @source:skeleton/xbase09.cpp
 xbase09                         //
 
@@ -42594,7 +42623,7 @@ ikari3u                         // A7007 'IK3'(c) 1989
 ikari3w                         // A7007 'IK3'(c) 1989
 pow                             // A7008 'DG' (c) 1988
 powa                            // A7008 'DG' (c) 1988
-powb                            // bootleg
+powbl                           // bootleg
 powj                            // A7008 'DG' (c) 1988
 searchar                        // A8007 'BH' (c) 1989
 searcharj                       // A8007 'BH' (c) 1989
@@ -42603,6 +42632,7 @@ streetsm                        // A8007 'S2' (c) 1989
 streetsm1                       // A7008 'S2' (c) 1989
 streetsmj                       // A8007 'S2' (c) 1989
 streetsmw                       // (c) 1989
+streetsmwbl                     // bootleg
 
 @source:sony/betacam.cpp
 uvw1200                         // 199? Sony Betacam-SP UVW-1200
@@ -43255,11 +43285,6 @@ cchance                         // (c)1987 Taito?
 
 @source:taito/chaknpop.cpp
 chaknpop                        // AO4 (c) 1983 Taito Corporation
-
-@source:taito/champbwl.cpp
-champbwl                        // (c)1989 Romstar.  not Taito, but the same Seta video chips
-champbwla                       // (c)1989 Romstar.  not Taito, but the same Seta video chips
-doraemon                        // Sunsoft / Epoch / Fujiko - Shogakukan - TV Asahi (prototype)
 
 @source:taito/changela.cpp
 changela                        // ??? (c) 1983 Taito Corporation
@@ -44336,7 +44361,6 @@ shadowwa                        // 6215 - (c) 1988 Tecmo (World)
 stratof                         // (c) 1991 Tecmo
 tknight                         // (c) 1989 Tecmo
 wildfang                        // (c) 1989 Tecmo
-wildfangh                       // (c) 1991? Tecmo?
 wildfangs                       // (c) 1989 Tecmo
 
 @source:tecmo/lvcards.cpp
@@ -44730,8 +44754,8 @@ gamecom                         // Tiger Game.com
 @source:tiger/k28.cpp
 k28
 
-@source:tiger/k28m2.cpp
-k28m2
+@source:tiger/k28o.cpp
+k28o
 
 @source:tiger/pylo.cpp
 pylo
@@ -45488,9 +45512,11 @@ ekaramix                        //
 ekaraphs                        //
 ekaras                          //
 epitch                          //
+epo_crok
 epo_dmon                        //
 epo_efdx                        //
 epo_epp                         //
+epo_epp2
 epo_epp3                        //
 epo_eppk                        //
 epo_esdx                        //
@@ -45500,6 +45526,7 @@ epo_tfp2                        //
 evio                            //
 gcslottv                        //
 gungunad                        //
+gungunrv
 has_wamg                        //
 hikara                          //
 jarajal                         //
@@ -45541,6 +45568,7 @@ taitons2                        //
 tak_geig                        //
 tcarnavi                        //
 tomcpin                         //
+tomshoot                        //
 tomplc                          //
 tvpc_dor
 tvpc_tom
