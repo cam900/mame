@@ -17973,13 +17973,6 @@ ts2624                          // 1982
 @source:falco/falcots28.cpp
 ts28                            // 1983
 
-@source:fidelity/as12.cpp
-feleg
-felega
-felega1
-felega2
-felega3
-
 @source:fidelity/bridgeb.cpp
 bridgeb
 
@@ -18059,6 +18052,13 @@ premiere                        //
 
 @source:fidelity/eldorado.cpp
 feldo
+
+@source:fidelity/elegance.cpp
+feleg
+felega
+felega1
+felega2
+felega3
 
 @source:fidelity/elite.cpp
 feag                            //
@@ -20198,6 +20198,7 @@ tjsb                            // (c) 1997
 
 @source:igs/igs_fear.cpp
 fearless                        // (c) 2006
+icescape                        // (c) 2006
 superkds
 
 @source:igs/igs_m027.cpp
@@ -20205,23 +20206,33 @@ amazoni2                        // (c) 2002
 amazonia                        // (c) 1999
 amazonkp                        // (c) 1999
 chessc2                         // (c) 200?
-crzybugs                        // (c) 200?
+crzybugs                        // (c) 2009
+crzybugsa                       // (c) 2006
+crzybugsb                       // (c) 2005
+crzybugsj                       // (c) 2007
 extradrw                        // (c) 200?
 fruitpar                        // (c) 200?
 gonefsh2                        // (c) 200?
-haunthig                        // (c) 200?
+haunthig                        // (c) 2008
+haunthiga                       // (c) 2006
+jking02                         // (c) 200?
 klxyj                           // (c) 200?
 lhzb3                           // (c) 200?
 lhzb4                           // (c) 200?
+luckycrs                        // (c) 200?
 mgcs3                           // (c) 200?
 mgfx                            // (c) 200?
 mgzz                            // (c) 2003
 oceanpar                        //
 oceanpara                       //
+olympic5                        // (c) 2005
+olympic5a                       // (c) 2003
 qlgs                            // (c) 1999
 sddz                            // (c) 200?
 sdwx                            // (c) 2002
 slqz3                           // (c) 1999
+tripfev                         // (c) 2006
+wldfruit                        // (c) 200?
 zhongguo                        // (c) 2000
 
 @source:igs/igs_m036.cpp
@@ -20461,6 +20472,7 @@ kov3hd101
 
 @source:igs/spoker.cpp
 3super8                         // unknown
+jb200us                         // (c) 1997 IGS
 spk100                          // (c) 1996 IGS
 spk102ua                        // (c) 1996 IGS
 spk114it                        // (c) 199? IGS
@@ -35420,7 +35432,7 @@ rocktrv2                        // (c) 1986 Triumph Software Inc
 shootbul                        // (c) 1985 Bally Midway
 sprglbpg                        // German bootleg
 sprglobp                        // (c) 1983 Epos Corporation
-sprglobp2                       // (c) 1983 Epos Corporation
+sprglobp2                       // bootleg
 superabc                        // hack
 superabco                       // hack
 theglobme                       // (c) 1983 Magic Electronics
@@ -41803,6 +41815,9 @@ bitgrphb                        //
 
 @source:skeleton/bolsaint.cpp
 bolsaint                        // (c) 2000 Sleic/Petaco
+
+@source:skeleton/boo.cpp
+boo1000
 
 @source:skeleton/bpmmicro.cpp
 bp1200                          // (c) 1991 BP Microsystems
