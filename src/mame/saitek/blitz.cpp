@@ -41,7 +41,7 @@ TODO:
 
 #include "cpu/h8/h8325.h"
 #include "machine/sensorboard.h"
-#include "sound/spkrdev.h"
+#include "sound/dac.h"
 #include "video/pwm.h"
 
 #include "screen.h"
@@ -81,7 +81,7 @@ private:
 	required_device<sensorboard_device> m_board;
 	required_device<pwm_display_device> m_led_pwm;
 	required_device<pwm_display_device> m_lcd_pwm;
-	required_device<speaker_sound_device> m_dac;
+	required_device<dac_1bit_device> m_dac;
 	required_ioport m_inputs;
 	output_finder<4, 22> m_out_lcd;
 
@@ -242,7 +242,7 @@ u8 blitz_state::p6_r()
 void blitz_state::p6_w(u8 data)
 {
 	// P62: speaker out
-	m_dac->level_w(BIT(data, 2));
+	m_dac->write(BIT(data, 2));
 
 	// P60: 74164(1) CP
 	// P61: 74164(1) DSB, outputs to input mux / LED data
@@ -251,7 +251,7 @@ void blitz_state::p6_w(u8 data)
 	m_led_pwm->write_mx(m_inp_mux);
 
 	// P64: 74164(2) CP
-	// P65: 74164(2) DSB, output to LCD commons
+	// P65: 74164(2) DSB, output to LCD common
 	if (~m_port6 & data & 0x10)
 		m_lcd_com = m_lcd_com << 1 | BIT(data, 5);
 
@@ -266,7 +266,7 @@ void blitz_state::p6_w(u8 data)
 *******************************************************************************/
 
 // mode dial, rotary switch with 12 stops (duplicate halves)
-// 1: ready, 2: options, 3: info, 4: game, 5: set up, 6: level
+// ready, options, info, game, set up, level
 static const ioport_value mode_dial[6] = { 5, 1, 2, 4, 6, 3 };
 
 // shuttle dial, free running dial with 6 magnets and 2 reed switches
@@ -274,8 +274,8 @@ static const ioport_value shuttle_dial[4] = { 0, 1, 3, 2 };
 
 static INPUT_PORTS_START( blitz )
 	PORT_START("IN.0")
-	PORT_BIT(0x07, 0x00, IPT_POSITIONAL_V) PORT_POSITIONS(6) PORT_WRAPS PORT_REMAP_TABLE(mode_dial) PORT_SENSITIVITY(5) PORT_KEYDELTA(1) PORT_CENTERDELTA(0) PORT_NAME("Mode Dial")
-	PORT_BIT(0x18, 0x00, IPT_POSITIONAL_H) PORT_POSITIONS(4) PORT_WRAPS PORT_REMAP_TABLE(shuttle_dial) PORT_SENSITIVITY(10) PORT_KEYDELTA(1) PORT_CENTERDELTA(0) PORT_NAME("Shuttle Dial")
+	PORT_BIT(0x07, 0x00, IPT_POSITIONAL_V) PORT_POSITIONS(6) PORT_WRAPS PORT_REMAP_TABLE(mode_dial) PORT_SENSITIVITY(6) PORT_KEYDELTA(1) PORT_CENTERDELTA(0) PORT_NAME("Mode Dial")
+	PORT_BIT(0x18, 0x00, IPT_POSITIONAL_H) PORT_POSITIONS(4) PORT_WRAPS PORT_REMAP_TABLE(shuttle_dial) PORT_SENSITIVITY(12) PORT_KEYDELTA(1) PORT_CENTERDELTA(0) PORT_NAME("Shuttle Dial")
 	PORT_BIT(0x60, IP_ACTIVE_HIGH, IPT_CUSTOM) // freq sel
 	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_UNKNOWN)
 
@@ -331,7 +331,7 @@ void blitz_state::blitz(machine_config &config)
 
 	// sound hardware
 	SPEAKER(config, "speaker").front_center();
-	SPEAKER_SOUND(config, m_dac).add_route(ALL_OUTPUTS, "speaker", 0.25);
+	DAC_1BIT(config, m_dac).add_route(ALL_OUTPUTS, "speaker", 0.25);
 }
 
 
