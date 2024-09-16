@@ -102,13 +102,13 @@ const double XTAL::known_xtals[] = {
 	  3'579'000, // 3.579_MHz_XTAL         BeebOPL
 	  3'579'545, // 3.579545_MHz_XTAL      NTSC color subcarrier, extremely common, used on 100's of PCBs (Keytronic custom part #48-300-010 is equivalent)
 	  3'579'575, // 3.579575_MHz_XTAL      Atari 2600 NTSC
+	  3'580'000, // 3.58_MHz_XTAL          Resonator - Ritam Monty
 	  3'680'000, // 3.68_MHz_XTAL          Resonator - Baud rate clock for the 6551 in the MTU-130
 	  3'686'400, // 3.6864_MHz_XTAL        Baud rate clock for MC68681 and similar UARTs
 	  3'840'000, // 3.84_MHz_XTAL          Fairlight CMI Alphanumeric Keyboard
 	  3'900'000, // 3.9_MHz_XTAL           Resonator - Used on some Fidelity boards
 	  3'932'160, // 3.93216_MHz_XTAL       Apple Lisa COP421 (197-0016A)
 	  4'000'000, // 4_MHz_XTAL             -
-	  4'028'000, // 4.028_MHz_XTAL         Sony SMC-777
 	  4'032'000, // 4.032_MHz_XTAL         GRiD Compass modem board
 	  4'096'000, // 4.096_MHz_XTAL         Used to drive OKI M9810 chips
 	  4'194'304, // 4.194304_MHz_XTAL      Used to drive MC146818 / Nintendo Game Boy
@@ -419,6 +419,7 @@ const double XTAL::known_xtals[] = {
 	 32'147'000, // 32.147_MHz_XTAL        Ampex 210+ 132-column display clock
 	 32'215'900, // 32.2159_MHz_XTAL       Sega System 32, Sega Game Gear (close to 9x NTSC subcarrier which is 32.215905Mhz
 	 32'220'000, // 32.22_MHz_XTAL         Typically used on 90's Data East PCBs
+	 32'223'800, // 32.2238_MHz_XTAL       Sony SMC-777 (~2048x NTSC line rate)
 	 32'256'000, // 32.256_MHz_XTAL        Hitachi MB-6890
 	 32'317'400, // 32.3174_MHz_XTAL       DEC VT330, VT340
 	 32'530'470, // 32.53047_MHz_XTAL      Seta 2

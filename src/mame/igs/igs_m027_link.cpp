@@ -5,8 +5,7 @@
 IGS ARM7 (IGS027A) based mahjong / gambling platform(s) with link support
 Keeping them separate from igs_m027.cpp and igs017.cpp for now.
 
-NOTE: linking between mgcs2h and mgcs2l has been verified on real hw, while linking
-between cjslh and cjsll doesn't work on real hw for some reason.
+Linking has been verified to work fine on real hardware for both games.
 
 The two dumped extension games are really similar to mgdh in igs017.cpp code-wise,
 you can get them to the wait link screen just by implementing the mgdh's IGS MUX
@@ -128,7 +127,6 @@ Notes:
 #include "cpu/arm7/arm7.h"
 #include "cpu/arm7/arm7core.h"
 #include "cpu/m68000/m68000.h"
-#include "machine/i8255.h"
 #include "machine/nvram.h"
 #include "machine/timer.h"
 #include "sound/okim6295.h"
@@ -198,6 +196,10 @@ void host_state::host_map(address_map &map)
 {
 	map(0x00000000, 0x00003fff).rom(); // Internal ROM
 	map(0x08000000, 0x0800ffff).rom().region("user1", 0); // Game ROM (does it really map here? it appears to be connected indirectly via the 025)
+
+	// TODO: IGS025?
+	//map(0x28007000, 0x28007000).w(m_igs_mux, FUNC(igs_mux_device::address_w));
+	//map(0x28007001, 0x28007001).rw(m_igs_mux, FUNC(igs_mux_device::data_r), FUNC(igs_mux_device::data_w));
 }
 
 void extension_state::cjsll_map(address_map &map)
@@ -345,11 +347,8 @@ void extension_state::cjsll(machine_config &config)
 
 	IGS025(config, "igs025", 0);
 
-	I8255A(config, "ppi");
-
 	IGS017_IGS031(config, m_igs017_igs031, 0);
-	m_igs017_igs031->set_text_reverse_bits();
-	m_igs017_igs031->set_i8255_tag("ppi");
+	m_igs017_igs031->set_text_reverse_bits(true);
 
 	SPEAKER(config, "mono").front_center();
 
