@@ -19719,6 +19719,9 @@ bml3                            //
 bml3mk2                         //
 bml3mk5                         //
 
+@source:hitachi/mbs1.cpp
+mbs1                            //
+
 @source:homebrew/4004clk.cpp
 4004clk                         //
 
@@ -27964,6 +27967,7 @@ sspeedr                         // 1979 Midway
 
 @source:midway/starrider.cpp
 starridr                        //
+starridrp3                      //
 
 @source:midway/tmaster.cpp
 tm                              // (c) 1996 Midway Games
@@ -41987,6 +41991,9 @@ trmavia                         //
 
 @source:skeleton/ckz80.cpp
 ckz80                           //
+
+@source:skeleton/cle68k.cpp
+dmndhrt                         //
 
 @source:skeleton/clxvme186.cpp
 clxvme186                       //
