@@ -7,19 +7,24 @@
  These games use the IGS027A processor.  This is an ARM7 with internal
  ROM (also used on later PGM games).
 
- In some cases the first part of the Internal ROM is execute only, and
+ In some cases the first part of the internal ROM is execute only, and
  cannot be read out with a trojan.  It hasn't been confirmed if these
  games make use of that feature.
 
- To emulate these games the Internal ROM will need dumping
+ To emulate these games the internal ROM will need dumping.
  There are at least 20 other games on this and similar platforms.
 
- Hold service on boot to access input test and sond test when
+ Hold service on boot to access input test and sound test when
  implemented.
 
  Some DIP switch settings stick in non-volatile RAM (e.g. link settings
  for Chaoji Dou Dizhu Jiaqiang Ban).  The non-volatile RAM content must
  be cleared in order for changes to these settings to apply.
+
+ Some of these games (e.g. Chaoji Dou Dizhu) refer to the Mahjong Double
+ Up button as 续玩 (literally "Continue Play"), so settings like
+ 续玩游戏 are referring to the double-up game rather than what's usually
+ called a "continue" feature.
 
  TODO:
  * I/O for remaining games
@@ -87,9 +92,11 @@ public:
 	void jking02(machine_config &config) ATTR_COLD;
 	void qlgs(machine_config &config) ATTR_COLD;
 	void lhdmg(machine_config &config) ATTR_COLD;
+	void lhzb3106c5m(machine_config &config) ATTR_COLD;
+	void lhzb3sjb(machine_config &config) ATTR_COLD;
 	void cjddz(machine_config &config) ATTR_COLD;
 	void lhzb4(machine_config &config) ATTR_COLD;
-	void lthy(machine_config &config) ATTR_COLD;
+	void lthyp(machine_config &config) ATTR_COLD;
 	void zhongguo(machine_config &config) ATTR_COLD;
 	void mgzz(machine_config &config) ATTR_COLD;
 	void oceanpar(machine_config &config) ATTR_COLD;
@@ -102,6 +109,7 @@ public:
 	void init_gonefsh2() ATTR_COLD;
 	void init_cjddz() ATTR_COLD;
 	void init_cjddzp() ATTR_COLD;
+	void init_cjddzlf() ATTR_COLD;
 	void init_zhongguo() ATTR_COLD;
 	void init_klxyj() ATTR_COLD;
 	void init_slqz3() ATTR_COLD;
@@ -113,8 +121,7 @@ public:
 	void init_mgzz() ATTR_COLD;
 	void init_mgcs3() ATTR_COLD;
 	void init_jking02() ATTR_COLD;
-	void init_lhdmg() ATTR_COLD;
-	void init_lthy() ATTR_COLD;
+	void init_lthyp() ATTR_COLD;
 	void init_luckycrs() ATTR_COLD;
 	void init_olympic5() ATTR_COLD;
 	void init_tripslot() ATTR_COLD;
@@ -161,6 +168,7 @@ private:
 
 	template <unsigned Start> void lamps_w(u8 data);
 	void mahjong_output_w(u8 data);
+	void lhzb3sjb_output_w(u8 data);
 	void jking02_output_w(u8 data);
 	void oceanpar_output_w(u8 data);
 	void tripslot_misc_w(u8 data);
@@ -169,6 +177,7 @@ private:
 
 	u32 slqz3_gpio_r();
 	u32 lhdmg_gpio_r();
+	u32 lhzb3106c5m_gpio_r();
 	void unk2_w(u32 data);
 
 	TIMER_DEVICE_CALLBACK_MEMBER(interrupt);
@@ -410,7 +419,7 @@ INPUT_PORTS_END
 INPUT_PORTS_START( mahjong_test )
 	PORT_START("TEST")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_TILT )           PORT_NAME("Hopper Switch")  // 哈巴
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE1 )       PORT_NAME("Clear")          // 清除
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE1 )       PORT_NAME("Show Credits")   // 清除    (hold to show credits/bets/wins when hidden)
 	PORT_SERVICE_NO_TOGGLE( 0x04, IP_ACTIVE_LOW )                                   // 测试
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )                                // 查帐
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN1 )                                      // 投币
@@ -518,15 +527,15 @@ INPUT_PORTS_START( slqz3_dip_switches )
 	PORT_DIPSETTING(    0x04, "1" )
 	PORT_DIPSETTING(    0x00, "1" )
 	PORT_DIPNAME( 0x10, 0x10, "Double Up Game" )           PORT_DIPLOCATION("SW2:5")          // 比倍游戏
-	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无
+	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无         (no double up game on win but can still play double up game by pressing button 3 at the bet screen)
 	PORT_DIPSETTING(    0x10, DEF_STR(On) )                                                   // 有
-	PORT_DIPNAME( 0x20, 0x20, "Double Up/Continue Play" )  PORT_DIPLOCATION("SW2:6")          // 比倍续玩
+	PORT_DIPNAME( 0x20, 0x20, "Double Up Game Name" )      PORT_DIPLOCATION("SW2:6")          // 比倍续玩
 	PORT_DIPSETTING(    0x20, "Double Up" )                                                   // 比倍
 	PORT_DIPSETTING(    0x00, "Continue Play" )                                               // 续玩
 	PORT_DIPNAME( 0x40, 0x40, "Number Type" )              PORT_DIPLOCATION("SW2:7")          // 数字型态   (affects credit and bet display)
 	PORT_DIPSETTING(    0x40, "Numbers" )                                                     // 数字       (text and digits)
 	PORT_DIPSETTING(    0x00, "Blocks" )                                                      // 方块       (pigs for credit, apples for bet, mahjong tong tiles for numbers)
-	PORT_DIPNAME( 0x80, 0x80, "Hidden Function" )          PORT_DIPLOCATION("SW2:8")          // 隐分功能   (hides credits and bets, game plays normally)
+	PORT_DIPNAME( 0x80, 0x80, "Hide Credits" )             PORT_DIPLOCATION("SW2:8")          // 隐分功能   (hides credits/bets/wins, game plays normally)
 	PORT_DIPSETTING(    0x80, DEF_STR(Off) )                                                  // 无
 	PORT_DIPSETTING(    0x00, DEF_STR(On) )                                                   // 有
 INPUT_PORTS_END
@@ -660,7 +669,7 @@ INPUT_PORTS_START( qlgs )
 	PORT_SERVICE_NO_TOGGLE( 0x04, IP_ACTIVE_LOW )                                                                                      // 測試
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )                                                                                   // 査帳
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )               PORT_CONDITION("DSW2", 0x01, EQUALS, 0x01)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE1 )              PORT_CONDITION("DSW2", 0x01, EQUALS, 0x01)  PORT_NAME("Clear")          // 清除
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE1 )              PORT_CONDITION("DSW2", 0x01, EQUALS, 0x01)  PORT_NAME("Show Credits")   // 清除  (hold to show credits/bets/wins when hidden)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN1 )                 PORT_CONDITION("DSW2", 0x01, EQUALS, 0x00)                              // 投幣
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )               PORT_CONDITION("DSW2", 0x01, EQUALS, 0x00)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_UP )                                                                                   // 上
@@ -684,7 +693,7 @@ INPUT_PORTS_START( qlgs )
 	PORT_BIT( 0x00040, IP_ACTIVE_LOW, IPT_UNKNOWN )            PORT_CONDITION("DSW2", 0x01, EQUALS, 0x00)
 	PORT_BIT( 0x0ff80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x10000, IP_ACTIVE_LOW, IPT_UNKNOWN )            PORT_CONDITION("DSW2", 0x01, EQUALS, 0x01)
-	PORT_BIT( 0x10000, IP_ACTIVE_LOW, IPT_SERVICE1 )           PORT_CONDITION("DSW2", 0x01, EQUALS, 0x00)  PORT_NAME("Clear")          // 清除
+	PORT_BIT( 0x10000, IP_ACTIVE_LOW, IPT_SERVICE1 )           PORT_CONDITION("DSW2", 0x01, EQUALS, 0x00)  PORT_NAME("Show Credits")   // 清除  (hold to show credits/bets/wins when hidden)
 	PORT_BIT( 0x20000, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT )                                                                              // 退幣
 	PORT_BIT( 0xc0000, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -733,6 +742,40 @@ INPUT_PORTS_START( lhzb3 )
 	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无         (game title not shown)
 	PORT_DIPSETTING(    0x04, DEF_STR(On) )                                                   // 有
 	PORT_DIPUNKNOWN_DIPLOC( 0x08, 0x08, "SW2:4" )                                             // not shown in test mode
+INPUT_PORTS_END
+
+INPUT_PORTS_START( lhzb3sjb )
+	PORT_INCLUDE(mahjong_kbd)
+	PORT_INCLUDE(slqz3_dip_switches)
+
+	PORT_MODIFY("TEST")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("hopper", hopper_device, line_r) // 哈巴
+	PORT_BIT( 0xc0, IP_ACTIVE_LOW, IPT_UNKNOWN )         PORT_CONDITION("DSW2", 0x08, EQUALS, 0x08)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON3 )         PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 功能
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON2 )         PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 押注
+
+	PORT_START("JOY")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0xfc, IP_ACTIVE_HIGH, IPT_CUSTOM )         PORT_CONDITION("DSW2", 0x08, EQUALS, 0x08)  PORT_CUSTOM_MEMBER(igs_m027_state, kbd_ioport_r)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_START1 )          PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 开始
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_UP )     PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 上
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN )   PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 下
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT )   PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 左
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT )  PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 右
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON1 )         PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00)  // 摸／舍
+
+	PORT_START("PPIC")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00) PORT_WRITE_LINE_MEMBER(igs_m027_state, counter_w<0>) // coin or key-in
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_CONDITION("DSW2", 0x08, EQUALS, 0x00) PORT_WRITE_LINE_MEMBER(igs_m027_state, counter_w<1>) // hopper or key-out
+
+	PORT_MODIFY("DSW2")
+	PORT_DIPNAME( 0x04, 0x04, "Show Title" )               PORT_DIPLOCATION("SW2:3")          // 机种名称
+	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无         (game title not shown)
+	PORT_DIPSETTING(    0x04, DEF_STR(On) )                                                   // 有
+	PORT_DIPNAME( 0x08, 0x08, "Control Panel" )            PORT_DIPLOCATION("SW2:4")          // 操作配线
+	PORT_DIPSETTING(    0x08, "Mahjong" )                                                     // 麻将
+	PORT_DIPSETTING(    0x00, DEF_STR(Joystick) )                                             // 娱乐
 INPUT_PORTS_END
 
 INPUT_PORTS_START( lhzb4 )
@@ -818,7 +861,7 @@ INPUT_PORTS_START( lhzb4 )
 	PORT_DIPUNKNOWN_DIPLOC( 0x80, 0x80, "SW3:8" )
 INPUT_PORTS_END
 
-INPUT_PORTS_START( lthy )
+INPUT_PORTS_START( lthyp )
 	PORT_INCLUDE(mahjong_kbd_joy)
 
 	PORT_MODIFY("TEST")
@@ -892,16 +935,16 @@ INPUT_PORTS_START( zhongguo )
 	PORT_DIPNAME( 0x08, 0x08, "Double Up Jackpot" )        PORT_DIPLOCATION("SW2:4")    // 比倍爆机
 	PORT_DIPSETTING(    0x08, "1000" )
 	PORT_DIPSETTING(    0x00, "2000" )
-	PORT_DIPNAME( 0x10, 0x10, "Double Up Function" )       PORT_DIPLOCATION("SW2:5")    // 比倍功能
+	PORT_DIPNAME( 0x10, 0x10, "Double Up Game" )           PORT_DIPLOCATION("SW2:5")    // 比倍功能
 	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                            // 无
 	PORT_DIPSETTING(    0x10, DEF_STR(On) )                                             // 有
-	PORT_DIPNAME( 0x20, 0x20, "Double Up/Continue Play" )  PORT_DIPLOCATION("SW2:6")    // 比倍续玩
-	PORT_DIPSETTING(    0x20, "Double Up" )                                             // 比倍
-	PORT_DIPSETTING(    0x00, "Continue Play" )                                         // 续玩
+	PORT_DIPNAME( 0x20, 0x20, "Double Up Game Name" )      PORT_DIPLOCATION("SW2:6")    // 比倍续玩   (changes names for double up game and Double Up/Big/Small buttons)
+	PORT_DIPSETTING(    0x20, "Double Up" )                                             // 比倍       (比倍/大/小)
+	PORT_DIPSETTING(    0x00, "Continue Play" )                                         // 续玩       (续玩/左/右)
 	PORT_DIPNAME( 0x40, 0x40, "Credit Display" )           PORT_DIPLOCATION("SW2:7")    // 萤屏计分
 	PORT_DIPSETTING(    0x40, "Numbers" )                                               // 数字       (text and digits)
 	PORT_DIPSETTING(    0x00, "Circle Tiles" )                                          // 筒子       (pigs for credits, apples for bet, mahjong tong tiles for numbers)
-	PORT_DIPNAME( 0x80, 0x80, "Hidden Function" )          PORT_DIPLOCATION("SW2:8")    // 隐分功能   (hides credits and bets, game plays normally)
+	PORT_DIPNAME( 0x80, 0x80, "Hide Credits" )             PORT_DIPLOCATION("SW2:8")    // 隐分功能   (hides credits/bets/wins, game plays normally)
 	PORT_DIPSETTING(    0x80, DEF_STR(Off) )                                            // 无
 	PORT_DIPSETTING(    0x00, DEF_STR(On) )                                             // 有
 INPUT_PORTS_END
@@ -909,14 +952,12 @@ INPUT_PORTS_END
 INPUT_PORTS_START( mgzz101cn )
 	PORT_INCLUDE(mahjong_kbd_joy)
 
-	// TODO: missing HP input shown in test mode for joystick mode
-
 	PORT_MODIFY("KEY4")
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_GAMBLE_KEYIN )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) // TODO: default assignment clashes with mahjong I, using it hangs waiting for hopper to respond
 
 	PORT_MODIFY("TEST")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("hopper", hopper_device, line_r) // 哈巴
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("hopper", hopper_device, line_r) // HPSW/HP
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_GAMBLE_KEYOUT )
 
 	PORT_START("DSW1")
@@ -949,7 +990,7 @@ INPUT_PORTS_START( mgzz101cn )
 	PORT_DIPSETTING(    0x02, "20" )
 	PORT_DIPSETTING(    0x01, "30" )
 	PORT_DIPSETTING(    0x00, "50" )
-	PORT_DIPNAME( 0x04, 0x04, "Continue Immediately" )     PORT_DIPLOCATION("SW2:3")    // 直接續玩
+	PORT_DIPNAME( 0x04, 0x04, "Initial Double Up" )        PORT_DIPLOCATION("SW2:3")    // 直接續玩   (sets whether you can play the double up game by pressing A or button 1 at the bet screen)
 	PORT_DIPSETTING(    0x04, DEF_STR(Off) )                                            // 無
 	PORT_DIPSETTING(    0x00, DEF_STR(On) )                                             // 有
 	PORT_DIPUNKNOWN_DIPLOC( 0x08, 0x08, "SW2:4" )                                       // remaining DIP switches not shown in test mode
@@ -1110,10 +1151,10 @@ INPUT_PORTS_START( cjddz )
 	PORT_DIPNAME( 0x02, 0x02, "Control Panel" )            PORT_DIPLOCATION("SW1:2")          // 配线方式
 	PORT_DIPSETTING(    0x02, DEF_STR(Joystick) )                                             // 娱乐
 	PORT_DIPSETTING(    0x00, "Mahjong" )                                                     // 麻将
-	PORT_DIPNAME( 0x04, 0x04, DEF_STR(Allow_Continue) )    PORT_DIPLOCATION("SW1:3")          // 续玩游戏
-	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无
+	PORT_DIPNAME( 0x04, 0x04, "Double Up Game" )           PORT_DIPLOCATION("SW1:3")          // 续玩游戏
+	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无         (no double up game on win but can still play double up game by pressing C or button 3 at the bet screen)
 	PORT_DIPSETTING(    0x04, DEF_STR(On) )                                                   // 有
-	PORT_DIPNAME( 0x08, 0x08, "Siren Sound" )              PORT_DIPLOCATION("SW1:4")          // 报警音效
+	PORT_DIPNAME( 0x08, 0x08, "Siren Sound" )              PORT_DIPLOCATION("SW1:4")          // 报警音效   (lets you disable police siren sound effect when player or CPU has five cards remaining)
 	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无
 	PORT_DIPSETTING(    0x08, DEF_STR(On) )                                                   // 有
 	PORT_DIPNAME( 0x10, 0x10, "Auto Pass" )                PORT_DIPLOCATION("SW1:5")          // 自动PASS
@@ -1211,10 +1252,10 @@ INPUT_PORTS_START( cjddzp )
 	PORT_DIPNAME( 0x02, 0x02, "Control Panel" )            PORT_DIPLOCATION("SW2:2")          // 配线方式
 	PORT_DIPSETTING(    0x02, DEF_STR(Joystick) )                                             // 娱乐
 	PORT_DIPSETTING(    0x00, "Mahjong" )                                                     // 麻将
-	PORT_DIPNAME( 0x04, 0x04, DEF_STR(Allow_Continue) )    PORT_DIPLOCATION("SW2:3")          // 续玩游戏
-	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无
+	PORT_DIPNAME( 0x04, 0x04, "Double Up Game" )           PORT_DIPLOCATION("SW2:3")          // 续玩游戏
+	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无         (no double up game on win but can still play double up game by pressing C or button 3 at the bet screen)
 	PORT_DIPSETTING(    0x04, DEF_STR(On) )                                                   // 有
-	PORT_DIPNAME( 0x08, 0x08, "Siren Sound" )              PORT_DIPLOCATION("SW2:4")          // 报警音效
+	PORT_DIPNAME( 0x08, 0x08, "Siren Sound" )              PORT_DIPLOCATION("SW2:4")          // 报警音效   (lets you disable police siren sound effect when player or CPU has five cards remaining)
 	PORT_DIPSETTING(    0x00, DEF_STR(Off) )                                                  // 无
 	PORT_DIPSETTING(    0x08, DEF_STR(On) )                                                   // 有
 	PORT_DIPNAME( 0x10, 0x10, "Auto Pass" )                PORT_DIPLOCATION("SW2:5")          // 自动PASS
@@ -1638,6 +1679,14 @@ void igs_m027_state::mahjong_output_w(u8 data)
 	m_oki->set_rom_bank(data >> 6);
 }
 
+void igs_m027_state::lhzb3sjb_output_w(u8 data)
+{
+	m_io_select[0] = ~(u8(1) << bitswap<3>(data, 3, 1, 0));
+	m_hopper->motor_w(BIT(data, 2));
+
+	m_oki->set_rom_bank(data >> 6);
+}
+
 void igs_m027_state::jking02_output_w(u8 data)
 {
 	machine().bookkeeping().coin_counter_w(0, BIT(data, 0)); // one pulse per coin 1 accepted (36+10)
@@ -1699,6 +1748,16 @@ u32 igs_m027_state::lhdmg_gpio_r()
 		return 0xfffff;
 	else
 		return 0xfffff ^ 0x80000;
+}
+
+u32 igs_m027_state::lhzb3106c5m_gpio_r()
+{
+	logerror("%s: lhzb3106c5m_gpio_r\n", machine().describe_context());
+
+	if (m_io_select[1] & 1)
+		return 0xfffff;
+	else
+		return 0xfffff ^ 0x8000;
 }
 
 
@@ -1817,6 +1876,31 @@ void igs_m027_state::lhdmg(machine_config &config)
 	HOPPER(config, m_hopper, attotime::from_msec(50));
 }
 
+void igs_m027_state::lhzb3106c5m(machine_config &config)
+{
+	lhdmg(config);
+
+	m_maincpu->in_port().set(FUNC(igs_m027_state::lhzb3106c5m_gpio_r));
+}
+
+void igs_m027_state::lhzb3sjb(machine_config &config)
+{
+	m027_1ppi<true>(config);
+
+	m_maincpu->in_port().set(FUNC(igs_m027_state::slqz3_gpio_r)); // what lives here?
+
+	m_ppi[0]->in_pa_callback().set_ioport("TEST");
+	m_ppi[0]->in_pb_callback().set_ioport("JOY");
+	m_ppi[0]->out_pc_callback().set_ioport("PPIC");
+	m_ppi[0]->out_pc_callback().append(FUNC(igs_m027_state::lhzb3sjb_output_w));
+
+	m_igs017_igs031->in_pa_callback().set_ioport("DSW1");
+	m_igs017_igs031->in_pb_callback().set_ioport("DSW2");
+	m_igs017_igs031->in_pc_callback().set_constant(0xff);
+
+	HOPPER(config, m_hopper, attotime::from_msec(50));
+}
+
 void igs_m027_state::cjddz(machine_config &config)
 {
 	m027_1ppi<true>(config);
@@ -1844,7 +1928,7 @@ void igs_m027_state::lhzb4(machine_config &config)
 	m_oki->set_clock(2'000'000);
 }
 
-void igs_m027_state::lthy(machine_config &config)
+void igs_m027_state::lthyp(machine_config &config)
 {
 	m027_1ppi<true>(config);
 
@@ -1859,7 +1943,7 @@ void igs_m027_state::lthy(machine_config &config)
 
 void igs_m027_state::zhongguo(machine_config &config)
 {
-	lthy(config);
+	lthyp(config);
 
 	HOPPER(config, m_hopper, attotime::from_msec(50));
 }
@@ -2353,6 +2437,48 @@ ROM_START( lhzb3 )
 	ROM_LOAD( "s2402.u14", 0x00000, 0x100000, CRC(56083fe2) SHA1(62afd651809bf5e639bfda6e5579dbf4b903b664) )
 ROM_END
 
+ROM_START( lhzb3106c5m )
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A type G ARM based MCU
+	ROM_LOAD( "u10_027a.bin", 0x00000, 0x4000, CRC(19df9d4f) SHA1(d7e5be300220674ea6244242e06fb1929cbbb54f) ) // u10 is the sticker, not the location
+
+	ROM_REGION32_LE( 0x200000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "106c5n.u27", 0x000000, 0x200000, CRC(86031487) SHA1(d7bfe102ef4248e692d653edd479392ed7e20c28) ) // 11xxxxxxxxxxxxxxxxxxx = 0xFF
+
+	ROM_REGION( 0x080000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD( "igs_m2403.u17",  0x000000, 0x080000, CRC(a82398a9) SHA1(4d2987f57096b7f24ce6571ed3be6dcb33bce88d) )
+
+	ROM_REGION( 0x400000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "igs_m2401.u29", 0x000000, 0x400000, CRC(81428f18) SHA1(9fb19c8a79cc3443642f4b044e04735df2cb45be) ) // FIXED BITS (xxxxxxxx0xxxxxxx)
+
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "igs_s2402.u26", 0x000000, 0x200000, CRC(84bc2f3e) SHA1(49dcf5eaa39accd5c6bf01782fd4221298cb43ed) ) // 1ST AND 2ND HALF IDENTICAL
+ROM_END
+
+// This board is a bit different to the others. Main OSC is 22.1184MHz.
+// Everything is the same except no IGS027A. Instead there is a QFP128 chip in the place where the 027A would be.
+// It's clear this is a 027A replacement. The PCB still has the silk-screening for the pin numbers on the 027A but no QFP pads for it.
+// Only the QFP128 chip is there. With external program ROM removed and powered on, it only shows garbage.
+// In general the PCB seems a bit cheaply done if compared to other, almost bootleg-ish.
+// 龙虎争霸Ⅲ  升级版 (Lóng Hǔ Zhēngbà III Shēngjí Bǎn)
+ROM_START( lhzb3sjb )
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A sub
+	ROM_LOAD( "lhzb3unk2_igs027a", 0x00000, 0x4000, CRC(c713e8c6) SHA1(b0c57173b693ae54bd820a24fede1d008f90dd28) )
+
+	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "igs_p2401.u10", 0x00000, 0x80000, CRC(47d26b39) SHA1(85016799ee9cd2ccb905262a9ec7f0dee0d6537e) )
+
+	ROM_REGION( 0x080000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD( "igs_m2403.u9",  0x000000, 0x080000, CRC(a82398a9) SHA1(4d2987f57096b7f24ce6571ed3be6dcb33bce88d) )
+
+	ROM_REGION( 0x400000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "igs_m2404.u18", 0x000000, 0x400000, CRC(2379cdf3) SHA1(6f73dcb9c48e7bf02d67e6580c3ff86be3d9133c) ) // FIXED BITS (xxxxxxxx0xxxxxxx)
+
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "igs_s2402.u26", 0x000000, 0x200000, CRC(84bc2f3e) SHA1(49dcf5eaa39accd5c6bf01782fd4221298cb43ed) ) // 1ST AND 2ND HALF IDENTICAL
+ROM_END
+
 
 /*********************************************************************************
 
@@ -2398,7 +2524,7 @@ Notes:
 
 *********************************************************************************/
 
-ROM_START( lhdmg ) // appears to be a different edition of lhzb3 and lthy (GFX and sound ROM match)
+ROM_START( lhdmg ) // appears to be a different edition of lhzb3 and lthyp (GFX and sound ROM match)
 	ROM_REGION( 0x04000, "maincpu", 0 )
 	// Internal ROM of IGS027A type G ARM based MCU
 	ROM_LOAD( "b6_igs027a", 0x00000, 0x4000, CRC(75645f8c) SHA1(738fba64a906f4f10e78e332ad30b8da9dc86b21) )
@@ -2416,7 +2542,7 @@ ROM_START( lhdmg ) // appears to be a different edition of lhzb3 and lthy (GFX a
 	ROM_LOAD( "s2402.u14", 0x000000, 0x100000, CRC(56083fe2) SHA1(62afd651809bf5e639bfda6e5579dbf4b903b664) )
 ROM_END
 
-ROM_START( lhdmgp ) // appears to be a different edition of lhzb3 and lthy (GFX and sound ROM match)
+ROM_START( lhdmgp ) // appears to be a different edition of lhzb3 and lthyp (GFX and sound ROM match)
 	ROM_REGION( 0x04000, "maincpu", 0 )
 	// Internal ROM of IGS027A type G ARM based MCU
 	ROM_LOAD( "b4_igs027a", 0x00000, 0x4000, CRC(6fd48959) SHA1(75cb6fc6ea3c36805d1a61536e2f2476942c0c49) )
@@ -2543,7 +2669,7 @@ ROM_END
 
 /*********************************************************************************
 
-龙腾虎跃 (Lóng Téng Hǔ Yuè), IGS 1999
+龙腾虎跃 对战加强版 (Lóng Téng Hǔ Yào Jiāqiáng Bǎn), IGS 1999
 
 PCB Layout
 ----------
@@ -2577,7 +2703,7 @@ Notes:
 
 *********************************************************************************/
 
-ROM_START( lthy ) // appears to be a different edition of lhzb3 (GFX and sound ROM match)
+ROM_START( lthyp ) // appears to be a different edition of lhzb3 (GFX and sound ROM match)
 	ROM_REGION( 0x04000, "maincpu", 0 )
 	// Internal ROM of IGS027A type G ARM based MCU
 	ROM_LOAD( "d6_igs027a", 0x00000, 0x4000, CRC(b29ee32b) SHA1(aa5f1f8ed8d61dd328c4c28a7bba700935526d26) )
@@ -2765,10 +2891,52 @@ ROM_END
 // samples at u4 (or u5?)
 
 // 超级斗地主 (Chāojí Dòu Dìzhǔ)
-ROM_START( cjddz )
+ROM_START( cjddz ) // PCB-0489-05-FM-1
 	ROM_REGION( 0x04000, "maincpu", 0 )
 	// Internal ROM of IGS027A ARM based MCU
-	ROM_LOAD( "cjddz_igs027a", 0x00000, 0x4000, CRC(124f4bee) SHA1(bf9785516ef36290c2a7bac307bb2d849f2045ae) ) // unknown sticker
+	 // stickered B6 but doesn't work with other B6 dumps. Using the dump for cjddz215cn which works, waiting for trojan
+	ROM_LOAD( "cjddz_igs027a", 0x00000, 0x4000, BAD_DUMP CRC(124f4bee) SHA1(bf9785516ef36290c2a7bac307bb2d849f2045ae) )
+
+	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "p1.u17", 0x000000, 0x80000, CRC(81bc6ff6) SHA1(ca07b9becf6dd8724be339d8eee29c908dc10422) )
+
+	ROM_REGION( 0x80000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD16_WORD_SWAP( "m3.u27", 0x000000, 0x80000, CRC(520dc392) SHA1(0ab2620f20af8253806b6ff4e1d9d77a694da17c) )
+
+	ROM_REGION( 0x400000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "m4.u28", 0x000000, 0x400000, CRC(72487508) SHA1(9f4bbc858960ddaae403e4a3330b2345f6fd6cb3))
+
+	// OKI, sample tables are every 0x20000 starting at 0x40000
+	// 00000-1ffff and 20000-3ffff are likely music, always mapped at 20000 for any of the above banks
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "s2.u5", 0x000000, 0x200000, CRC(64fbba95) SHA1(1aecb1b8426939262688e4dbed09d6a56e71b8d5) )
+ROM_END
+
+ROM_START( cjddz217cn ) // PCB-0489-05-FM-1
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A ARM based MCU
+	 // stickered s12. Using the dump for cjddz215cn which works, waiting for trojan
+	ROM_LOAD( "cjddz217cn_igs027a", 0x00000, 0x4000, BAD_DUMP CRC(124f4bee) SHA1(bf9785516ef36290c2a7bac307bb2d849f2045ae) )
+
+	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "v-217cn.u17", 0x000000, 0x80000, CRC(42df949c) SHA1(262237d8219d41b04a99156289858fc63f9614dd) )
+
+	ROM_REGION( 0x80000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD16_WORD_SWAP( "text.u27", 0x000000, 0x80000, CRC(520dc392) SHA1(0ab2620f20af8253806b6ff4e1d9d77a694da17c) )
+
+	ROM_REGION( 0x400000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "igs_w05005w32m_f9ce_1d10.u28", 0x000000, 0x400000, CRC(72487508) SHA1(9f4bbc858960ddaae403e4a3330b2345f6fd6cb3))
+
+	// OKI, sample tables are every 0x20000 starting at 0x40000
+	// 00000-1ffff and 20000-3ffff are likely music, always mapped at 20000 for any of the above banks
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "igs_w05004b16m_8fa9_427d.u5", 0x000000, 0x200000, CRC(64fbba95) SHA1(1aecb1b8426939262688e4dbed09d6a56e71b8d5) )
+ROM_END
+
+ROM_START( cjddz215cn )
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A ARM based MCU
+	ROM_LOAD( "cjddz215cn_igs027a", 0x00000, 0x4000, CRC(124f4bee) SHA1(bf9785516ef36290c2a7bac307bb2d849f2045ae) ) // unknown sticker
 
 	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
 	ROM_LOAD( "ddz_218cn.u17", 0x000000, 0x80000, CRC(3cfe38d5) SHA1(9c7f82ecffbc22879583519d5f753bb35e973ee3) )
@@ -2785,11 +2953,11 @@ ROM_START( cjddz )
 	ROM_LOAD( "ddz_sp.u4", 0x00000, 0x200000, CRC(7ef65d95) SHA1(345c587cd449d6d06908e9687480be76b2cb2d28) )
 ROM_END
 
-// 超级斗地主加强版 (Chāojí Dòu Dìzhǔ Jiāqiáng Bǎn)
+// 超级斗地主 加强版 (Chāojí Dòu Dìzhǔ Jiāqiáng Bǎn)
 ROM_START( cjddzp )
 	ROM_REGION( 0x04000, "maincpu", 0 )
 	// Internal ROM of IGS027A ARM based MCU
-	ROM_LOAD( "sddzp_027a.rom", 0x00000, 0x4000, CRC(6cf26c3d) SHA1(c74d4ff71ff07c38449242e7e067e956a5c441be) ) // E10
+	ROM_LOAD( "e10_igs027a.rom", 0x00000, 0x4000, CRC(6cf26c3d) SHA1(c74d4ff71ff07c38449242e7e067e956a5c441be) ) // E10
 
 	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
 	ROM_LOAD( "cjddzp_s300cn.u17", 0x000000, 0x80000, CRC(5c1501ee) SHA1(701ba1cd1c4487846159c444bc58204348c1f590) )
@@ -2803,6 +2971,27 @@ ROM_START( cjddzp )
 
 	ROM_REGION( 0x200000, "oki", 0 )
 	ROM_LOAD( "cjddzp_sp-1.u4", 0x00000, 0x200000, CRC(7ef65d95) SHA1(345c587cd449d6d06908e9687480be76b2cb2d28) )
+ROM_END
+
+// 超级斗地主 两副牌 (Chāojí Dòu Dìzhǔ Liǎng Fù Pái)
+ROM_START( cjddzlf )
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A ARM based MCU
+	ROM_LOAD( "j1_igs027a", 0x00000, 0x4000, CRC(9f6e0207) SHA1(8c3dd1fdb847353060b55108431b8ef1649ed266) )
+
+	ROM_REGION32_LE( 0x80000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "igs_l2405.u17", 0x000000, 0x80000, CRC(ec310408) SHA1(acf7998017b86fff8b515f239459fff0c1eb43b6) )
+
+	ROM_REGION( 0x80000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD16_WORD_SWAP( "igs_m2401.u27", 0x000000, 0x80000, CRC(670aa9f3) SHA1(20cf2210ce4616d82712fcc71b2e950986279b58) )
+
+	ROM_REGION( 0x800000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "igs_s2402.u28", 0x000000, 0x400000, CRC(78d9c5a4) SHA1(1943b0f3b639c1b974a26e29ccc5edd61499f6f9) ) // FIXED BITS (xxxxxxx0xxxxxxxx)
+	ROM_LOAD( "igs_m2403.u29", 0x400000, 0x400000, CRC(a6d09c16) SHA1(c900c79d755e897b343d5b607d8395fb68158867) ) // FIXED BITS (xxxxxxxx0xxxxxxx)
+
+	// OKI, sample tables are every 0x20000 starting at 0x140000
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "igs_l2404.u5", 0x00000, 0x200000, CRC(55f6dfac) SHA1(876bec8db5aa3dfd10869ecdcd98bccb2ef860ef) )
 ROM_END
 
 // 龙虎争霸4 (Lóng Hǔ Zhēngbà 4)
@@ -2823,6 +3012,27 @@ ROM_START( lhzb4 )
 	// OKI, sample tables are every 0x20000 starting at 0x140000
 	ROM_REGION( 0x200000, "oki", 0 )
 	ROM_LOAD( "w05502.u5", 0x00000, 0x200000, CRC(467f677e) SHA1(63927c0d606176c0e22db89ea3a9777ed702abbd) )
+ROM_END
+
+// 龙虎争霸4 对花版 (Lóng Hǔ Zhēngbà 4 Duì Huā Bǎn)
+ROM_START( lhzb4dhb ) // Only 2 DIP switch banks are populated.
+	ROM_REGION( 0x04000, "maincpu", 0 )
+	// Internal ROM of IGS027A ARM based MCU
+	// stickered F12. Using the dump for lhzb4104cn which works, waiting for trojan
+	ROM_LOAD( "f12_igs027a", 0x00000, 0x4000, CRC(de12c918) SHA1(87c1cf92a95565d78c6fe7629c19729f5fb5c2a5) ) // F12
+
+	ROM_REGION32_LE( 0x200000, "user1", 0 ) // external ARM data / prg
+	ROM_LOAD( "v-203cn.u46", 0x000000, 0x200000, CRC(96d0cb19) SHA1(e5a450a9767327f5ceb0611400fe40b3582c0e8d) )
+
+	ROM_REGION( 0x200000, "igs017_igs031:tilemaps", 0 )
+	ROM_LOAD16_WORD_SWAP( "text_u26.u26", 0x000000, 0x200000, CRC(39d10d8f) SHA1(2c4869ee0cf142a7eb34378bbdfbb6eb58ebc954) )
+
+	ROM_REGION( 0x400000, "igs017_igs031:sprites", 0 )
+	ROM_LOAD( "igs_a05501w032_d07e_01e0.u28", 0x000000, 0x400000, CRC(f78b3714) SHA1(c73d8e50b04126bc4f91783384713624ed133ee2) )
+
+	// OKI, sample tables are every 0x20000 starting at 0x140000
+	ROM_REGION( 0x200000, "oki", 0 )
+	ROM_LOAD( "igs_w05502b016_45d1_756d.u5", 0x00000, 0x200000, CRC(467f677e) SHA1(63927c0d606176c0e22db89ea3a9777ed702abbd) )
 ROM_END
 
 // 雀龙高手 (Què Lóng Gāoshǒu) (IGS, 1999)
@@ -2947,6 +3157,14 @@ void igs_m027_state::init_cjddzp()
 	m_igs017_igs031->tarzan_decrypt_sprites(0x400000, 0x400000);
 }
 
+void igs_m027_state::init_cjddzlf()
+{
+	cjddzlf_decrypt(machine());
+
+	m_igs017_igs031->sdwx_gfx_decrypt();
+	m_igs017_igs031->tarzan_decrypt_sprites(0x400000, 0x400000);
+}
+
 void igs_m027_state::init_gonefsh2()
 {
 	gonefsh2_decrypt(machine());
@@ -3023,9 +3241,9 @@ void igs_m027_state::init_jking02()
 	// the sprite ROM at 0x400000 doesn't require decryption
 }
 
-void igs_m027_state::init_lthy()
+void igs_m027_state::init_lthyp()
 {
-	lthy_decrypt(machine());
+	lthyp_decrypt(machine());
 	m_igs017_igs031->set_text_reverse_bits(false);
 }
 
@@ -3041,12 +3259,6 @@ void igs_m027_state::init_olympic5()
 	olympic5_decrypt(machine());
 	//qlgs_gfx_decrypt(machine());
 	pgm_create_dummy_internal_arm_region();
-}
-
-void igs_m027_state::init_lhdmg()
-{
-	lhdmg_decrypt(machine());
-	m_igs017_igs031->set_text_reverse_bits(false);
 }
 
 void igs_m027_state::init_tripslot()
@@ -3087,11 +3299,14 @@ void igs_m027_state::init_chessc2()
 // Complete dumps
 GAME(  1999, slqz3,         0,        slqz3,        slqz3,         igs_m027_state, init_slqz3,    ROT0, "IGS", "Shuang Long Qiang Zhu 3 (China, VS107C)", 0 ) // shows V107C5J in service mode
 GAME(  1999, qlgs,          0,        qlgs,         qlgs,          igs_m027_state, init_qlgs,     ROT0, "IGS", "Que Long Gaoshou (S501CN)", MACHINE_NODEVICE_LAN )
-GAME(  1999, lhdmg,         0,        lhdmg,        lhdmg,         igs_m027_state, init_lhdmg,    ROT0, "IGS", "Long Hu Da Manguan (V102C3M)", 0 )
-GAME(  1999, lhdmgp,        0,        lhdmg,        lhdmg,         igs_m027_state, init_lhdmg,    ROT0, "IGS", "Long Hu Da Manguan Duizhan Jiaqiang Ban (V400C3M)", 0 )
-GAME(  1999, lhzb3,         0,        lhdmg,        lhzb3,         igs_m027_state, init_lhdmg,    ROT0, "IGS", "Long Hu Zhengba III (V400CN)", 0 )
+GAME(  1999, lhdmg,         0,        lhdmg,        lhdmg,         igs_m027_state, init_slqz3,    ROT0, "IGS", "Long Hu Da Manguan (V102C3M)", 0 )
+GAME(  1999, lhdmgp,        0,        lhdmg,        lhdmg,         igs_m027_state, init_slqz3,    ROT0, "IGS", "Long Hu Da Manguan Duizhan Jiaqiang Ban (V400C3M)", 0 )
+GAME(  1999, lhzb3,         0,        lhdmg,        lhzb3,         igs_m027_state, init_slqz3,    ROT0, "IGS", "Long Hu Zhengba III (V400CN)", 0 )
+GAME(  1999, lhzb3106c5m,   lhzb3,    lhzb3106c5m,  lhzb3,         igs_m027_state, init_slqz3,    ROT0, "IGS", "Long Hu Zhengba III (V106C5M)", 0 )
+GAME(  1999, lhzb3sjb,      0,        lhzb3sjb,     lhzb3sjb,      igs_m027_state, init_slqz3,    ROT0, "IGS", "Long Hu Zhengba III Shengji Ban (V300C5)", 0 )
 GAME(  2004, lhzb4,         0,        lhzb4,        lhzb4,         igs_m027_state, init_lhzb4,    ROT0, "IGS", "Long Hu Zhengba 4 (V104CN)", 0 )
-GAME(  1999, lthy,          0,        lthy,         lthy,          igs_m027_state, init_lthy,     ROT0, "IGS", "Long Teng Hu Yue (S104CN)", MACHINE_NODEVICE_LAN )
+GAME(  2004, lhzb4dhb,      0,        lhzb4,        lhzb4,         igs_m027_state, init_lhzb4,    ROT0, "IGS", "Long Hu Zhengba 4 Dui Hua Ban (V203CN)", 0 )
+GAME(  1999, lthyp,         0,        lthyp,        lthyp,         igs_m027_state, init_lthyp,    ROT0, "IGS", "Long Teng Hu Yao Duizhan Jiaqiang Ban (S104CN)", MACHINE_NODEVICE_LAN )
 GAME(  2000, zhongguo,      0,        zhongguo,     zhongguo,      igs_m027_state, init_zhongguo, ROT0, "IGS", "Zhongguo Chu Da D (V102C)", 0 )
 GAMEL( 200?, jking02,       0,        jking02,      jking02,       igs_m027_state, init_jking02,  ROT0, "IGS", "Jungle King 2002 (V209US)", MACHINE_NODEVICE_LAN, layout_jking02 ) // shows V212US in bookkeeping menu
 GAME(  2003, mgzz,          0,        mgzz,         mgzz101cn,     igs_m027_state, init_mgzz,     ROT0, "IGS", "Manguan Zhizun (V101CN)", 0 )
@@ -3101,8 +3316,11 @@ GAMEL( 1999, oceanpar,      0,        oceanpar,     oceanpar105us, igs_m027_stat
 GAMEL( 1999, oceanpar101us, oceanpar, oceanpar,     oceanpar101us, igs_m027_state, init_oceanpar, ROT0, "IGS", "Ocean Paradise (V101US)", 0, layout_oceanpar ) // 1999 copyright in ROM
 GAMEL( 1999, fruitpar,      0,        oceanpar,     oceanpar105us, igs_m027_state, init_fruitpar, ROT0, "IGS", "Fruit Paradise (V214US)", 0, layout_oceanpar )
 GAMEL( 1999, fruitpar206us, fruitpar, oceanpar,     fruitpar206us, igs_m027_state, init_fruitpar, ROT0, "IGS", "Fruit Paradise (V206US)", 0, layout_oceanpar )
-GAME(  200?, cjddz,         0,        cjddz,        cjddz,         igs_m027_state, init_cjddz,    ROT0, "IGS", "Chaoji Dou Dizhu (V215CN)", 0 )
+GAME(  200?, cjddz,         0,        cjddz,        cjddz,         igs_m027_state, init_cjddz,    ROT0, "IGS", "Chaoji Dou Dizhu (V219CN)", 0 )
+GAME(  200?, cjddz217cn,    cjddz,    cjddz,        cjddz,         igs_m027_state, init_cjddz,    ROT0, "IGS", "Chaoji Dou Dizhu (V217CN)", 0 )
+GAME(  200?, cjddz215cn,    cjddz,    cjddz,        cjddz,         igs_m027_state, init_cjddz,    ROT0, "IGS", "Chaoji Dou Dizhu (V215CN)", 0 )
 GAME(  200?, cjddzp,        0,        cjddz,        cjddzp,        igs_m027_state, init_cjddzp,   ROT0, "IGS", "Chaoji Dou Dizhu Jiaqiang Ban (S300CN)", MACHINE_NODEVICE_LAN )
+GAME(  200?, cjddzlf,       0,        cjddz,        cjddz,         igs_m027_state, init_cjddzlf,  ROT0, "IGS", "Chaoji Dou Dizhu Liang Fu Pai (V109CN)", 0 )
 GAMEL( 2007, tripslot,      0,        tripslot,     tripslot,      igs_m027_state, init_tripslot, ROT0, "IGS", "Triple Slot (V200VE)", 0, layout_tripslot ) // 2007 date in internal ROM at least, could be later, default settings password is all 'start 1'
 // this has a 2nd 8255
 GAME(  2001, extradrw,      0,        extradrw,     base,          igs_m027_state, init_extradrw, ROT0, "IGS", "Extra Draw (V100VE)", MACHINE_NOT_WORKING )
