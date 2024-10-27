@@ -128,6 +128,8 @@ public:
 
 	void xavix2002(machine_config &config);
 
+	void xavix_43mhz(machine_config &config);
+
 	void init_xavix();
 
 	void ioevent_trg01(int state);
@@ -211,6 +213,8 @@ protected:
 	required_device<screen_device> m_screen;
 	required_device<address_map_bank_device> m_lowbus;
 	address_space* m_cpuspace = nullptr;
+
+	bool m_disable_timer_irq_hack = false; // hack for epo_mini which floods timer IRQs to the point it won't do anything else
 
 private:
 
@@ -610,7 +614,6 @@ private:
 	uint8_t guru_anport2_r() { uint8_t ret = m_mouse1x->read()-0x10; return ret; }
 };
 
-
 class xavix_i2c_state : public xavix_state
 {
 public:
@@ -639,6 +642,37 @@ protected:
 	required_device<i2cmem_device> m_i2cmem;
 };
 
+class xavix_i2c_mj_state : public xavix_i2c_state
+{
+public:
+	xavix_i2c_mj_state(const machine_config &mconfig, device_type type, const char *tag)
+		: xavix_i2c_state(mconfig, type, tag)
+		, m_dial(*this, "DIAL")
+	{ }
+
+	void xavix_i2c_24lc02_mj(machine_config &config);
+
+protected:
+	virtual void write_io1(uint8_t data, uint8_t direction) override;
+
+	uint8_t mj_anport0_r() { return m_dial->read()^0x7f; }
+
+	required_ioport m_dial;
+};
+
+class xavix_epo_hamc_state : public xavix_state
+{
+public:
+	xavix_epo_hamc_state(const machine_config &mconfig, device_type type, const char *tag)
+		: xavix_state(mconfig, type, tag)
+	{ }
+
+	int camera_r() { return machine().rand(); }
+
+protected:
+};
+
+
 class xavix_i2c_lotr_state : public xavix_i2c_state
 {
 public:
@@ -647,6 +681,8 @@ public:
 	{ }
 
 	int camera_r();
+
+	void init_epo_mini();
 
 protected:
 	//virtual void write_io1(uint8_t data, uint8_t direction) override;
