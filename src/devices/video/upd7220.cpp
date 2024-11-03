@@ -23,7 +23,7 @@
     - A5105 has a FIFO bug with the RDAT, should be a lot larger when it scrolls up.
       Can be fixed with a DRDY mechanism for RDAT/WDAT;
     - Some later SWs on PC-98 throws "Invalid command byte 05" (zettmj on Epson logo),
-      actual undocumented command to reset something or perhaps just check if upd7220 isn't really a upd72120 instead?
+      actual undocumented command to reset something?
 
     - honor visible area
     - wide mode (32-bit access)
@@ -383,17 +383,11 @@ inline void upd7220_device::update_blank_timer(int state)
 
 inline void upd7220_device::recompute_parameters()
 {
-	int horiz_mult = 16, vert_mult = 1;
-	/* TODO: assume that the pitch also controls number of horizontal pixels in a single cell */
-	// horiz_mult = 4 if both mixed and interlace?
-	if((m_mode & UPD7220_MODE_DISPLAY_MASK) == UPD7220_MODE_DISPLAY_MIXED)
-		horiz_mult = 8;
-	else if((m_mode & UPD7220_MODE_INTERLACE_MASK) == UPD7220_MODE_INTERLACE_ON)
-	{
-		// in interlaced mode every line contains both fields
-		horiz_mult = 8; // TODO this breaks microbx2, compis uhrg video, characters are 16 pixels wide in interlaced mode too
-		vert_mult = 2;
-	}
+	// microbx2 wants horizontal multiplier of x16
+	// pc9801:diremono sets up m_mode to be specifically in character mode, wanting x8 here
+	// TODO: verify compis uhrg video & high reso Hyper 98
+	const int horiz_mult = (m_mode & UPD7220_MODE_DISPLAY_MASK) == UPD7220_MODE_DISPLAY_GRAPHICS ? 16 : 8;
+	const int vert_mult = (m_mode & UPD7220_MODE_INTERLACE_MASK) == UPD7220_MODE_INTERLACE_ON ? 2 : 1;
 
 	int horiz_pix_total = (m_hs + m_hbp + m_hfp + m_aw) * horiz_mult;
 	int vert_pix_total = (m_vs + m_vbp + m_al + m_vfp) * vert_mult;
@@ -1812,7 +1806,7 @@ void upd7220_device::update_graphics(bitmap_rgb32 &bitmap, const rectangle &clip
 	int im, wd;
 	int y = 0, tsy = 0, bsy = 0;
 	int mixed = ((m_mode & UPD7220_MODE_DISPLAY_MASK) == UPD7220_MODE_DISPLAY_MIXED) ? 1 : 0;
-	uint8_t interlace = ((m_mode & UPD7220_MODE_INTERLACE_MASK) == UPD7220_MODE_INTERLACE_ON) ? 0 : 1;
+	uint8_t interlace = ((m_mode & UPD7220_MODE_INTERLACE_MASK) == UPD7220_MODE_INTERLACE_ON) ? 1 : 0;
 	uint8_t zoom = m_disp + 1;
 
 	for(int area = 0; area < 4; area++)
@@ -1835,7 +1829,7 @@ void upd7220_device::update_graphics(bitmap_rgb32 &bitmap, const rectangle &clip
 			if (len == 0)
 				len = 0x400;
 
-			if(!interlace)
+			if(interlace)
 				len <<= 1;
 
 			for(y = 0; y < len; y++)
@@ -1848,7 +1842,9 @@ void upd7220_device::update_graphics(bitmap_rgb32 &bitmap, const rectangle &clip
 				for(int z = 0; z <= m_disp; ++z)
 				{
 					int yval = (y*zoom)+z + (bsy + m_vbp);
-					if(yval <= cliprect.bottom() && (yval - m_vbp) < m_al)
+					// pc9801:duel sets up bitmap layer with height 384 vs. 400 of text layer
+					// so we scissor here, interlace wants it bumped x2 (microbx2)
+					if(yval <= cliprect.bottom() && (yval - m_vbp) < m_al << interlace)
 						draw_graphics_line(bitmap, addr, yval, wd, mixed);
 				}
 			}

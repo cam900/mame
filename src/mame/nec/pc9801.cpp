@@ -356,6 +356,7 @@ Keyboard TX commands:
 
 #include "emu.h"
 #include "pc9801.h"
+
 #include "machine/input_merger.h"
 
 void pc98_base_state::rtc_w(uint8_t data)
@@ -1657,9 +1658,25 @@ u8 pc9801_state::ppi_sys_portb_r()
 	return res;
 }
 
+void pc9801_state::uart_irq_check()
+{
+	m_pic1->ir4_w(m_uart_irq_pending & m_uart_irq_mask ? 1 : 0);
+}
+
+template <unsigned N> void pc98_base_state::update_uart_irq(int state)
+{
+	if (state)
+		m_uart_irq_pending |= 1 << N;
+	else
+		m_uart_irq_pending &= ~(1 << N);
+	uart_irq_check();
+}
+
 void pc98_base_state::ppi_sys_beep_portc_w(uint8_t data)
 {
 	m_beeper->set_state(!(data & 0x08));
+	m_uart_irq_mask = data & 7;
+	uart_irq_check();
 }
 
 void pc9801vm_state::ppi_sys_dac_portc_w(uint8_t data)
@@ -1668,6 +1685,8 @@ void pc9801vm_state::ppi_sys_dac_portc_w(uint8_t data)
 	// TODO: some models have a finer grained volume control at I/O port 0xae8e
 	// (98NOTE only?)
 	m_dac1bit->set_output_gain(0, m_dac1bit_disable ? 0.0 : 1.0);
+	m_uart_irq_mask = data & 7;
+	uart_irq_check();
 }
 
 /*
@@ -2228,6 +2247,23 @@ void pc9801vm_state::pc9801_ide(machine_config &config)
 	SOFTWARE_LIST(config, "cd_list").set_original("pc98_cd");
 }
 
+void pc98_base_state::pc9801_serial(machine_config &config)
+{
+	// clocked by PIT channel 2
+	I8251(config, m_sio, 0);
+	m_sio->txd_handler().set("serial", FUNC(rs232_port_device::write_txd));
+	m_sio->rts_handler().set("serial", FUNC(rs232_port_device::write_rts));
+	m_sio->dtr_handler().set("serial", FUNC(rs232_port_device::write_dtr));
+	m_sio->rxrdy_handler().set([this] (int state) { update_uart_irq<0>(state); });
+	m_sio->txempty_handler().set([this] (int state) { update_uart_irq<1>(state); });
+	m_sio->txrdy_handler().set([this] (int state) { update_uart_irq<2>(state); });
+
+	rs232_port_device &rs232(RS232_PORT(config, "serial", default_rs232_devices, nullptr));
+	rs232.rxd_handler().set(m_sio, FUNC(i8251_device::write_rxd));
+	rs232.cts_handler().set(m_sio, FUNC(i8251_device::write_cts));
+	rs232.dsr_handler().set(m_sio, FUNC(i8251_device::write_dsr));
+}
+
 void pc9801_state::pc9801_common(machine_config &config)
 {
 	PIT8253(config, m_pit, 0);
@@ -2274,7 +2310,7 @@ void pc9801_state::pc9801_common(machine_config &config)
 	pc9801_mouse(config);
 	pc9801_cbus(config);
 
-	I8251(config, m_sio, 0);
+	pc9801_serial(config);
 
 	PC9801_MEMSW(config, m_memsw, 0);
 
@@ -2292,12 +2328,12 @@ void pc9801_state::pc9801_common(machine_config &config)
 	m_screen->set_screen_update(FUNC(pc9801_state::screen_update));
 	m_screen->screen_vblank().set(FUNC(pc9801_state::vrtc_irq));
 
-	UPD7220(config, m_hgdc[0], 21.0526_MHz_XTAL / 8);
+	UPD7220(config, m_hgdc[0], 21.0526_MHz_XTAL / 8, "screen");
 	m_hgdc[0]->set_addrmap(0, &pc9801_state::upd7220_1_map);
 	m_hgdc[0]->set_draw_text(FUNC(pc9801_state::hgdc_draw_text));
 	m_hgdc[0]->vsync_wr_callback().set(m_hgdc[1], FUNC(upd7220_device::ext_sync_w));
 
-	UPD7220(config, m_hgdc[1], 21.0526_MHz_XTAL / 8);
+	UPD7220(config, m_hgdc[1], 21.0526_MHz_XTAL / 8, "screen");
 	m_hgdc[1]->set_addrmap(0, &pc9801_state::upd7220_2_map);
 	m_hgdc[1]->set_display_pixels(FUNC(pc9801_state::hgdc_display_pixels));
 
@@ -3024,6 +3060,7 @@ COMP( 1986, pc9801vx,   0,        0, pc9801vx,  pc9801rs, pc9801vm_state, init_p
 // ...
 
 // PC-H98 (Hyper 98, '90-'93 high end line with High-reso, proprietary NESA bus, E²GC)
+// PC-H98S cfr. pc_h98.cpp
 // PC-H98T (LCD Hyper 98)
 // SV-H98 "98SERVER" (i486, later Hyper 98 revision)
 // SV-98 (Pentium based, second gen of 98SERVER)
@@ -3060,6 +3097,8 @@ COMP( 1993, pc9801bx2,  0,        0, pc9801bx2, pc9801rs, pc9801bx_state, init_p
 // ...
 
 // PC-98LT / PC-98HA -> cfr. pc98ha.cpp
+// PC-9801N "98NOTE" (V30 based, EMS + 3.5" floppy, 8.9" FL blue LCD).
+// PC-9801N* (98NOTE upgrades)
 // PC-9801T (i386SX, extremely expensive TFT or LCD laptop with C-Bus slots, de-facto a "portable" desktop machine)
 // PC-9801LX (i286, belongs to pc98ha.cpp?)
 // PC-9801LS (i386SX, Plasma laptop)

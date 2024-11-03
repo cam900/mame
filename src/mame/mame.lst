@@ -2247,6 +2247,7 @@ agalletaj                       // (c) 1996 Banpresto / Gazelle (country is in E
 agalletak                       // (c) 1996 Banpresto / Gazelle (country is in EEPROM)
 agalletat                       // (c) 1996 Banpresto / Gazelle (country is in EEPROM)
 agalletau                       // (c) 1996 Banpresto / Gazelle (country is in EEPROM)
+cellage                         // (c) 1996 Yujin/Namco
 crusherm                        // (c) 1999 Takumi
 ddonpach                        // (c) 1997 Atlus/Cave
 ddonpacha                       // hack
@@ -21646,6 +21647,7 @@ bowmen                          // (c) 1994 Ten-Level
 buccanrs                        // (c) 1989 Duintronic
 buccanrsa                       // (c) 1989 Duintronic
 buccanrsb                       // (c) 1989 Duintronic
+captainx                        // bootleg
 kikcubic                        // (c) 1988 (Japan)
 kikcubicb                       // bootleg
 vigilant                        // (c) 1988 (World Rev E)
@@ -30557,6 +30559,7 @@ potnpkri                        // Bootleg
 potnpkrj                        // Bootleg
 potnpkrk                        // Bootleg
 potnpkrl                        // Bootleg
+potnpkrm                        // Bootleg
 pottnpkr                        // Bootleg
 royale                          // Unknown
 royalea                         // Unknown
@@ -36709,6 +36712,7 @@ bmf_fr                          //
 bmf_it                          //
 bmf_jp                          //
 bmf_nl                          //
+bmf_nl302                       //
 bmf_no                          //
 bmf_sp                          //
 bmf_sv                          //
