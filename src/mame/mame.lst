@@ -1440,6 +1440,7 @@ zoo                             // (c) 2004  Astro Corp.
 blackbd                         //
 blackbda                        //
 blackbdb                        //
+blackbdu                        //
 carnivac                        //
 dslayrr                         //
 dslayrra                        //
@@ -15091,6 +15092,7 @@ koftball                        // (c) 1995 BMC
 
 @source:bmc/popobear.cpp
 magkengo                        // (c) 2005 Herb Home
+magkengou                       // (c) 2005 Herb Home
 popobear                        // (c) 2000 BMC
 
 @source:bondwell/bw12.cpp
@@ -17913,6 +17915,7 @@ pwrflip                         // (c) 1994 Excellent System
 fever13                         // (c) 1995 Excellent System
 lastbank                        // (c) 1994 Excellent System
 mir7hg                          // (c) 1996 Excellent System
+ukiyobx                         // (c) 1995 Excellent System
 
 @source:excellent/witch.cpp
 keirinou                        // (c) 1987 Excellent System
@@ -18072,71 +18075,71 @@ bridgecv
 gincribc
 
 @source:fidelity/cc1.cpp
-cc1                             //
-cc3                             //
+cc1
+cc3
 cc10c
 
 @source:fidelity/cc7.cpp
-backgamc                        //
-cc7                             //
-cc7a                            //
+backgamc
+cc7
+cc7a
 
 @source:fidelity/cc10.cpp
-cc10                            //
-cc10a                           //
-checkc4                         //
+cc10
+cc10a
+checkc4
 
 @source:fidelity/checkc2.cpp
 checkc2
 
 @source:fidelity/chesster.cpp
-chesster                        //
-chesstera                       //
-kishon                          //
-kishona                         //
+chesster
+chesstera
+kishon
+kishona
 
 @source:fidelity/csc.cpp
-csc                             //
-csce                            //
-cscet                           //
-reversic                        //
-super9cc                        //
+csc
+csce
+cscet
+reversic
+super9cc
 
 @source:fidelity/dames.cpp
-damesc                          //
+damesc
 
 @source:fidelity/desdis.cpp
-fdes2000d                       //
-fdes2100d                       //
-fdes2100da                      //
-fdes2265                        //
-fdes2265a                       //
-fdes2325                        //
+fdes2000d
+fdes2100d
+fdes2100da
+fdes2265
+fdes2265a
+fdes2325
 
 @source:fidelity/eag68k.cpp
-feagv10                         //
-feagv11                         //
-feagv4                          //
-feagv4a                         //
-feagv5                          //
-feagv7                          //
-feagv7a                         //
-feagv7b                         //
-feagv7c                         //
-feagv9                          //
-feagv9a                         //
-feagv9b                         //
-feagv9c                         //
-fex68k                          //
-fex68ka                         //
-fex68kb                         //
-fex68km2                        //
-fex68km2a                       //
-fex68km3                        //
-fex68km3a                       //
-fex68km3b                       //
-fex68km4                        //
-premiere                        //
+feagv10
+feagv11
+feagv4
+feagv4a
+feagv5
+feagv7
+feagv7a
+feagv7b
+feagv7c
+feagv9
+feagv9a
+feagv9b
+feagv9c
+fex68k
+fex68ka
+fex68kb
+fex68km2
+fex68km2a
+fex68km3
+fex68km3a
+fex68km3b
+fex68km4
+premiere
 
 @source:fidelity/eldorado.cpp
 feldo
@@ -18149,46 +18152,47 @@ felega2
 felega3
 
 @source:fidelity/elite.cpp
-feag                            //
-feag2100                        //
-feag2100a                       //
-feas                            //
-feasbu                          //
-feasbua                         //
-feasgla                         //
-feasglaa                        //
-feasglab                        //
-feasx                           //
-fpres                           //
-fpresa                          //
-fpresb                          //
-fpresc                          //
-fpresd                          //
-fprese                          //
-fpresbu                         //
-fpresgla                        //
+feag
+feag2100
+feag2100a
+feagpriv
+feas
+feasbu
+feasbua
+feasgla
+feasglaa
+feasglab
+feasx
+fpres
+fpresa
+fpresb
+fpresc
+fpresd
+fprese
+fpresbu
+fpresgla
 
 @source:fidelity/excel.cpp
-fexcel                          //
-fexcel12                        //
-fexcel12a                       //
-fexcela                         //
-fexceld                         //
-fexcelp                         //
-fexcelpa                        //
-fexcelv                         //
-granits                         // RCS
+fexcel
+fexcel12
+fexcel12a
+fexcela
+fexceld
+fexcelp
+fexcelpa
+fexcelv
+granits
 
 @source:fidelity/msc.cpp
 miniscco
 
 @source:fidelity/phantom.cpp
-cphantom                        //
-fphantom                        //
+cphantom
+fphantom
 
 @source:fidelity/sc12.cpp
-fscc12                          //
-fscc12a                         //
+fscc12
+fscc12a
 
 @source:fidelity/sc6.cpp
 classic
@@ -18198,21 +18202,21 @@ gambitv
 miniscc
 
 @source:fidelity/sc8.cpp
-fscc8                           //
+fscc8
 
 @source:fidelity/sc9.cpp
-fscc9                           //
-fscc9b                          //
-fscc9c                          //
-fscc9ps                         //
+fscc9
+fscc9b
+fscc9c
+fscc9ps
 
 @source:fidelity/vcc.cpp
-avcc                            //
-vcc                             //
-vcca                            //
+avcc
+vcc
+vcca
 
 @source:fidelity/vsc.cpp
-vsc                             //
+vsc
 
 @source:force/miniforce.cpp
 miniforce                       // D26 cabinet test board
@@ -20301,6 +20305,7 @@ happyskl                        // (c) 2000?
 iqblocka                        // (c) 1996
 iqblockf                        // (c) 1996
 jking103a                       // (c) 1999
+jking200pr                      // (c) 2000?
 jking302us                      // (c) 2000?
 lhzb                            // (c) 1998
 lhzba                           // (c) 1998
@@ -20318,6 +20323,8 @@ slqz2a                          // (c) 1998
 spkrform                        // (c) 2000?
 starzan                         // (c) 2000?
 tarzan                          // (c) 1999
+tarzan103m                      // (c) 1999?
+tarzan202fa                     // (c) 1999?
 tarzana                         // (c) 1999
 tarzanb                         // (c) 1999
 tarzanc                         // (c) 1999
@@ -28198,6 +28205,7 @@ rs3230                          // MIPS RS3230
 fruitwld                        // (c) 2008 I.A.M.
 fruitwlda                       // (c) 2007 I.A.M.
 jumanji                         // (c) 2007 I.A.M.
+jumanjia                        // (c) 2007 I.A.M.
 plutus                          // (c) 200? I.A.M.
 pokrwild                        // (c) 200? I.A.M.
 rodent                          // (c) 2005 The Game Room
@@ -30527,8 +30535,10 @@ goldnpkc                        // Bootleg
 goldnpkd                        // Bootleg
 goldnpke                        // Intercoast (bootleg)
 goldnpkf                        // Intercoast (bootleg)
+goldnpkg                        // Bootleg
 goldnpkr                        // (c) 1981 Bonanza
 goodluck                        // Unknown
+jkrbonus                        // bootleg?
 jokercar                        // 199?, unknown
 lespendu                        // (c) 198? Voyageur de L'Espace Inc.
 lespenduj                       // (c) 198? Voyageur de L'Espace Inc.
@@ -32489,7 +32499,28 @@ wmstopb                         // (c) 1999 WMS - Top Banana (Russian)
 yukongld                        // (c) 2000 WMS - Yukon Gold (Russian)
 
 @source:misc/xtom3d.cpp
+pumpipx2                        // (c) 2002 Andamiro
+pumpipx2p                       // (c) 2002 Andamiro
+pumpipx3                        // (c) 2003 Andamiro
+pumpipx3a                       // (c) 2003 Andamiro
+pumpipx3b                       // (c) 2003 Andamiro
 pumpit1                         // (c) 1999 Andamiro
+pumpit2                         // (c) 1999 Andamiro
+pumpit2a                        // (c) 2000 Andamiro
+pumpit3                         // (c) 2000 Andamiro
+pumpit3a                        // (c) 2000 Andamiro
+pumpit8                         // (c) 2002 Andamiro
+pumpitc                         // (c) 2000 Andamiro
+pumpite                         // (c) 2001 Andamiro
+pumpitea                        // (c) 2001 Andamiro
+pumpito                         // (c) 2000 Andamiro
+pumpitp2                        // (c) 2002 Andamiro
+pumpitp3                        // (c) 2003 Andamiro
+pumpitp3a                       // (c) 2003 Andamiro
+pumpitpc                        // (c) 2000 Andamiro
+pumpitpr                        // (c) 2001 Andamiro
+pumpitpru                       // (c) 2001 Andamiro
+pumpitpx                        // (c) 2001 Andamiro
 pumpitup                        // (c) 1999 Andamiro
 xtom3d                          // (c) 1999 Andamiro
 
@@ -33472,6 +33503,7 @@ victlapj                        // (c) 1996
 aking                           // Angler King - March 1999
 crszone                         // Crisis Zone - December 1999
 crszonev2a                      // Crisis Zone - December 1999
+crszonev2b                      // Crisis Zone - December 1999
 crszonev3a                      // Crisis Zone - December 1999
 crszonev3b                      // Crisis Zone - December 1999
 crszonev3b2                     // Crisis Zone - December 1999
@@ -34657,6 +34689,7 @@ dgun853
 gamezn2
 gprnrs1
 gprnrs16
+gujtv108
 joysti30
 lxnoddy
 majgnc
@@ -34761,6 +34794,7 @@ egame150
 fapocket
 gcs2mgp
 gtct885
+hhgc319
 hkb502
 hkb502a
 lpgm240
@@ -34784,7 +34818,6 @@ mog_m320
 myarccn
 nubsupmf
 otrail
-pcmx11
 q5_500in1
 rd5_240
 red5mam
@@ -35009,6 +35042,8 @@ wrecking                        // (c) 1984 Nintendo
 
 @source:nintendo/vt1682.cpp
 110dance
+cmpmx10
+cmpmx11
 dance555
 exsprt48
 gm235upc
@@ -40142,6 +40177,7 @@ astrob1                         // (c) 1981
 astrob2                         // (c) 1981
 astrob2a                        // (c) 1981
 astrob2b                        // (c) 1981
+astrobf                         // (c) 1981
 astrobg                         // (c) 1981
 monsterb                        // (c) 1982
 monsterb2                       // (c) 1982
@@ -42106,6 +42142,8 @@ ckz80                           //
 
 @source:skeleton/cle68k.cpp
 dmndhrt                         //
+dmndhrtn                        //
+honeybee                        //
 
 @source:skeleton/clxvme186.cpp
 clxvme186                       //
@@ -42251,6 +42289,9 @@ waveterm                        //
 @source:skeleton/evolution_handheld.cpp
 evolhh
 
+@source:skeleton/extrema_m27sv.cpp
+multgmxl
+
 @source:skeleton/fanucs15.cpp
 fanucs15                        // 1990
 
@@ -42395,6 +42436,10 @@ lft1510                         //
 
 @source:skeleton/lg-dvd.cpp
 lggp40                          //
+
+@source:skeleton/lgtz80.cpp
+arthurkn                        //
+fruitcat                        //
 
 @source:skeleton/lilith.cpp
 lilith                          //
@@ -42668,6 +42713,9 @@ systel100                       //
 @source:skeleton/syvg.cpp
 luckyvl
 
+@source:skeleton/tamagotchi_pix.cpp
+tamapix
+
 @source:skeleton/tavernie.cpp
 cpu09                           //
 ivg09                           //
@@ -42753,6 +42801,9 @@ vector3                         //
 
 @source:skeleton/vectrix.cpp
 vectrix                         // (c) 19?? Olympia?
+
+@source:skeleton/vgame.cpp
+hilice                          //
 
 @source:skeleton/vp415.cpp
 vp415                           // (c) 1983 Philips
@@ -45512,7 +45563,9 @@ beambox
 
 @source:tvgames/generalplus_gpl16250_rom.cpp
 beijuehh
+bornkidh
 gameu50
+gameu108
 gormiti
 imgame
 myac220
@@ -45564,6 +45617,7 @@ kidizmb
 kidizmp
 pocketmp
 pocketmr
+sanxpet
 zippity
 zippityuk
 
@@ -45880,6 +45934,7 @@ epo_mmsp                        //
 epo_quiz                        //
 epo_stad
 epo_strk                        //
+epo_strkp                       //
 epo_tenn                        //
 epo_tfp2                        //
 epo_tp2p                        //
@@ -45914,6 +45969,8 @@ rad_madf                        //
 rad_mtrk                        //
 rad_mtrkp                       //
 rad_opus                        //
+rad_opusp                       //
+rad_opusa                       //
 rad_ping                        //
 rad_pingp                       //
 rad_rh                          //
@@ -45926,12 +45983,16 @@ rad_ssxp                        //
 taikodp                         //
 taitons1                        //
 taitons2                        //
+tak_beyb                        //
 tak_comt                        //
 tak_daig
 tak_gin                         //
 tak_geig                        //
 tak_hamr                        //
+tak_town                        //
+tak_zuba                        //
 tcarnavi                        //
+tom_tvho                        //
 tomcpin                         //
 tomshoot                        //
 tomthr                          //
@@ -45959,6 +46020,7 @@ epo_mini                        //
 epo_sdb                         //
 tak_chq                         //
 tom_dpgm                        //
+tom_jump
 ttv_lotr                        //
 ttv_mx                          //
 ttv_sw                          //
@@ -45976,6 +46038,7 @@ suprtvpcdo
 suprtvpchk
 tmy_thom                        //
 udance
+xavaero                         //
 xavbaseb                        //
 xavbassf                        //
 xavbowl                         //
@@ -46741,11 +46804,13 @@ wicat                           //
 luckgrln                        // (c) 1991 Wing Co. Ltd
 
 @source:wing/lucky37.cpp
+bingo75                         // (c) 199? Wing Co. Ltd
 lucky21                         // (c) 199? Wing Co. Ltd
 lucky21d                        // (c) 199? Wing Co. Ltd
 lucky25                         // (c) 199? Wing Co. Ltd
 lucky37                         // (c) 199? Wing Co. Ltd
-bingo75                         // (c) 199? Wing Co. Ltd
+lucky75                         // (c) 199? Wing Co. Ltd
+luckystr                        // (c) 199? Wing Co. Ltd
 
 @source:wing/lucky74.cpp
 excitbj                         // (c) 1992 Wing Co. Ltd
