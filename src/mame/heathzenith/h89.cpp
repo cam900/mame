@@ -127,9 +127,8 @@ protected:
 
 	static constexpr u8 GPP_SINGLE_STEP_BIT             = 0;
 	static constexpr u8 GPP_ENABLE_TIMER_INTERRUPT_BIT  = 1;
-	static constexpr u8 GPP_MEM1_BIT                    = 2;
 	static constexpr u8 GPP_MEM0_BIT                    = 4;
-	static constexpr u8 GPP_DISABLE_ROM_BIT             = 5;
+	static constexpr u8 GPP_MEM1_BIT                    = 5;
 	static constexpr u8 GPP_IO0_BIT                     = 6;
 	static constexpr u8 GPP_IO1_BIT                     = 7;
 
@@ -627,6 +626,30 @@ static INPUT_PORTS_START( h89 )
 	PORT_DIPSETTING(    0x00, "9600" )
 	PORT_DIPSETTING(    0x80, "19200" )
 
+	// SigmaSoft's SigmaROM
+	PORT_DIPNAME( 0x03, 0x00, "Disk I/O #2" )                        PORT_DIPLOCATION("SW501:1,2")     PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x00, "H-88-1" )
+	PORT_DIPSETTING(    0x01, "H/Z-47" )
+	PORT_DIPSETTING(    0x02, "WD1002 Hard Disk" )
+	PORT_DIPSETTING(    0x03, "WD1002 Floppy Disk" )
+	PORT_DIPNAME( 0x0c, 0x00, "Disk I/O #1" )                        PORT_DIPLOCATION("SW501:3,4")     PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x00, "H-89-37" )
+	PORT_DIPSETTING(    0x04, "H/Z-47" )
+	PORT_DIPSETTING(    0x08, "WD1002 Hard Disk" )
+	PORT_DIPSETTING(    0x0c, "WD1002 Floppy Disk" )
+	PORT_DIPNAME( 0x10, 0x00, "Primary Boot from" )                  PORT_DIPLOCATION("SW501:5")       PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x00, "Disk I/O #2" )
+	PORT_DIPSETTING(    0x10, "Disk I/O #1" )
+	PORT_DIPNAME( 0x20, 0x20, "Reserved" )                           PORT_DIPLOCATION("SW501:6")       PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x20, "Must be selected" )
+	PORT_DIPSETTING(    0x00, "Must not be selected" )
+	PORT_DIPNAME( 0x40, 0x00, "Console Baud rate" )                  PORT_DIPLOCATION("SW501:7")       PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x00, "9600" )
+	PORT_DIPSETTING(    0x40, "19200" )
+	PORT_DIPNAME( 0x80, 0x00, "Boot mode" )                          PORT_DIPLOCATION("SW501:8")       PORT_CONDITION("CONFIG", 0x3c, EQUALS, 0x1c)
+	PORT_DIPSETTING(    0x00, DEF_STR( Normal ) )
+	PORT_DIPSETTING(    0x80, "Auto" )
+
 
 	PORT_START("CONFIG")
 	PORT_CONFNAME(0x03, 0x00, "CPU Clock Speed Upgrade")
@@ -641,6 +664,7 @@ static INPUT_PORTS_START( h89 )
 	PORT_CONFSETTING(   0x10, "Kres KMR-100")
 	PORT_CONFSETTING(   0x14, "Ultimeth MTRHEX-4k")
 	PORT_CONFSETTING(   0x18, "Ultimeth MTRHEX-2k")
+	PORT_CONFSETTING(   0x1c, "SigmaROM")
 
 INPUT_PORTS_END
 
@@ -816,10 +840,10 @@ void h89_base_state::reset_single_step_state()
 // ---------------------
 //  0    Single-step enable
 //  1    2 mSec interrupt enable
-//  2    Latched bit MEM 1 H on memory exp connector
-//  3    Not used
+//  2    Not used (on original Heath CPU Board)
+//  3    Not used (on original Heath CPU Board)
 //  4    Latched bit MEM 0 H on memory expansion connector (Commonly used for Speed upgrades)
-//  5    ORG-0 (CP/M map)
+//  5    Latched bit MEM 1 H on memory expansion connector - ORG-0 (CP/M map)
 //  6    Latched bit I/O 0 on I/O exp connector
 //  7    Latched bit I/O 1 on I/O exp connector
 //
@@ -847,9 +871,9 @@ void h89_base_state::update_gpp(u8 gpp)
 		}
 	}
 
-	if (BIT(changed_gpp, GPP_DISABLE_ROM_BIT))
+	if (BIT(changed_gpp, GPP_MEM1_BIT))
 	{
-		m_rom_enabled = BIT(m_gpp, GPP_DISABLE_ROM_BIT) == 0;
+		m_rom_enabled = BIT(m_gpp, GPP_MEM1_BIT) == 0;
 
 		update_mem_view();
 	}
@@ -1075,6 +1099,14 @@ void h89_mms_state::h89_mms(machine_config &config)
 		ROM_SYSTEM_BIOS(x, "mtrhex", "Ultimeth 2k ROM") \
 		ROMX_LOAD("2716_mtrhex.u518",         0x0000, 0x0800, CRC(842a306a) SHA1(ddbc2b8bb127464af9eda8e7c56e6be7c8b43a16), ROM_BIOS(x))
 
+#define ROM_SIGMA_V_1_3(x) \
+		ROM_SYSTEM_BIOS(x, "sigmarom", "SigmaROM v1.3") \
+		ROMX_LOAD("2732_sigma_rom_v_1.3.bin", 0x0000, 0x1000, CRC(c5c6b799) SHA1(f55e141a63cde8e1481480b8da9ba50569e08546), ROM_BIOS(x))
+
+#define ROM_SIGMA_V_1_2(x) \
+		ROM_SYSTEM_BIOS(x, "sigmarom_v1_2", "SigmaROM v1.2") \
+		ROMX_LOAD("2732_sigma_rom_v_1.2.bin", 0x0000, 0x1000, CRC(c4ff47c5) SHA1(d6f3d71ff270a663003ec18a3ed1fa49f627123a), ROM_BIOS(x))
+
 
 ROM_START( h88 )
 	ROM_REGION( 0x2000, "maincpu", ROMREGION_ERASEFF )
@@ -1105,6 +1137,10 @@ ROM_START( h89 )
 	ROM_MMS_444_84A(6)
 
 	ROM_ULTIMETH_2K(7)
+
+	ROM_SIGMA_V_1_3(8)
+
+	ROM_SIGMA_V_1_2(9)
 ROM_END
 
 ROM_START( h89_sigmasoft )
@@ -1128,6 +1164,10 @@ ROM_START( h89_sigmasoft )
 	ROM_MMS_444_84A(6)
 
 	ROM_ULTIMETH_2K(7)
+
+	ROM_SIGMA_V_1_3(8)
+
+	ROM_SIGMA_V_1_2(9)
 ROM_END
 
 ROM_START( h89_mms )
@@ -1164,6 +1204,10 @@ ROM_START( z90 )
 	ROM_MTR90_444_84(4)
 
 	ROM_MMS_444_84A(5)
+
+	ROM_SIGMA_V_1_3(6)
+
+	ROM_SIGMA_V_1_2(7)
 ROM_END
 
 } // anonymous namespace

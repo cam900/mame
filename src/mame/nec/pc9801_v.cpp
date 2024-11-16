@@ -502,8 +502,9 @@ void pc9801vm_state::border_color_w(offs_t offset, u8 data)
 	if (offset)
 	{
 		// 24.83/15.75 kHz selector, available for everything but vanilla class
-		// TODO: verify clock for 200 line mode (handtuned), verify that vanilla effectively cannot select it thru dips.
-		const XTAL screen_clock = (data & 1 ? XTAL(21'052'600) : (XTAL(21'052'600) / 3) * 2) / 8;
+		// TODO: verify that vanilla effectively cannot select it thru dips.
+		// TODO: pc9801vm doesn't access this
+		const XTAL screen_clock = (data & 1 ? XTAL(21'052'600) : XTAL(14'318'181)) / 8;
 
 		m_hgdc[0]->set_unscaled_clock(screen_clock);
 		m_hgdc[1]->set_unscaled_clock(screen_clock);
@@ -720,12 +721,12 @@ uint16_t pc9801vm_state::egc_do_partial_op(int plane, uint16_t src, uint16_t pat
 
 void pc9801vm_state::egc_blit_w(uint32_t offset, uint16_t data, uint16_t mem_mask)
 {
-	uint16_t mask = m_egc.regs[4] & mem_mask, out = 0;
+	uint16_t mask = m_egc.mask & mem_mask, out = 0;
 	bool dir = !(m_egc.regs[6] & 0x1000);
 	int dst_off = (m_egc.regs[6] >> 4) & 0xf, src_off = m_egc.regs[6] & 0xf;
 	offset = (offset & 0x3fff) +  m_vram_bank * 0x10000;
 
-	if(!m_egc.init && (src_off > dst_off))
+	if(!m_egc.start && (src_off > dst_off))
 	{
 		if(BIT(m_egc.regs[2], 10))
 		{
@@ -733,7 +734,7 @@ void pc9801vm_state::egc_blit_w(uint32_t offset, uint16_t data, uint16_t mem_mas
 			// leftover[0] is inited above, set others to same
 			m_egc.leftover[1] = m_egc.leftover[2] = m_egc.leftover[3] = m_egc.leftover[0];
 		}
-		m_egc.init = true;
+		m_egc.start = true;
 		return;
 	}
 
@@ -741,7 +742,7 @@ void pc9801vm_state::egc_blit_w(uint32_t offset, uint16_t data, uint16_t mem_mas
 	if(m_egc.first)
 	{
 		mask &= dir ? ~((1 << dst_off) - 1) : ((1 << (16 - dst_off)) - 1);
-		m_egc.init = true;
+		m_egc.start = true;
 	}
 
 	// mask off the bits past the end of the blit
@@ -816,7 +817,8 @@ void pc9801vm_state::egc_blit_w(uint32_t offset, uint16_t data, uint16_t mem_mas
 	if(m_egc.count <= 0)
 	{
 		m_egc.first = true;
-		m_egc.init = false;
+		m_egc.start = false;
+		m_egc.loaded = false;
 		m_egc.count = (m_egc.regs[7] & 0xfff) + 1;
 	}
 }
@@ -831,7 +833,17 @@ uint16_t pc9801vm_state::egc_blit_r(uint32_t offset, uint16_t mem_mask)
 		m_egc.pat[2] = m_video_ram[1][plane_off + (0x4000 * 3)];
 		m_egc.pat[3] = m_video_ram[1][plane_off];
 	}
-	m_egc.init = true;
+
+	if(m_egc.first && !m_egc.start && !m_egc.loaded)
+	{
+		int dst_off = (m_egc.regs[6] >> 4) & 0xf, src_off = m_egc.regs[6] & 0xf;
+		if(dst_off >= src_off) // check if it needs to be shifted into the next word
+			m_egc.start = true;
+		m_egc.loaded = true;
+	}
+	else
+		m_egc.start = true;
+
 	for(int i = 0; i < 4; i++)
 		m_egc.src[i] = egc_shift(i, m_video_ram[1][plane_off + (((i + 1) & 3) * 0x4000)]);
 
