@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Barry Rodewald
+// copyright-holders:Barry Rodewald, Angelo Salese
 /*
  * Tseng Labs VGA family
  *
@@ -220,7 +220,7 @@ void tseng_vga_device::crtc_map(address_map &map)
 		})
 	);
 	// Horizontal overflow
-	// NOTE: undocumented in ET4000AX
+	// NOTE: undocumented in ET4000AX, may apply to w32i only
 	map(0x3f, 0x3f).lrw8(
 		NAME([this] (offs_t offset) {
 			return et4k.horz_overflow;
@@ -229,6 +229,7 @@ void tseng_vga_device::crtc_map(address_map &map)
 			et4k.horz_overflow = data;
 			vga.crtc.horz_total = (vga.crtc.horz_total & 0xff) | ((data & 1) << 8);
 			vga.crtc.offset = (vga.crtc.offset & 0x00ff) | ((data & 0x80) << 1);
+			// TODO: bits 4 & 2 (horizontal sync and blank start, bit 8)
 			recompute_params();
 		})
 	);
@@ -379,6 +380,32 @@ uint32_t tseng_vga_device::latch_start_addr()
 et4kw32i_vga_device::et4kw32i_vga_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: tseng_vga_device(mconfig, tag, ET4KW32I_VGA, owner, clock)
 {
+	m_acl_space_config = address_space_config("acl_regs", ENDIANNESS_LITTLE, 8, 8, 0, address_map_constructor(FUNC(et4kw32i_vga_device::acl_map), this));
+	m_mmu_space_config = address_space_config("mmu_regs", ENDIANNESS_LITTLE, 8, 15, 0, address_map_constructor(FUNC(et4kw32i_vga_device::mmu_map), this));
+
+	m_acl_idx = 0;
+	m_ima.control = 0;
+}
+
+device_memory_interface::space_config_vector et4kw32i_vga_device::memory_space_config() const
+{
+	auto r = svga_device::memory_space_config();
+	r.emplace_back(std::make_pair(EXT_REG,     &m_acl_space_config));
+	r.emplace_back(std::make_pair(EXT_REG + 1, &m_mmu_space_config));
+	return r;
+}
+
+void et4kw32i_vga_device::device_start()
+{
+	tseng_vga_device::device_start();
+
+	save_item(NAME(m_acl_idx));
+
+	save_item(NAME(m_crtcb.xpos));
+	save_item(NAME(m_crtcb.ypos));
+	save_item(NAME(m_crtcb.address));
+
+	save_item(NAME(m_ima.control));
 }
 
 void et4kw32i_vga_device::crtc_map(address_map &map)
@@ -432,5 +459,232 @@ void et4kw32i_vga_device::io_3cx_map(address_map &map)
 			svga.bank_r |= (data & 0xf0) >> 4;
 		})
 	);
+}
+
+u8 et4kw32i_vga_device::acl_index_r(offs_t offset)
+{
+	return m_acl_idx;
+}
+
+void et4kw32i_vga_device::acl_index_w(offs_t offset, u8 data)
+{
+	m_acl_idx = data;
+}
+
+u8 et4kw32i_vga_device::acl_data_r(offs_t offset)
+{
+	return space(EXT_REG).read_byte(m_acl_idx);
+}
+
+void et4kw32i_vga_device::acl_data_w(offs_t offset, u8 data)
+{
+	space(EXT_REG).write_byte(m_acl_idx, data);
+}
+
+// TODO: sketchy, essentially stacks MMU on top of normally mirrored VGA memory
+uint8_t et4kw32i_vga_device::mem_r(offs_t offset)
+{
+	if(svga.rgb8_en || svga.rgb15_en || svga.rgb16_en || svga.rgb24_en)
+	{
+		if (et4k.vsconf1 & 0x28 && vga.gc.memory_map_sel)
+		{
+			const u32 mmu_address = vga.gc.memory_map_sel & 2 ? 0x08000 : 0x18000;
+
+			if ((offset & 0x18000) == mmu_address)
+				return space(EXT_REG + 1).read_byte(offset & 0x7fff);
+		}
+
+		offset &= 0xffff;
+		return svga_device::mem_linear_r(offset + svga.bank_r * 0x10000);
+	}
+
+	return vga_device::mem_r(offset);
+}
+
+void et4kw32i_vga_device::mem_w(offs_t offset, uint8_t data)
+{
+	if(svga.rgb8_en || svga.rgb15_en || svga.rgb16_en || svga.rgb24_en)
+	{
+		if (et4k.vsconf1 & 0x28 && vga.gc.memory_map_sel)
+		{
+			const u32 mmu_address = vga.gc.memory_map_sel & 2 ? 0x08000 : 0x18000;
+
+			if ((offset & 0x18000) == mmu_address)
+			{
+				space(EXT_REG + 1).write_byte(offset & 0x7fff, data);
+				return;
+			}
+		}
+
+		offset &= 0xffff;
+		svga_device::mem_linear_w(offset + svga.bank_w * 0x10000, data);
+		return;
+	}
+
+	vga_device::mem_w(offset,data);
+}
+
+/*
+ * MMU & ACL interactions
+ */
+
+template <unsigned N> u8 et4kw32i_vga_device::mmu_blit_r(offs_t offset)
+{
+	if (m_mmu.control & 1 << N)
+	{
+		// To FIFO, TBD
+		return 0;
+	}
+
+	return svga_device::mem_linear_r(offset + m_mmu.base_address[N]);
+}
+
+template <unsigned N> void et4kw32i_vga_device::mmu_blit_w(offs_t offset, u8 data)
+{
+	if (m_mmu.control & 1 << N)
+	{
+		// To FIFO, TBD
+		return;
+	}
+
+	svga_device::mem_linear_w(offset + m_mmu.base_address[N], data);
+}
+
+template <unsigned N> u8 et4kw32i_vga_device::mmu_base_address_r(offs_t offset)
+{
+	return m_mmu.base_address[N] >> (offset * 8);
+}
+
+template <unsigned N> void et4kw32i_vga_device::mmu_base_address_w(offs_t offset, u8 data)
+{
+	const u8 shift = offset * 8;
+	const u32 mask = ~(0xff << shift);
+	m_mmu.base_address[N] &= mask;
+	m_mmu.base_address[N] |= (data << shift);
+}
+
+
+void et4kw32i_vga_device::mmu_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rw(FUNC(et4kw32i_vga_device::mmu_blit_r<0>), FUNC(et4kw32i_vga_device::mmu_blit_w<0>));
+	map(0x2000, 0x3fff).rw(FUNC(et4kw32i_vga_device::mmu_blit_r<1>), FUNC(et4kw32i_vga_device::mmu_blit_w<1>));
+	map(0x4000, 0x5fff).rw(FUNC(et4kw32i_vga_device::mmu_blit_r<2>), FUNC(et4kw32i_vga_device::mmu_blit_w<2>));
+	map(0x6000, 0x6003).mirror(0x1f00).rw(FUNC(et4kw32i_vga_device::mmu_base_address_r<0>), FUNC(et4kw32i_vga_device::mmu_base_address_w<0>));
+	map(0x6004, 0x6007).mirror(0x1f00).rw(FUNC(et4kw32i_vga_device::mmu_base_address_r<1>), FUNC(et4kw32i_vga_device::mmu_base_address_w<1>));
+	map(0x6008, 0x600b).mirror(0x1f00).rw(FUNC(et4kw32i_vga_device::mmu_base_address_r<2>), FUNC(et4kw32i_vga_device::mmu_base_address_w<2>));
+	map(0x6013, 0x6013).mirror(0x1f00).lrw8(
+		NAME([this] (offs_t offset) {
+			return m_mmu.control;
+		}),
+		NAME([this] (offs_t offset, u8 data) {
+			m_mmu.control = data;
+		})
+	);
+}
+
+void et4kw32i_vga_device::acl_map(address_map &map)
+{
+	map(0xe0, 0xe1).lrw8(
+		NAME([this] (offs_t offset) {
+			return m_crtcb.xpos >> (offset * 8);
+		}),
+		NAME([this] (offs_t offset, u8 data) {
+			if (offset)
+			{
+				m_crtcb.xpos &= 0xff;
+				m_crtcb.xpos |= (data & 7) << 8;
+			}
+			else
+			{
+				m_crtcb.xpos &= 0x700;
+				m_crtcb.xpos |= (data & 0xff);
+			}
+		})
+	);
+	map(0xe4, 0xe5).lrw8(
+		NAME([this] (offs_t offset) {
+			return m_crtcb.ypos >> (offset * 8);
+		}),
+		NAME([this] (offs_t offset, u8 data) {
+			if (offset)
+			{
+				m_crtcb.ypos &= 0xff;
+				m_crtcb.ypos |= (data & 7) << 8;
+			}
+			else
+			{
+				m_crtcb.ypos &= 0x700;
+				m_crtcb.ypos |= (data & 0xff);
+			}
+		})
+	);
+
+	map(0xe8, 0xea).lrw8(
+		NAME([this] (offs_t offset) {
+			return m_crtcb.address >> (offset * 8);
+		}),
+		NAME([this] (offs_t offset, u8 data) {
+			const u8 shift = offset * 8;
+			const u32 mask = ~(0xff << shift);
+			m_crtcb.address &= mask;
+			m_crtcb.address |= (data << shift);
+			m_crtcb.address &= 0xfffff;
+		})
+	);
+
+	/*
+	 * x--- ---- CRTCB enable
+	 * -x-- ---- Token outputs/External Sprite enable
+	 * --xx xx-- <reserved>, always 1000
+	 * ---- --x- Interlace Image Port address
+	 * ---- ---x Image Port enable
+	 */
+	map(0xf7, 0xf7).lrw8(
+		NAME([this] (offs_t offset) {
+			return m_ima.control;
+		}),
+		NAME([this] (offs_t offset, u8 data) {
+			m_ima.control = data;
+			if (data & 0x5f)
+				popmessage("pc_vga_tseng.cpp: IMA $f7 write %02x", data);
+		})
+	);
+}
+
+uint32_t et4kw32i_vga_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+{
+	svga_device::screen_update(screen, bitmap, cliprect);
+
+	// HW cursor
+	// TODO: enough for Win95 in 8bpp and not much else
+	if (BIT(m_ima.control, 7))
+	{
+		const u32 base_offs = (m_crtcb.address << 2) + 0x3f0;
+		const u8 transparent_pen = 2;
+
+		for (int y = 0; y < 32; y ++)
+		{
+			int res_y = y + m_crtcb.ypos;
+			for (int x = 0; x < 32; x++)
+			{
+				int res_x = x + m_crtcb.xpos;
+				if (!cliprect.contains(res_x, res_y))
+					continue;
+				// TODO: odd bytes
+				const u32 cursor_address = (((x >> 2) + y * 16) << 1) + base_offs;
+
+				const int xi = (x & 3) * 2;
+				u8 cursor_gfx =  (vga.memory[(cursor_address) % vga.svga_intf.vram_size] >> xi) & 3;
+
+				// TODO: pen 3 really RMW with a xor
+				if (cursor_gfx == transparent_pen)
+					continue;
+
+				bitmap.pix(res_y, res_x) = cursor_gfx & 1 ? 0xffffff : 0x000000;
+			}
+		}
+	}
+
+	return 0;
 }
 

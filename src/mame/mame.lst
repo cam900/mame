@@ -41927,6 +41927,7 @@ sushimar                        // b9803 (c) 1997 Sigma
 tbeastw2                        // b9808 (c) 1998 Sigma / Transformer Production Company / Takara
 tdoboon                         // (c) 2000 Sammy
 ucytokyu                        // b9809 (c) 1997 Sigma
+wantouch                        // (c) 2002 Sammy
 
 @source:sigma/spiders.cpp
 spiders                         // (c) 1981 Sigma Ent. Inc.
@@ -42449,9 +42450,6 @@ jade                            //
 
 @source:skeleton/jonos.cpp
 jonos                           //
-
-@source:skeleton/juku.cpp
-juku                            //
 
 @source:skeleton/junior80.cpp
 junior80                        //
@@ -46310,6 +46308,9 @@ irisha                          //
 @source:ussr/istrebiteli.cpp
 istreb                          //
 motogonki                       //
+
+@source:ussr/juku.cpp
+juku                            // (c) 1988 EKTA
 
 @source:ussr/krokha.cpp
 krokha                          // 1990 SKB Kontur, USSR
