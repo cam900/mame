@@ -17731,6 +17731,7 @@ draco                           // (c) 1981 Cidelsa
 
 @source:efo/nightmare.cpp
 nightmare                       // (c) 1982 E.F.O.
+nightmarea                      // (c) 1982 E.F.O.
 
 @source:elektor/avrmax.cpp
 atm18mcc
@@ -41927,7 +41928,7 @@ sushimar                        // b9803 (c) 1997 Sigma
 tbeastw2                        // b9808 (c) 1998 Sigma / Transformer Production Company / Takara
 tdoboon                         // (c) 2000 Sammy
 ucytokyu                        // b9809 (c) 1997 Sigma
-wantouch                        // (c) 2002 Sammy
+wantouch                        // (c) 2003 Sammy
 
 @source:sigma/spiders.cpp
 spiders                         // (c) 1981 Sigma Ent. Inc.
@@ -46876,7 +46877,10 @@ lucky74b                        // (c) 1988 Wing Co. Ltd
 janshi                          //
 pinkiri8                        //
 ronjan                          //
+ronjana                         //
 ronjans                         //
+ronjansa                        //
+ronjansb                        //
 
 @source:wing/slotcarn.cpp
 slotcarn                        // (c) 1985 Wing Co. Ltd
