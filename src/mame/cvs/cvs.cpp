@@ -97,7 +97,6 @@ Todo & FIXME:
 ***************************************************************************/
 
 #include "emu.h"
-
 #include "cvs_base.h"
 
 #include "speaker.h"
@@ -364,7 +363,6 @@ uint32_t cvs_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, c
 				x, y);
 	}
 
-
 	// Update screen - 8 regions, fixed scrolling area
 	int scroll[8];
 
@@ -394,21 +392,23 @@ uint32_t cvs_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, c
 			{
 				int const bx = 255 - 7 - m_bullet_ram[offs] - ct;
 
-				// Bullet/Object Collision
-				if ((s2636_0_bitmap.pix(offs, bx) != 0) ||
-					(s2636_1_bitmap.pix(offs, bx) != 0) ||
-					(s2636_2_bitmap.pix(offs, bx) != 0))
-					m_collision_register |= 0x08;
+				if (cliprect.contains(bx, offs))
+				{
+					// Bullet/Object Collision
+					if ((s2636_0_bitmap.pix(offs, bx) != 0) ||
+						(s2636_1_bitmap.pix(offs, bx) != 0) ||
+						(s2636_2_bitmap.pix(offs, bx) != 0))
+						m_collision_register |= 0x08;
 
-				// Bullet/Background Collision
-				if (m_palette->pen_indirect(m_scrolled_collision_background.pix(offs, bx)))
-					m_collision_register |= 0x80;
+					// Bullet/Background Collision
+					if (m_palette->pen_indirect(m_scrolled_collision_background.pix(offs, bx)))
+						m_collision_register |= 0x80;
 
-				bitmap.pix(offs, bx) = BULLET_STAR_PEN;
+					bitmap.pix(offs, bx) = BULLET_STAR_PEN;
+				}
 			}
 		}
 	}
-
 
 	// mix and copy the S2636 images into the main bitmap, also check for collision
 	for (int y = cliprect.top(); y <= cliprect.bottom(); y++)
@@ -715,7 +715,7 @@ void cvs_state::main_cpu_io_map(address_map &map)
 void cvs_state::main_cpu_data_map(address_map &map)
 {
 	map(S2650_CTRL_PORT, S2650_CTRL_PORT).rw(FUNC(cvs_state::collision_r), FUNC(cvs_state::audio_command_w));
-	map(S2650_DATA_PORT, S2650_DATA_PORT).rw(FUNC(cvs_state::collision_clear), FUNC(cvs_state::video_fx_w));
+	map(S2650_DATA_PORT, S2650_DATA_PORT).rw(FUNC(cvs_state::collision_clear_r), FUNC(cvs_state::video_fx_w));
 }
 
 /*************************************
@@ -1211,7 +1211,7 @@ void cvs_state::cvs(machine_config &config)
 	m_maincpu->set_addrmap(AS_DATA, &cvs_state::main_cpu_data_map);
 	m_maincpu->set_vblank_int("screen", FUNC(cvs_state::main_cpu_interrupt));
 	m_maincpu->sense_handler().set("screen", FUNC(screen_device::vblank));
-	m_maincpu->flag_handler().set(FUNC(cvs_state::write_s2650_flag));
+	m_maincpu->flag_handler().set([this] (int state) { m_ram_view.select(state); });
 	m_maincpu->intack_handler().set_constant(0x03);
 
 	S2650(config, m_audiocpu, XTAL(14'318'181) / 16);
