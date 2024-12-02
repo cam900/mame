@@ -288,7 +288,6 @@ private:
 	uint8_t rongrong_input_r();
 	void rongrong_select_w(uint8_t data);
 protected:
-	void hanakanz_keyb_w(uint8_t data);
 	uint8_t hanakanz_rand_r();
 private:
 	void mjschuka_protection_w(uint8_t data);
@@ -333,7 +332,6 @@ protected:
 	void sryudens_rambank_w(uint8_t data);
 private:
 	uint8_t mjflove_protection_r();
-	uint8_t mjflove_keyb_r(offs_t offset);
 	void mjflove_coincounter_w(uint8_t data);
 	uint8_t sryudens_keyb_r(offs_t offset);
 	void sryudens_coincounter_w(uint8_t data);
@@ -600,7 +598,6 @@ private:
 	void hanakanz_blitter_data_w(uint8_t data);
 
 	void hanakanz_rombank_w(uint8_t data);
-	//void hanakanz_keyb_w(uint8_t data);
 	void hanakanz_dsw_w(uint8_t data);
 	uint8_t hanakanz_keyb_r(offs_t offset);
 	uint8_t hanakanz_dsw_r();
@@ -2774,11 +2771,6 @@ void hanakanz_state::hanakanz_map(address_map &map)
 }
 
 
-void ddenlovr_state::hanakanz_keyb_w(uint8_t data)
-{
-	m_keyb = data;
-}
-
 void hanakanz_state::hanakanz_dsw_w(uint8_t data)
 {
 	m_dsw_sel = data;
@@ -2786,13 +2778,7 @@ void hanakanz_state::hanakanz_dsw_w(uint8_t data)
 
 uint8_t hanakanz_state::hanakanz_keyb_r(offs_t offset)
 {
-	uint8_t val = 0xff;
-
-	if      (!BIT(m_keyb, 0))   val = ioport(offset ? "KEY5" : "KEY0")->read();
-	else if (!BIT(m_keyb, 1))   val = ioport(offset ? "KEY6" : "KEY1")->read();
-	else if (!BIT(m_keyb, 2))   val = ioport(offset ? "KEY7" : "KEY2")->read();
-	else if (!BIT(m_keyb, 3))   val = ioport(offset ? "KEY8" : "KEY3")->read();
-	else if (!BIT(m_keyb, 4))   val = ioport(offset ? "KEY9" : "KEY4")->read();
+	uint8_t val = offset ? hanamai_keyboard_r<0>() : hanamai_keyboard_r<1>();
 
 	val |= ioport(offset ? "HOPPER" : "BET")->read();
 	return val;
@@ -2896,7 +2882,7 @@ void hanakanz_state::hanakanz_portmap(address_map &map)
 	map(0x90, 0x90).portr("SYSTEM");
 	map(0x91, 0x92).r(FUNC(hanakanz_state::hanakanz_keyb_r));
 	map(0x93, 0x93).w(FUNC(hanakanz_state::hanakanz_coincounter_w));
-	map(0x94, 0x94).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+	map(0x94, 0x94).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0x96, 0x96).r(FUNC(hanakanz_state::hanakanz_rand_r));
 	map(0xa0, 0xa1).w("ym2413", FUNC(ym2413_device::write));
 	map(0xc0, 0xc0).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
@@ -2914,7 +2900,7 @@ void hanakanz_state::hkagerou_portmap(address_map &map)
 	map(0xb0, 0xb0).portr("SYSTEM");
 	map(0xb1, 0xb2).r(FUNC(hanakanz_state::hanakanz_keyb_r));
 	map(0xb3, 0xb3).w(FUNC(hanakanz_state::hanakanz_coincounter_w));
-	map(0xb4, 0xb4).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+	map(0xb4, 0xb4).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0xb6, 0xb6).r(FUNC(hanakanz_state::hanakanz_rand_r));
 	map(0xc0, 0xc0).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 	map(0xe0, 0xef).rw("rtc", FUNC(msm6242_device::read), FUNC(msm6242_device::write));
@@ -2934,7 +2920,7 @@ void hanakanz_state::kotbinyo_portmap(address_map &map)
 	map(0xb1, 0xb1).portr("KEYB0");
 	map(0xb2, 0xb2).portr("KEYB1");
 	map(0xb3, 0xb3).w(FUNC(hanakanz_state::hanakanz_coincounter_w));
-//  map(0xb4, 0xb4).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+//  map(0xb4, 0xb4).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0xb6, 0xb6).r(FUNC(hanakanz_state::hanakanz_rand_r));
 	map(0xc0, 0xc0).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 //  map(0xe0, 0xef).rw("rtc", FUNC(msm6242_device::read), FUNC(msm6242_device::write));
@@ -2954,7 +2940,7 @@ void hanakanz_state::kotbinsp_portmap(address_map &map)
 	map(0x91, 0x91).portr("KEYB0");
 	map(0x92, 0x92).portr("KEYB1");
 	map(0x93, 0x93).w(FUNC(hanakanz_state::hanakanz_coincounter_w));
-//  map(0x94, 0x94).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+//  map(0x94, 0x94).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0x96, 0x96).r(FUNC(hanakanz_state::hanakanz_rand_r));
 	map(0xc0, 0xc0).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 //  map(0xe0, 0xef).rw("rtc", FUNC(msm6242_device::read), FUNC(msm6242_device::write));
@@ -2977,7 +2963,7 @@ void hanakanz_state::mjreach1_portmap(address_map &map)
 	map(0x80, 0x80).w(FUNC(hanakanz_state::hanakanz_blitter_data_w));
 	map(0x81, 0x81).w(FUNC(hanakanz_state::hanakanz_palette_w));
 	map(0x83, 0x84).r(FUNC(hanakanz_state::hanakanz_gfxrom_r));
-	map(0x90, 0x90).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+	map(0x90, 0x90).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0x92, 0x92).r(FUNC(hanakanz_state::hanakanz_rand_r));
 	map(0x93, 0x93).rw(FUNC(hanakanz_state::mjreach1_protection_r), FUNC(hanakanz_state::mjreach1_protection_w));
 	map(0x94, 0x94).portr("SYSTEM");
@@ -2995,13 +2981,7 @@ void hanakanz_state::mjreach1_portmap(address_map &map)
 
 uint8_t hanakanz_state::mjchuuka_keyb_r(offs_t offset)
 {
-	uint8_t val = 0xff;
-
-	if      (!BIT(m_keyb, 0))   val = ioport(offset ? "KEY5" : "KEY0")->read();
-	else if (!BIT(m_keyb, 1))   val = ioport(offset ? "KEY6" : "KEY1")->read();
-	else if (!BIT(m_keyb, 2))   val = ioport(offset ? "KEY7" : "KEY2")->read();
-	else if (!BIT(m_keyb, 3))   val = ioport(offset ? "KEY8" : "KEY3")->read();
-	else if (!BIT(m_keyb, 4))   val = ioport(offset ? "KEY9" : "KEY4")->read();
+	uint8_t val = offset ? hanamai_keyboard_r<0>() : hanamai_keyboard_r<1>();
 
 	val |= ioport(offset ? "HOPPER" : "BET")->read();
 
@@ -3099,7 +3079,7 @@ void hanakanz_state::mjchuuka_portmap(address_map &map)
 	map(0x21, 0x21).select(0xff00).w(FUNC(hanakanz_state::mjchuuka_palette_w));
 	map(0x23, 0x23).mirror(0xff00).r(FUNC(hanakanz_state::mjchuuka_gfxrom_0_r));
 	map(0x40, 0x40).mirror(0xff00).w(FUNC(hanakanz_state::mjchuuka_coincounter_w));
-	map(0x41, 0x41).mirror(0xff00).w(FUNC(hanakanz_state::hanakanz_keyb_w));
+	map(0x41, 0x41).mirror(0xff00).w(FUNC(hanakanz_state::hanamai_keyboard_w));
 	map(0x42, 0x42).mirror(0xff00).portr("SYSTEM");
 	map(0x43, 0x44).mirror(0xff00).r(FUNC(hanakanz_state::mjchuuka_keyb_r));
 	map(0x45, 0x45).mirror(0xff00).r(FUNC(hanakanz_state::mjchuuka_gfxrom_1_r));
@@ -3160,7 +3140,7 @@ void ddenlovr_state::mjschuka_portmap(address_map &map)
 	map(0x5c, 0x5c).r(FUNC(ddenlovr_state::hanakanz_rand_r));
 
 	map(0x60, 0x60).w(FUNC(ddenlovr_state::sryudens_coincounter_w));
-	map(0x61, 0x61).w(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	map(0x61, 0x61).w(FUNC(ddenlovr_state::hanamai_keyboard_w));
 	map(0x62, 0x62).portr("SYSTEM");
 	map(0x63, 0x64).r(FUNC(ddenlovr_state::sryudens_keyb_r));
 
@@ -3191,7 +3171,7 @@ void ddenlovr_state::mjmyorntr_portmap(address_map &map)
 	map(0x40, 0x41).w(FUNC(ddenlovr_state::ddenlovr_blitter_w));
 	map(0x43, 0x43).r(FUNC(ddenlovr_state::ddenlovr_gfxrom_r));
 	map(0x50, 0x50).w(FUNC(ddenlovr_state::sryudens_coincounter_w));
-	map(0x51, 0x51).w(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	map(0x51, 0x51).w(FUNC(ddenlovr_state::hanamai_keyboard_w));
 	map(0x52, 0x52).portr("SYSTEM");
 	map(0x53, 0x54).r(FUNC(ddenlovr_state::sryudens_keyb_r));
 	map(0x58, 0x58).portr("DSW1");
@@ -3236,7 +3216,7 @@ void ddenlovr_state::mjmyster_select2_w(uint8_t data)
 	m_input_sel = data;
 
 	if (data & 0x80)
-		m_keyb = 1;
+		m_keyb = 0;
 }
 
 uint8_t ddenlovr_state::mjmyster_coins_r()
@@ -3258,14 +3238,17 @@ uint8_t ddenlovr_state::mjmyster_keyb_r()
 {
 	uint8_t ret = 0xff;
 
-	if      (BIT(m_keyb, 0))   ret = ioport("KEY0")->read();
-	else if (BIT(m_keyb, 1))   ret = ioport("KEY1")->read();
-	else if (BIT(m_keyb, 2))   ret = ioport("KEY2")->read();
-	else if (BIT(m_keyb, 3))   ret = ioport("KEY3")->read();
-	else if (BIT(m_keyb, 4))   ret = ioport("KEY4")->read();
-	else    logerror("%06x: warning, unknown bits read, keyb = %02x\n", m_maincpu->pc(), m_keyb);
-
-	m_keyb <<= 1;
+	if (m_keyb < 5)
+	{
+		ret = m_io_key[BIT(m_input_sel, 0)][m_keyb]->read();
+		if (!machine().side_effects_disabled())
+			++m_keyb;
+	}
+	else
+	{
+		if (!machine().side_effects_disabled())
+			logerror("%06x: warning, unknown bits read, keyb = %02x\n", m_maincpu->pc(), m_keyb);
+	}
 
 	return ret;
 }
@@ -3420,24 +3403,28 @@ void ddenlovr_state::hginga_coins_w(uint8_t data)
 
 uint8_t ddenlovr_state::hginga_input_r()
 {
-	static const char *const keynames0[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
-	static const char *const keynames1[] = { "KEY5", "KEY6", "KEY7", "KEY8", "KEY9" };
-
+	uint8_t result = 0xff;
 	switch (m_input_sel)
 	{
-		case 0x2d:
-			return 0xff;
+	case 0x2d:
+		result = 0xff;
+		break;
 
-		// player 1
-		case 0xa1:
-			return ioport(keynames0[m_keyb++])->read();
+	case 0xa1: // player 1
+	case 0xa2: // player 2
+		if (m_keyb < 5)
+		{
+			result = m_io_key[BIT(m_input_sel, 1)][m_keyb]->read();
+			if (!machine().side_effects_disabled())
+				++m_keyb;
+		}
+		break;
 
-		// player 2
-		case 0xa2:
-			return ioport(keynames1[m_keyb++])->read();
+	default:
+		if (!machine().side_effects_disabled())
+			logerror("%04x: input_r with select = %02x\n", m_maincpu->pc(), m_input_sel);
 	}
-	logerror("%04x: input_r with select = %02x\n", m_maincpu->pc(), m_input_sel);
-	return 0xff;
+	return result;
 }
 
 void ddenlovr_state::hginga_blitter_w(offs_t offset, uint8_t data)
@@ -3500,7 +3487,7 @@ void ddenlovr_state::hginga_portmap(address_map &map)
                              Hanafuda Hana Gokou
 ***************************************************************************/
 
-uint8_t ddenlovr_state::hgokou_player_r(int player )
+uint8_t ddenlovr_state::hgokou_player_r(int player)
 {
 	uint8_t hopper_bit = ((m_hopper && !(m_screen->frame_number() % 10)) ? 0 : (1 << 6));
 
@@ -3540,8 +3527,8 @@ void ddenlovr_state::hgokou_input_w(uint8_t data)
 			// bit 1 = out counter
 			// bit 2 = hopper
 			// bit 7 = ?
-			machine().bookkeeping().coin_counter_w(0, data & 1);
-			machine().bookkeeping().coin_counter_w(1, data & 2);
+			machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
+			machine().bookkeeping().coin_counter_w(1, BIT(data, 1));
 			m_hopper = data & 0x04;
 #ifdef MAME_DEBUG
 //          popmessage("COINS %02x",data);
@@ -3912,19 +3899,6 @@ uint8_t ddenlovr_state::mjflove_protection_r()
 	return 0x27;
 }
 
-uint8_t ddenlovr_state::mjflove_keyb_r(offs_t offset)
-{
-	uint8_t val = 0xff;
-
-	if      (!BIT(m_keyb, 0))   val = ioport(offset ? "KEY5" : "KEY0")->read();
-	else if (!BIT(m_keyb, 1))   val = ioport(offset ? "KEY6" : "KEY1")->read();
-	else if (!BIT(m_keyb, 2))   val = ioport(offset ? "KEY7" : "KEY2")->read();
-	else if (!BIT(m_keyb, 3))   val = ioport(offset ? "KEY8" : "KEY3")->read();
-	else if (!BIT(m_keyb, 4))   val = ioport(offset ? "KEY9" : "KEY4")->read();
-
-	return val;
-}
-
 ioport_value ddenlovr_state::mjflove_blitter_r()
 {
 	// bit 7 = 1 -> blitter busy
@@ -3957,7 +3931,8 @@ void ddenlovr_state::mjflove_portmap(address_map &map)
 	map(0x0038, 0x0038).nopr();         // ? ack or watchdog
 	map(0x0040, 0x0041).w(FUNC(ddenlovr_state::ddenlovr_blitter_w)).mirror(0xff00);
 	map(0x0043, 0x0043).r(FUNC(ddenlovr_state::ddenlovr_gfxrom_r));
-	map(0x0080, 0x0081).r(FUNC(ddenlovr_state::mjflove_keyb_r));
+	map(0x0080, 0x0080).r(FUNC(ddenlovr_state::hanamai_keyboard_r<0>));
+	map(0x0081, 0x0081).r(FUNC(ddenlovr_state::hanamai_keyboard_r<1>));
 	map(0x0082, 0x0082).portr("SYSTEM");
 	map(0x00da, 0x00da).r(FUNC(ddenlovr_state::mjflove_protection_r)).mirror(0xff00);
 	map(0x00f2, 0x00f2).w(FUNC(ddenlovr_state::mjmyster_rambank_w)).mirror(0xff00);
@@ -4094,13 +4069,7 @@ void ddenlovr_state::sryudens_map(address_map &map)
 
 uint8_t ddenlovr_state::sryudens_keyb_r(offs_t offset)
 {
-	uint8_t val = 0x3f;
-
-	if      (!BIT(m_keyb, 0))   val = ioport(offset ? "KEY5" : "KEY0")->read();
-	else if (!BIT(m_keyb, 1))   val = ioport(offset ? "KEY6" : "KEY1")->read();
-	else if (!BIT(m_keyb, 2))   val = ioport(offset ? "KEY7" : "KEY2")->read();
-	else if (!BIT(m_keyb, 3))   val = ioport(offset ? "KEY8" : "KEY3")->read();
-	else if (!BIT(m_keyb, 4))   val = ioport(offset ? "KEY9" : "KEY4")->read();
+	uint8_t val = offset ? hanamai_keyboard_r<0>() : hanamai_keyboard_r<1>();
 
 	val |= ioport(offset ? "HOPPER" : "BET")->read();
 	if (offset)
@@ -4116,8 +4085,8 @@ void ddenlovr_state::sryudens_coincounter_w(uint8_t data)
 	// bit 4 = ? on except during boot or test mode
 	// bit 7 = ? mostly on
 
-	machine().bookkeeping().coin_counter_w(0, data & 1);
-	machine().bookkeeping().coin_counter_w(1, data & 2);
+	machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
+	machine().bookkeeping().coin_counter_w(1, BIT(data, 1));
 	m_hopper = data & 0x04;
 
 	if (data & 0x68)
@@ -4159,7 +4128,7 @@ void ddenlovr_state::sryudens_portmap(address_map &map)
 	map(0x93, 0x93).portr("DSW3");
 	map(0x94, 0x94).portr("DSWTOP");
 	map(0x98, 0x98).w(FUNC(ddenlovr_state::sryudens_coincounter_w));
-	map(0x99, 0x99).w(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	map(0x99, 0x99).w(FUNC(ddenlovr_state::hanamai_keyboard_w));
 	map(0x9a, 0x9a).portr("SYSTEM");
 	map(0x9b, 0x9c).r(FUNC(ddenlovr_state::sryudens_keyb_r));
 }
@@ -4205,7 +4174,7 @@ void ddenlovr_state::janshinp_portmap(address_map &map)
 	map(0x03, 0x03).portr("DSW3");
 	map(0x04, 0x04).portr("DSWTOP");
 	map(0x08, 0x08).w(FUNC(ddenlovr_state::janshinp_coincounter_w));
-	map(0x09, 0x09).w(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	map(0x09, 0x09).w(FUNC(ddenlovr_state::hanamai_keyboard_w));
 	map(0x0a, 0x0a).portr("SYSTEM");
 	map(0x0b, 0x0c).r(FUNC(ddenlovr_state::sryudens_keyb_r));
 	map(0x20, 0x23).w(FUNC(ddenlovr_state::ddenlovr_palette_base_w));
@@ -4373,7 +4342,8 @@ void htengoku_state::htengoku_coin_w(uint8_t data)
 			// bit 0 = coin counter
 			// bit 1 = out counter
 			// bit 2 = hopper
-			machine().bookkeeping().coin_counter_w(0, data & 1);
+			machine().bookkeeping().coin_counter_w(0, BIT(data, 0));
+			machine().bookkeeping().coin_counter_w(1, BIT(data, 1));
 			m_hopper = data & 0x04;
 #ifdef MAME_DEBUG
 //          popmessage("COINS %02x",data);
@@ -4540,15 +4510,8 @@ void htengoku_state::htengoku(machine_config &config)
 
 uint8_t ddenlovr_state::daimyojn_keyb1_r()
 {
-	uint8_t val = 0x3f;
-
 	uint8_t hopper_bit = ((m_hopper && !(m_screen->frame_number() % 10)) ? 0 : (1 << 6));
-
-	if      (!BIT(m_keyb, 0))  val = ioport("KEY0")->read() | hopper_bit;
-	else if (!BIT(m_keyb, 1))  val = ioport("KEY1")->read() | hopper_bit;
-	else if (!BIT(m_keyb, 2))  val = ioport("KEY2")->read() | hopper_bit;
-	else if (!BIT(m_keyb, 3))  val = ioport("KEY3")->read() | hopper_bit;
-	else if (!BIT(m_keyb, 4))  val = ioport("KEY4")->read() | hopper_bit;
+	uint8_t val = hanamai_keyboard_r<1>() | hopper_bit;
 
 //  val |= ioport("BET")->read();
 	return val;
@@ -4556,13 +4519,7 @@ uint8_t ddenlovr_state::daimyojn_keyb1_r()
 
 uint8_t ddenlovr_state::daimyojn_keyb2_r()
 {
-	uint8_t val = 0x3f;
-
-	if      (!BIT(m_keyb, 0))  val = ioport("KEY5")->read();
-	else if (!BIT(m_keyb, 1))  val = ioport("KEY6")->read();
-	else if (!BIT(m_keyb, 2))  val = ioport("KEY7")->read();
-	else if (!BIT(m_keyb, 3))  val = ioport("KEY8")->read();
-	else if (!BIT(m_keyb, 4))  val = ioport("KEY9")->read();
+	uint8_t val = hanamai_keyboard_r<0>();
 
 	val |= ioport("HOPPER")->read();
 	return val;
@@ -5020,14 +4977,14 @@ static INPUT_PORTS_START( htengoku )
 	PORT_START("COINS")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE  ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1) PORT_TOGGLE
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE2 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE3 )   // data clear
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_TOGGLE
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
-	PORT_INCLUDE( HANAFUDA_KEYS_BET )
+	PORT_INCLUDE( dynax_hanafuda_keys_bet )
 
 	PORT_START("DSW0")  // IN11 - DSW1
 	PORT_DIPNAME( 0x01, 0x01, "Show Girls" )
@@ -5619,94 +5576,109 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( hanakanz )
 	PORT_START("SYSTEM")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1)   // Test
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_CODE(KEYCODE_4) // pay
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))   // Test
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
 	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(2)  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(2)  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(2)  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(2)  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(2)  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G ) PORT_PLAYER(2)  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(2)  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H ) PORT_PLAYER(2)  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // PON
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)   // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Kan
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_CONDITION("BET",0x40,EQUALS,0x00) // "t"
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 )
 
-	PORT_START("KEY6")
+	PORT_START("KEY1")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )      // J
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )      // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )  // BET
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_CONDITION("BET",0x40,EQUALS,0x00) // "s"
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // BET
+
+	PORT_START("KEY2")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G ) PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    PORT_CONDITION("BET",0x40,EQUALS,0x00)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG ) PORT_CONDITION("BET",0x40,EQUALS,0x00) // "b"
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )     PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Ron
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_START("KEY3")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H ) PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    PORT_CONDITION("BET",0x40,EQUALS,0x00)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_CONDITION("BET",0x40,EQUALS,0x00) // "w"
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )           PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_START("KEY4")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )           PORT_CONDITION("BET",0x40,EQUALS,0x00)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_START("KEY5")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(2)  // A
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(2)  // E
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(2)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_PLAYER(2) // "t"
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
+
+	PORT_START("KEY6")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(2)  // B
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(2)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_PLAYER(2) // "s"
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )       PORT_CONDITION("BET",0x40,EQUALS,0x40)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // BET
 
 	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G )
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(2)  // C
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_G ) PORT_CONDITION("BET",0x40,EQUALS,0x40) PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    PORT_CONDITION("BET",0x40,EQUALS,0x00)
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Chi
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_PLAYER(2) // "b"
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )     PORT_CONDITION("BET",0x40,EQUALS,0x40)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Ron
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H )
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(2)  // D
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_H ) PORT_CONDITION("BET",0x40,EQUALS,0x40) PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    PORT_CONDITION("BET",0x40,EQUALS,0x00)
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // PON
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_CONDITION("BET",0x40,EQUALS,0x00) PORT_PLAYER(2) // "w"
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )           PORT_CONDITION("BET",0x40,EQUALS,0x40)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )        // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )      // "s"
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_CONDITION("BET",0x40,EQUALS,0x40) PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )           PORT_CONDITION("BET",0x40,EQUALS,0x00)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x07, 0x07, "Unknown 1-0&1&2" )
@@ -5843,62 +5815,22 @@ static INPUT_PORTS_START( hkagerou )
 	PORT_START("SYSTEM")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1)   // Test
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) // Test
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
 	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_NAME("P2 1 (Hanafuda) / P2 A (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_NAME("P2 5 (Hanafuda) / P2 E (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 I (not used)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P2 Yes")  // P2 M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 Kan (not used)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_NAME("P2 2 (Hanafuda) / P2 B (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_NAME("P2 6 (Hanafuda) / P2 F (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 J (not used)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P2 No")   // P2 N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 Reach (not used)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // P2 BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_NAME("P2 3 (Hanafuda) / P2 C (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 G (not used)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 K (not used)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 Chi (not used)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 Ron (not used)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_NAME("P2 4 (Hanafuda) / P2 D (Mahjong)") PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 H (not used)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 L (not used)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 PON (not used)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN)                             // P2 ?? (not used)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // P2 t (Take)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // P2 w (W.Up)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // P2 f (Flip Flop)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)       // P2 b (Big)
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)       // P2 s (Small)
-
-	PORT_START("KEY5")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_NAME("P1 1 (Hanafuda) / P1 A (Mahjong)")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_NAME("P1 5 (Hanafuda) / P1 E (Mahjong)")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                                        // P1 I (not used)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P1 Yes") PORT_CODE(KEYCODE_Y) // P1 M
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P1 Yes") PORT_CODE(KEYCODE_M) // P1 M
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                                        // P1 Kan (not used)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 )
 
-	PORT_START("KEY6")
+	PORT_START("KEY1")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_NAME("P1 2 (Hanafuda) / P1 B (Mahjong)")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_NAME("P1 6 (Hanafuda) / P1 F (Mahjong)")
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                                        // P1 J (not used)
@@ -5906,7 +5838,7 @@ static INPUT_PORTS_START( hkagerou )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                                        // P1 Reach (not used)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )                                    // P1 BET
 
-	PORT_START("KEY7")
+	PORT_START("KEY2")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_NAME("P1 3 (Hanafuda) / P1 C (Mahjong)")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P1 G (not used)
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P1 K (not used)
@@ -5914,7 +5846,7 @@ static INPUT_PORTS_START( hkagerou )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P1 Ron (not used)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
-	PORT_START("KEY8")
+	PORT_START("KEY3")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_NAME("P1 4 (Hanafuda) / P1 D (Mahjong)")
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P1 H (not used)
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P1 L (not used)
@@ -5922,13 +5854,53 @@ static INPUT_PORTS_START( hkagerou )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
-	PORT_START("KEY9")
+	PORT_START("KEY4")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN)             // P1 ?? (not used)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // P1 t (Take)
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // P1 w (W.Up)
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // P1 f (Flip Flop)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )        // P1 b (Big)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )      // P1 s (Small)
+
+	PORT_START("KEY5")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_NAME("P2 1 (Hanafuda) / P2 A (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_NAME("P2 5 (Hanafuda) / P2 E (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 I (not used)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P2 Yes")  // P2 M
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 Kan (not used)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 )
+
+	PORT_START("KEY6")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_NAME("P2 2 (Hanafuda) / P2 B (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_NAME("P2 6 (Hanafuda) / P2 F (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 J (not used)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("P2 No")   // P2 N
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )                    // P2 Reach (not used)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // P2 BET
+
+	PORT_START("KEY7")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_NAME("P2 3 (Hanafuda) / P2 C (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 G (not used)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 K (not used)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 Chi (not used)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 Ron (not used)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_START("KEY8")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_NAME("P2 4 (Hanafuda) / P2 D (Mahjong)") PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 H (not used)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 L (not used)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // P2 PON (not used)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_START("KEY9")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN)                             // P2 ?? (not used)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // P2 t (Take)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // P2 w (W.Up)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // P2 f (Flip Flop)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)       // P2 b (Big)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)       // P2 s (Small)
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x07, 0x07, "Unknown 1-0&1&2" )
@@ -6286,91 +6258,13 @@ static INPUT_PORTS_START( mjreach1 )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2)  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)        // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)        // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)        // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )    // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )    // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )    // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )  // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 )       // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )      // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )      // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )      // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )      // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )     // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )     // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )     // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )   // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )   // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )       // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )     // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )     // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )     // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )   // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )       // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )       // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )        // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )          // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )        // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -6519,91 +6413,13 @@ static INPUT_PORTS_START( jongtei )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )        // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -6808,91 +6624,13 @@ static INPUT_PORTS_START( mjchuuka )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)       // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)       // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -7041,91 +6779,13 @@ static INPUT_PORTS_START( mjschuka )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -7375,51 +7035,13 @@ static INPUT_PORTS_START( mjmyster )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
 	PORT_SERVICE_NO_TOGGLE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )        // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -7554,31 +7176,31 @@ static INPUT_PORTS_START( hginga )
 	PORT_START("SYSTEM")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 //  PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1)   // Test
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))    // Test
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
 //  PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(2)   // A
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(2)   // E
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(2)   // M
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Kan
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2   )
 
 	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(2)   // B
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(2)   // F
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(2)   // N
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Reach
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
 
 	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(2)   // C
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // G
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Chi
@@ -7586,7 +7208,7 @@ static INPUT_PORTS_START( hginga )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(2)   // D
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // H
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // PON
@@ -7602,23 +7224,23 @@ static INPUT_PORTS_START( hginga )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
 
 	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A )  // A
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E )  // E
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES )  // M
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Kan
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1   )
 
 	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B )  // B
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F )  // F
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO )  // N
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Reach
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
 
 	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C )  // C
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // G
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Chi
@@ -7626,7 +7248,7 @@ static INPUT_PORTS_START( hginga )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D )  // D
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // H
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )    // PON
@@ -7773,93 +7395,15 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( hgokou )
 	PORT_START("SYSTEM")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1)   PORT_TOGGLE
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BILL1 ) PORT_CODE(KEYCODE_6)  // note
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )  // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1)
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // PON
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_A ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_E ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_YES ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)   // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2)
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_B ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_HANAFUDA_F ) PORT_PLAYER(2)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_HANAFUDA_NO ) PORT_PLAYER(2)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_C ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN ) PORT_PLAYER(2) // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_BIG ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_HANAFUDA_D ) PORT_PLAYER(2)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN ) PORT_PLAYER(2) // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // PON
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // "s"
+	PORT_INCLUDE( dynax_hanafuda_keys_bet )
 
 	// Note the PCB has 4x 10-position DIP switches and SW5 is a 4-position DIP switch.
 	// SW5 is used to select either the Mahjong edge connector, or the 18/10 Edge connectors (i.e. emulation of SW5 is not required)
@@ -7987,53 +7531,15 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( mjmyornt )
 	PORT_START("SYSTEM")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN)
-	PORT_SERVICE_NO_TOGGLE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )  // note
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1)
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN ) // 18B
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_TOGGLE PORT_NAME(DEF_STR( Test ))   // Test
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BILL1 ) PORT_CODE(KEYCODE_6)  // note
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_SERVICE1 )
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )    // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" ) PORT_DIPLOCATION("SW1:1,2,3,4")
@@ -8276,85 +7782,7 @@ static INPUT_PORTS_START( mjflove )
 	PORT_BIT( 0x60, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_CUSTOM_MEMBER(FUNC(ddenlovr_state::mjflove_blitter_r))  // RTC (bit 5) & blitter irq flag (bit 6)
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM )   // blitter busy flag
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW2")  // IN12 - DSW2
 	PORT_DIPNAME( 0x03, 0x03, DEF_STR( Coinage ) )      PORT_DIPLOCATION("SW1:1,2")
@@ -8412,9 +7840,9 @@ static INPUT_PORTS_START( hparadis )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_COIN2 )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE1 )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1)   PORT_TOGGLE
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // analyzer
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE3 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME(DEF_STR( Test ))   PORT_TOGGLE
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )   // analyzer
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MEMORY_RESET )  // data clear
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -8589,91 +8017,13 @@ static INPUT_PORTS_START( sryudens )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE( 0x04, IP_ACTIVE_LOW )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN3 )      // note2
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -8822,91 +8172,13 @@ static INPUT_PORTS_START( seljan2 )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE( 0x04, IP_ACTIVE_LOW )
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(5)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN3 )      // note2
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )    // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE       )    // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP   )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP   )    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG         )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL       )    // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -9055,91 +8327,13 @@ static INPUT_PORTS_START( janshinp )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN3 )      // service coin (test mode)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)       // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)   // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)   // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -9287,91 +8481,13 @@ static INPUT_PORTS_START( dtoyoken )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_SERVICE(0x04, IP_ACTIVE_LOW)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN3 )      // service coin (test mode)
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )  // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE )      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP )  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL )  // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -9518,92 +8634,14 @@ static INPUT_PORTS_START( daimyojn )
 	PORT_START("SYSTEM")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_GAMBLE_PAYOUT ) PORT_CODE(KEYCODE_4) // pay
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN  )
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE  ) PORT_NAME(DEF_STR( Test )) PORT_CODE(KEYCODE_F1) PORT_TOGGLE
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SERVICE1 )   // analyzer
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_SERVICE2 )   // data clear
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE  ) PORT_NAME(DEF_STR( Test )) PORT_TOGGLE
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_BOOK )    // analyzer
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MEMORY_RESET )   // data clear
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN2 )      // note
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(5)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN3 )      // note2
 
-	PORT_START("KEY0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A ) PORT_PLAYER(2)   // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E ) PORT_PLAYER(2)   // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I ) PORT_PLAYER(2)   // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M ) PORT_PLAYER(2)   // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN ) PORT_PLAYER(2) // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START2 ) // Start 2
-
-	PORT_START("KEY1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B ) PORT_PLAYER(2)   // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F ) PORT_PLAYER(2)   // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J ) PORT_PLAYER(2)   // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N ) PORT_PLAYER(2)   // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH ) PORT_PLAYER(2)   // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET ) PORT_PLAYER(2) // BET
-
-	PORT_START("KEY2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C ) PORT_PLAYER(2)   // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G ) PORT_PLAYER(2)   // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K ) PORT_PLAYER(2)   // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI ) PORT_PLAYER(2) // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON ) PORT_PLAYER(2) // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D ) PORT_PLAYER(2)   // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H ) PORT_PLAYER(2)   // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L ) PORT_PLAYER(2)   // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON ) PORT_PLAYER(2) // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE ) PORT_PLAYER(2) // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE ) PORT_PLAYER(2)      // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP ) PORT_PLAYER(2)  // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP ) PORT_PLAYER(2)  // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG   ) PORT_PLAYER(2)   // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL ) PORT_PLAYER(2)   // "s"
-
-	PORT_START("KEY5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_A )  // A
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_E )  // E
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_I )  // I
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_M )  // M
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_KAN )    // Kan
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1 ) // Start 1
-
-	PORT_START("KEY6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_B )  // B
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_F )  // F
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_J )  // J
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_N )  // N
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_REACH )  // Reach
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_BET )    // BET
-
-	PORT_START("KEY7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_C )  // C
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_G )  // G
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_K )  // K
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_CHI )    // Chi
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_RON )    // Ron
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_D )  // D
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_H )  // H
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_L )  // L
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_PON )    // Pon
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )    // nothing
-
-	PORT_START("KEY9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_MAHJONG_LAST_CHANCE )    // "l"
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_SCORE       )    // "t"
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP   )    // "w"
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_MAHJONG_FLIP_FLOP   )    // Flip Flop
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_MAHJONG_BIG         )    // "b"
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_MAHJONG_SMALL       )    // "s"
+	PORT_INCLUDE( dynax_mahjong_keys_bet )
 
 	PORT_START("DSW1")
 	PORT_DIPNAME( 0x0f, 0x07, "Pay Out Rate (%)" )
@@ -10625,7 +9663,7 @@ void ddenlovr_state::mjflove(machine_config &config)
 	maincpu.set_addrmap(AS_PROGRAM, &ddenlovr_state::rongrong_map);
 	maincpu.set_addrmap(AS_IO, &ddenlovr_state::mjflove_portmap);
 	maincpu.in_pa_callback().set_ioport("DSW2");
-	maincpu.out_pb_callback().set(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	maincpu.out_pb_callback().set(FUNC(ddenlovr_state::hanamai_keyboard_w));
 
 	MCFG_MACHINE_START_OVERRIDE(ddenlovr_state,mjflove)
 
@@ -10846,7 +9884,7 @@ void ddenlovr_state::seljan2(machine_config &config)
 	tmpz84c015_device &maincpu(TMPZ84C015(config, m_maincpu, XTAL(16'000'000) / 2));
 	maincpu.set_addrmap(AS_PROGRAM, &ddenlovr_state::seljan2_map);
 	maincpu.set_addrmap(AS_IO, &ddenlovr_state::seljan2_portmap);
-	maincpu.out_pa_callback().set(FUNC(ddenlovr_state::hanakanz_keyb_w));
+	maincpu.out_pa_callback().set(FUNC(ddenlovr_state::hanamai_keyboard_w));
 	maincpu.out_pb_callback().set(FUNC(ddenlovr_state::sryudens_coincounter_w));
 
 	MCFG_MACHINE_START_OVERRIDE(ddenlovr_state,seljan2)
