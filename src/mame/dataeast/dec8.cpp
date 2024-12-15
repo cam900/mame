@@ -44,7 +44,7 @@ To do:
 #include "emu.h"
 #include "dec8.h"
 
-#include "cpu/m6502/m6502.h"
+#include "cpu/m6502/r65c02.h"
 #include "cpu/m6809/hd6309.h"
 #include "cpu/m6809/m6809.h"
 #include "deco222.h"
@@ -200,7 +200,7 @@ void dec8_state_base::sound_w(u8 data)
 {
 	m_soundlatch->write(data);
 	m_audiocpu->set_input_line(m6502_device::NMI_LINE, ASSERT_LINE);
-	m_m6502_timer->adjust(m_audiocpu->cycles_to_attotime(3));
+	m_6502_timer->adjust(m_audiocpu->cycles_to_attotime(3));
 }
 
 void csilver_state::adpcm_int(int state)
@@ -793,7 +793,7 @@ static INPUT_PORTS_START( lastmisn )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("I8751")
 	PORT_BIT( 0x1f, IP_ACTIVE_LOW, IPT_UNUSED )
@@ -889,7 +889,7 @@ static INPUT_PORTS_START( shackled )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED ) // tested and discarded by vestigial code at start
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("I8751")
 	PORT_BIT( 0x1f, IP_ACTIVE_LOW, IPT_UNUSED )
@@ -989,7 +989,7 @@ static INPUT_PORTS_START( gondo )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("I8751") /* hooked up on the i8751 */
 	/* Low 4 bits not connected on schematics */
@@ -1061,7 +1061,7 @@ static INPUT_PORTS_START( garyoret )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(2)  /* shoot */
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_PLAYER(2)  /* bomb */
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("I8751") /* hooked up on the (fake) i8751 */
 	PORT_BIT( 0x0f, IP_ACTIVE_LOW, IPT_UNUSED )
@@ -1149,7 +1149,8 @@ static INPUT_PORTS_START( ghostb )
 																				// PORT_DIPSETTING(    0x03, DEF_STR( 1C_1C ) )
 																				// PORT_DIPSETTING(    0x02, DEF_STR( 1C_2C ) )
 																				// PORT_DIPSETTING(    0x01, DEF_STR( 1C_3C ) )
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")          // PORT_DIPLOCATION("SW1:3") // Manual says 'Must Be Off'. Note: Turning on 3+4+5+8 does nothing on real hardware.
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
+          // PORT_DIPLOCATION("SW1:3") // Manual says 'Must Be Off'. Note: Turning on 3+4+5+8 does nothing on real hardware.
 	PORT_DIPUNUSED( 0x04, IP_ACTIVE_LOW )                       PORT_DIPLOCATION("SW1:4") // Manual says 'Must Be Off'. See note
 	PORT_DIPUNUSED( 0x10, IP_ACTIVE_LOW )                       PORT_DIPLOCATION("SW1:5") // Manual says 'Must Be Off'. See note
 	PORT_DIPNAME( 0x20, 0x20, DEF_STR( Demo_Sounds ) )          PORT_DIPLOCATION("SW1:6")
@@ -1287,7 +1288,7 @@ static INPUT_PORTS_START( csilver )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("DSW0")
 	PORT_DIPNAME( 0x03, 0x03, DEF_STR( Coin_A ) )               PORT_DIPLOCATION("SW1:1,2")
@@ -1382,7 +1383,7 @@ static INPUT_PORTS_START( oscar )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("DSW0")
 	PORT_DIPNAME( 0x03, 0x03, DEF_STR( Coin_A ) )               PORT_DIPLOCATION("SW1:1,2")  /* table at 0xf8e3 (4 * 2 bytes : coins then credits) */
@@ -1471,7 +1472,7 @@ static INPUT_PORTS_START( srdarwin )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN )  PORT_8WAY PORT_COCKTAIL
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_COCKTAIL
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_COCKTAIL
-	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("I8751") /* hooked up on the i8751 */
@@ -1568,7 +1569,7 @@ static INPUT_PORTS_START( cobracom )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen")
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_READ_LINE_DEVICE_MEMBER("screen", FUNC(screen_device::vblank))
 
 	PORT_START("DSW0")
 	PORT_DIPNAME( 0x03, 0x03, DEF_STR( Coin_A ) )               PORT_DIPLOCATION("SW1:1,2")  /* code at 0x88b7 in 'cobracom', 0x890e in 'cobracomj' */
@@ -1796,7 +1797,7 @@ void dec8_state_base::machine_start()
 	uint32_t max_bank = (memregion("maincpu")->bytes() - 0x10000) / 0x4000;
 	m_mainbank->configure_entries(0, max_bank, &ROM[0x10000], 0x4000);
 
-	m_m6502_timer = timer_alloc(FUNC(dec8_state_base::audiocpu_nmi_clear), this);
+	m_6502_timer = timer_alloc(FUNC(dec8_state_base::audiocpu_nmi_clear), this);
 
 	save_item(NAME(m_coin_state));
 
@@ -1884,7 +1885,7 @@ void lastmisn_state::lastmisn(machine_config &config)
 	MC6809E(config, m_subcpu, 2000000);
 	m_subcpu->set_addrmap(AS_PROGRAM, &lastmisn_state::lastmisn_sub_map);
 
-	M6502(config, m_audiocpu, 1500000);
+	R65C02(config, m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &lastmisn_state::ym3526_s_map); /* NMIs are caused by the main CPU */
 
 	I8751(config, m_mcu, XTAL(8'000'000));
@@ -1943,7 +1944,7 @@ void lastmisn_state::shackled(machine_config &config)
 	MC6809E(config, m_subcpu, 2000000);
 	m_subcpu->set_addrmap(AS_PROGRAM, &lastmisn_state::shackled_sub_map);
 
-	M6502(config, m_audiocpu, 1500000);
+	R65C02(config, m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &lastmisn_state::ym3526_s_map); /* NMIs are caused by the main CPU */
 
 	I8751(config, m_mcu, XTAL(8'000'000));
@@ -2000,7 +2001,7 @@ void gondo_state::gondo(machine_config &config)
 	HD6309E(config, m_maincpu, 3000000); /* HD63C09EP */
 	m_maincpu->set_addrmap(AS_PROGRAM, &gondo_state::gondo_map);
 
-	M6502(config, m_audiocpu, 1500000);
+	R65C02(config, m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &gondo_state::oscar_s_map); /* NMIs are caused by the main CPU */
 
 	I8751(config, m_mcu, XTAL(8'000'000));
@@ -2055,7 +2056,7 @@ void lastmisn_state::garyoret(machine_config &config)
 	HD6309E(config, m_maincpu, 3000000); /* HD63C09EP */
 	m_maincpu->set_addrmap(AS_PROGRAM, &lastmisn_state::garyoret_map);
 
-	M6502(config, m_audiocpu, 1500000);
+	R65C02(config, m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &lastmisn_state::oscar_s_map); /* NMIs are caused by the main CPU */
 
 	I8751(config, m_mcu, XTAL(8'000'000));
@@ -2167,7 +2168,7 @@ void lastmisn_state::ghostb(machine_config &config)
 void lastmisn_state::meikyuh(machine_config &config)
 {
 	ghostb(config);
-	M6502(config.replace(), m_audiocpu, 1500000);
+	R65C02(config.replace(), m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &lastmisn_state::dec8_s_map);
 }
 
@@ -2181,7 +2182,7 @@ void csilver_state::csilver(machine_config &config)
 	MC6809E(config, m_subcpu, XTAL(12'000'000)/8); /* verified on pcb */
 	m_subcpu->set_addrmap(AS_PROGRAM, &csilver_state::sub_map);
 
-	M6502(config, m_audiocpu, XTAL(12'000'000)/8); /* verified on pcb */
+	R65C02(config, m_audiocpu, XTAL(12'000'000)/8); /* verified on pcb */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &csilver_state::sound_map); /* NMIs are caused by the main CPU */
 
 	config.set_maximum_quantum(attotime::from_hz(6000));
@@ -2298,7 +2299,7 @@ void oscar_state::oscarbl(machine_config &config)
 {
 	oscar(config);
 
-	M6502(config.replace(), m_audiocpu, XTAL(12'000'000)/8);
+	R65C02(config.replace(), m_audiocpu, XTAL(12'000'000)/8);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &oscar_state::oscar_s_map); /* NMIs are caused by the main CPU */
 	m_audiocpu->set_addrmap(AS_OPCODES, &oscar_state::oscarbl_s_opcodes_map);
 }
@@ -2358,7 +2359,7 @@ void oscar_state::cobracom(machine_config &config)
 	MC6809E(config, m_maincpu, 2000000);  /* MC68B09EP */
 	m_maincpu->set_addrmap(AS_PROGRAM, &oscar_state::cobra_map);
 
-	M6502(config, m_audiocpu, 1500000);
+	R65C02(config, m_audiocpu, 1500000);
 	m_audiocpu->set_addrmap(AS_PROGRAM, &oscar_state::dec8_s_map); /* NMIs are caused by the main CPU */
 
 	/* video hardware */
@@ -3910,7 +3911,7 @@ void srdarwin_state::init_srdarwinb()
 
 	u8 *rom = memregion("sprites")->base();
 	uint8_t byte1;
-	
+
 	for (int i = 0; i < 0x30000; i += 4)
 	{
 		byte1 = rom[i + 1];

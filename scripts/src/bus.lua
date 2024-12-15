@@ -4690,6 +4690,8 @@ if (BUSES["ZORRO"]~=null) then
 		MAME_DIR .. "src/devices/bus/amiga/zorro/buddha.h",
 		MAME_DIR .. "src/devices/bus/amiga/zorro/ripple.cpp",
 		MAME_DIR .. "src/devices/bus/amiga/zorro/ripple.h",
+		MAME_DIR .. "src/devices/bus/amiga/zorro/toccata.cpp",
+		MAME_DIR .. "src/devices/bus/amiga/zorro/toccata.h",
 	}
 end
 
@@ -5755,6 +5757,8 @@ if (BUSES["H89BUS"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/bus/heathzenith/h89/cards.cpp",
 		MAME_DIR .. "src/devices/bus/heathzenith/h89/cards.h",
+		MAME_DIR .. "src/devices/bus/heathzenith/h89/cdr_fdc_880h.cpp",
+		MAME_DIR .. "src/devices/bus/heathzenith/h89/cdr_fdc_880h.h",
 		MAME_DIR .. "src/devices/bus/heathzenith/h89/h89bus.cpp",
 		MAME_DIR .. "src/devices/bus/heathzenith/h89/h89bus.h",
 		MAME_DIR .. "src/devices/bus/heathzenith/h89/h17_fdc.cpp",
