@@ -17550,6 +17550,7 @@ hgokbang                        // "116" (c) 1995 Dynax
 hgokou                          // "108" (c) 1995 Dynax (Alba license)
 hgokoua                         // "108" (c) 1995 Dynax (Alba license)
 hkagerou                        // "510" Hana Kagerou 1996 Nakanihon
+hnrose                          // Hana Night Rose (C) 2000 Techno-Top
 hparadis                        // "101" (c) 1994 Nakanihon
 htengoku                        // "65" (c) 1992 Dynax
 janshinp                        // "700j" 1996 Dynax / Sigma
@@ -17569,6 +17570,7 @@ mjmyuniv                        // "85" (c) 1994 Dynax
 mjmywrld                        // "77" (c) 1994 Dynax
 mjreach1                        // "526" Mahjong Reach Ippatsu 1998 Nihon System/Dynax
 mjschuka                        // "115" (c) 1995 Dynax
+mjtenho                         // Mahjong Tenho (C) 2002 Techno-Top
 mmpanic                         // "70" (c) 1992 Nakanihon/Taito
 momotaro                        // "027" 2004 Techno-Top
 nettoqc                         // "103" (c) 1995 Nakanihon
@@ -45517,6 +45519,7 @@ snowbro2ny                      // TP-033 (c) 1994 Nyanko
 burgkids                        // (c) 1995 Sunwise
 othldrby                        // (c) 1995 Sunwise
 pwrkick                         // (c) 1994 Sunwise
+pyutakun                        // (c) 1995 Sunwise
 
 @source:toaplan/tekipaki.cpp
 tekipaki                        // TP-020 (c) 1991 Toaplan
@@ -46010,7 +46013,9 @@ icanpian                        //
 jak_batm                        // The Batman, 2004
 jak_mk
 jak_mpacw
+jak_potc
 jak_sbjd
+jak_supm
 jak_wall
 
 @source:tvgames/spg2xx_jakks_gkr.cpp
@@ -46280,6 +46285,7 @@ tvpc_ham
 tvpc_tom
 
 @source:tvgames/xavix2.cpp
+ban_db2j
 ltv_naru                        //
 domfitad                        //
 dombikec                        //
@@ -46306,13 +46312,20 @@ ttv_sw                          //
 ttv_swj                         //
 
 @source:tvgames/xavix_2002.cpp
+anpanmdx
+apmj2009
+ban_dn1j
 ban_kksj
+epo_ntpj
 ban_ordj
 domdance                        //
 domfitch                        //
 domfitex                        //
 domstepc                        //
+doradraw
+epo_doka
 epo_tfit
+maxheart
 mrangbat
 suprtvpc
 suprtvpcdo
