@@ -14,7 +14,6 @@ Quiz Gekiretsu Scramble (Gakuen Paradise 2) (c) 1993 Face
 #include "emu.h"
 
 #include "cpu/z80/z80.h"
-#include "machine/bankdev.h"
 #include "sound/okim6295.h"
 #include "sound/ymopn.h"
 
@@ -34,16 +33,17 @@ public:
 		, m_maincpu(*this, "maincpu")
 		, m_gfxdecode(*this, "gfxdecode")
 		, m_palette(*this, "palette")
-		, m_mainbank(*this, "mainbank")
 		, m_fg_ram(*this, "fg_ram")
 		, m_bg_ram(*this, "bg_ram")
 		, m_spriteram(*this, "spriteram")
 		, m_fgctrl_rom(*this, "fgctrl")
+		, m_mainbank(*this, "mainbank")
+		, m_romview(*this, "romview")
 	{ }
 
-	void gakupara(machine_config &config);
-	void quizdna(machine_config &config);
-	void gekiretu(machine_config &config);
+	void gakupara(machine_config &config) ATTR_COLD;
+	void quizdna(machine_config &config) ATTR_COLD;
+	void gekiretu(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -53,12 +53,13 @@ private:
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
-	required_device<address_map_bank_device> m_mainbank;
 
 	required_shared_ptr<uint8_t> m_fg_ram;
 	required_shared_ptr<uint8_t> m_bg_ram;
 	required_shared_ptr<uint8_t> m_spriteram;
 	required_region_ptr<uint8_t> m_fgctrl_rom;
+	required_memory_bank m_mainbank;
+	memory_view m_romview;
 
 	tilemap_t *m_bg_tilemap = nullptr;
 	tilemap_t *m_fg_tilemap = nullptr;
@@ -73,7 +74,7 @@ private:
 	void bg_yscroll_w(uint8_t data);
 	void bg_xscroll_w(offs_t offset, uint8_t data);
 	void screen_ctrl_w(uint8_t data);
-	void rombank_w(uint8_t data);
+	template <uint8_t Xor = 0> void rombank_w(uint8_t data);
 
 	// game specific
 	void gekiretu_rombank_w(uint8_t data);
@@ -83,12 +84,14 @@ private:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect);
-	void bank_map(address_map &map) ATTR_COLD;
+
+	void common_map(address_map &map) ATTR_COLD;
+	void quizdna_map(address_map &map) ATTR_COLD;
+	void gekiretu_map(address_map &map) ATTR_COLD;
+	void common_io(address_map &map) ATTR_COLD;
+	void quizdna_io_map(address_map &map) ATTR_COLD;
 	void gakupara_io_map(address_map &map) ATTR_COLD;
 	void gekiretu_io_map(address_map &map) ATTR_COLD;
-	void gekiretu_map(address_map &map) ATTR_COLD;
-	void quizdna_io_map(address_map &map) ATTR_COLD;
-	void quizdna_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -252,25 +255,33 @@ uint32_t quizdna_state::screen_update(screen_device &screen, bitmap_ind16 &bitma
 }
 
 
+template <uint8_t Xor>
 void quizdna_state::rombank_w(uint8_t data)
 {
-	m_mainbank->set_bank(data & 0x3f);
-}
-
-void quizdna_state::gekiretu_rombank_w(uint8_t data)
-{
-	m_mainbank->set_bank((data & 0x3f) ^ 0x0a);
+	uint8_t const bank = (data ^ Xor) & 0x3f;
+	if (bank)
+		m_romview.select(0);
+	else
+		m_romview.disable();
+	m_mainbank->set_entry(bank);
 }
 
 /****************************************************************************/
 
+void quizdna_state::common_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom().region("maincpu", 0);
+	map(0x8000, 0x8fff).mirror(0x1000).ram().w(FUNC(quizdna_state::fg_ram_w)).share(m_fg_ram);
+	map(0xa000, 0xbfff).ram().w(FUNC(quizdna_state::bg_ram_w)).share(m_bg_ram);
+	map(0x8000, 0xbfff).view(m_romview);
+	m_romview[0](0x8000, 0xbfff).bankr(m_mainbank);
+	map(0xc000, 0xdfff).ram();
+}
+
 void quizdna_state::quizdna_map(address_map &map)
 {
-	map(0x0000, 0x7fff).rom();
-	map(0x8000, 0xbfff).r(m_mainbank, FUNC(address_map_bank_device::read8));
-	map(0x8000, 0x8fff).mirror(0x1000).w(FUNC(quizdna_state::fg_ram_w)).share(m_fg_ram);
-	map(0xa000, 0xbfff).w(FUNC(quizdna_state::bg_ram_w)).share(m_bg_ram);
-	map(0xc000, 0xdfff).ram();
+	common_map(map);
+
 	map(0xe000, 0xe1ff).ram().share(m_spriteram);
 	map(0xe200, 0xefff).ram();
 	map(0xf000, 0xffff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
@@ -278,69 +289,49 @@ void quizdna_state::quizdna_map(address_map &map)
 
 void quizdna_state::gekiretu_map(address_map &map)
 {
-	map(0x0000, 0x7fff).rom();
-	map(0x8000, 0xbfff).r(m_mainbank, FUNC(address_map_bank_device::read8));
-	map(0x8000, 0x8fff).mirror(0x1000).w(FUNC(quizdna_state::fg_ram_w)).share(m_fg_ram);
-	map(0xa000, 0xbfff).w(FUNC(quizdna_state::bg_ram_w)).share(m_bg_ram);
-	map(0xc000, 0xdfff).ram();
+	common_map(map);
+
 	map(0xe000, 0xefff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
 	map(0xf000, 0xf1ff).ram().share(m_spriteram);
 	map(0xf200, 0xffff).ram();
 }
 
-void quizdna_state::bank_map(address_map &map)
+void quizdna_state::common_io(address_map &map)
 {
-	map(0x00000, 0x00fff).mirror(0x1000).readonly().share(m_fg_ram);
-	map(0x02000, 0x03fff).readonly().share(m_bg_ram);
-	map(0x04000, 0xfffff).rom().region("maincpu", 0x14000);
+	map.global_mask(0xff);
+	map(0x80, 0x80).portr("P1");
+	map(0x81, 0x81).portr("P2");
+	map(0x90, 0x90).portr("SYSTEM");
+	map(0x91, 0x91).portr("SERVICE");
+	map(0xc0, 0xc0).w(FUNC(quizdna_state::rombank_w<0>));
+	map(0xd0, 0xd0).w(FUNC(quizdna_state::screen_ctrl_w));
+	map(0xe0, 0xe1).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xf0, 0xf0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 }
 
 void quizdna_state::quizdna_io_map(address_map &map)
 {
-	map.global_mask(0xff);
+	common_io(map);
+
 	map(0x02, 0x03).w(FUNC(quizdna_state::bg_xscroll_w));
 	map(0x04, 0x04).w(FUNC(quizdna_state::bg_yscroll_w));
 	map(0x05, 0x06).nopw(); // unknown
-	map(0x80, 0x80).portr("P1");
-	map(0x81, 0x81).portr("P2");
-	map(0x90, 0x90).portr("SYSTEM");
-	map(0x91, 0x91).portr("SERVICE");
-	map(0xc0, 0xc0).w(FUNC(quizdna_state::rombank_w));
-	map(0xd0, 0xd0).w(FUNC(quizdna_state::screen_ctrl_w));
-	map(0xe0, 0xe1).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
-	map(0xf0, 0xf0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 }
 
 void quizdna_state::gakupara_io_map(address_map &map)
 {
-	map.global_mask(0xff);
+	common_io(map);
+
 	map(0x00, 0x01).w(FUNC(quizdna_state::bg_xscroll_w));
 	map(0x02, 0x02).w(FUNC(quizdna_state::bg_yscroll_w));
 	map(0x03, 0x04).nopw(); // unknown
-	map(0x80, 0x80).portr("P1");
-	map(0x81, 0x81).portr("P2");
-	map(0x90, 0x90).portr("SYSTEM");
-	map(0x91, 0x91).portr("SERVICE");
-	map(0xc0, 0xc0).w(FUNC(quizdna_state::rombank_w));
-	map(0xd0, 0xd0).w(FUNC(quizdna_state::screen_ctrl_w));
-	map(0xe0, 0xe1).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
-	map(0xf0, 0xf0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
 }
 
 void quizdna_state::gekiretu_io_map(address_map &map)
 {
-	map.global_mask(0xff);
-	map(0x02, 0x03).w(FUNC(quizdna_state::bg_xscroll_w));
-	map(0x04, 0x04).w(FUNC(quizdna_state::bg_yscroll_w));
-	map(0x05, 0x06).nopw(); // unknown
-	map(0x80, 0x80).portr("P1");
-	map(0x81, 0x81).portr("P2");
-	map(0x90, 0x90).portr("SYSTEM");
-	map(0x91, 0x91).portr("SERVICE");
-	map(0xc0, 0xc0).w(FUNC(quizdna_state::gekiretu_rombank_w));
-	map(0xd0, 0xd0).w(FUNC(quizdna_state::screen_ctrl_w));
-	map(0xe0, 0xe1).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
-	map(0xf0, 0xf0).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	quizdna_io_map(map);
+
+	map(0xc0, 0xc0).w(FUNC(quizdna_state::rombank_w<0x0a>)); // two bits of bank number are inverted
 }
 
 
@@ -636,7 +627,7 @@ INPUT_PORTS_END
 static const gfx_layout fglayout =
 {
 	16,8,     // 16*8 characters
-	8192*2,   // 16384 characters
+	RGN_FRAC(1,1),   // 16384 characters
 	1,        // 1 bit per pixel
 	{0},
 	{ STEP16(0,1) },
@@ -644,37 +635,15 @@ static const gfx_layout fglayout =
 	16*8
 };
 
-static const gfx_layout bglayout =
-{
-	8,8,        // 8*8 characters
-	32768+1024, // 32768+1024 characters
-	4,          // 4 bits per pixel
-	{0,1,2,3},
-	{ STEP8(0,4) },
-	{ STEP8(0,32) },
-	8*8*4
-};
-
-static const gfx_layout objlayout =
-{
-	16,16,    // 16*16 characters
-	8192+256, // 8192+256 characters
-	4,        // 4 bits per pixel
-	{0,1,2,3},
-	{ STEP16(0,4) },
-	{ STEP16(0,64) },
-	16*16*4
-};
-
 static GFXDECODE_START( gfx_quizdna )
-	GFXDECODE_ENTRY( "fgtiles", 0x0000, fglayout,  0x7e0,  16 )
-	GFXDECODE_ENTRY( "bgtiles", 0x0000, bglayout,  0x000, 128 )
-	GFXDECODE_ENTRY( "sprites", 0x0000, objlayout, 0x600,  32 )
+	GFXDECODE_ENTRY( "fgtiles", 0x0000, fglayout,               0x7e0,  16 )
+	GFXDECODE_ENTRY( "bgtiles", 0x0000, gfx_8x8x4_packed_msb,   0x000, 128 )
+	GFXDECODE_ENTRY( "sprites", 0x0000, gfx_16x16x4_packed_msb, 0x600,  32 )
 GFXDECODE_END
 
 void quizdna_state::machine_start()
 {
-	m_mainbank->set_bank(0);
+	m_mainbank->configure_entries(0, 64, memregion("maincpu")->base(), 0x4000);
 }
 
 
@@ -687,8 +656,6 @@ void quizdna_state::quizdna(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &quizdna_state::quizdna_map);
 	m_maincpu->set_addrmap(AS_IO, &quizdna_state::quizdna_io_map);
 	m_maincpu->set_vblank_int("screen", FUNC(quizdna_state::irq0_line_hold));
-
-	ADDRESS_MAP_BANK(config, m_mainbank).set_map(&quizdna_state::bank_map).set_options(ENDIANNESS_LITTLE, 8, 20, 0x4000);
 
 	// video hardware
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
@@ -739,18 +706,17 @@ void quizdna_state::gekiretu(machine_config &config)
 /****************************************************************************/
 
 ROM_START( quizdna )
-	ROM_REGION( 0x110000, "maincpu", 0 )
-	ROM_LOAD( "quiz2-pr.28",  0x00000,  0x08000, CRC(a428ede4) SHA1(cdca3bd84b2ea421fb05502ea29e9eb605e574eb) )
-	ROM_CONTINUE(             0x18000,  0x78000 ) // banked
-	// empty
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "quiz2-pr.28",  0x00000,  0x80000, CRC(a428ede4) SHA1(cdca3bd84b2ea421fb05502ea29e9eb605e574eb) )
+	// U29 unpopulated
 
 	ROM_REGION( 0x40000, "fgtiles", 0 )
 	ROM_LOAD( "quiz2.102",    0x00000,  0x20000, CRC(62402ac9) SHA1(bf52d22b119d54410dad4949b0687bb0edf3e143) )
-	// empty
+	// U103 unpopulated
 
 	ROM_REGION( 0x108000, "bgtiles", 0 )
 	ROM_LOAD( "quiz2-bg.100", 0x000000,  0x100000, CRC(f1d0cac2) SHA1(26d25c1157d1916dfe4496c6cf119c4a9339e31c) )
-	// empty
+	// U99 unpopulated
 
 	ROM_REGION( 0x108000, "sprites", 0 )
 	ROM_LOAD( "quiz2-ob.98",  0x000000,  0x100000, CRC(682f19a6) SHA1(6b8e6e583f423cf8ef9095f2c300201db7d7b8b3) )
@@ -765,9 +731,8 @@ ROM_END
 
 ROM_START( gakupara )
 	ROM_REGION( 0x110000, "maincpu", 0 )
-	ROM_LOAD( "u28.bin",  0x00000,  0x08000, CRC(72124bb8) SHA1(e734acff7e9d6b8c6a95c76860732320a2e3a828) )
-	ROM_CONTINUE(         0x18000,  0x78000 )             // banked
-	ROM_LOAD( "u29.bin",  0x90000,  0x40000, CRC(09f4948e) SHA1(21ccf5af6935cf40c0cf73fbee14bff3c4e1d23d) ) // banked
+	ROM_LOAD( "u28.bin",  0x00000,  0x80000, CRC(72124bb8) SHA1(e734acff7e9d6b8c6a95c76860732320a2e3a828) )
+	ROM_LOAD( "u29.bin",  0x80000,  0x40000, CRC(09f4948e) SHA1(21ccf5af6935cf40c0cf73fbee14bff3c4e1d23d) )
 
 	ROM_REGION( 0x40000, "fgtiles", 0 )
 	ROM_LOAD( "u102.bin", 0x00000,  0x20000, CRC(62402ac9) SHA1(bf52d22b119d54410dad4949b0687bb0edf3e143) )
@@ -789,10 +754,9 @@ ROM_START( gakupara )
 ROM_END
 
 ROM_START( gakupara102 ) // ARC-0004-1 PCB
-	ROM_REGION( 0x110000, "maincpu", 0 )
-	ROM_LOAD( "u28.bin",  0x00000,  0x08000, CRC(9256c18a) SHA1(6704fa48c468621af76ce91b38addeee0d654b56) ) // SLDH
-	ROM_CONTINUE(         0x18000,  0x78000 )             // banked
-	ROM_LOAD( "u29.bin",  0x90000,  0x40000, CRC(09f4948e) SHA1(21ccf5af6935cf40c0cf73fbee14bff3c4e1d23d) ) // banked
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "u28.bin",  0x00000,  0x80000, CRC(9256c18a) SHA1(6704fa48c468621af76ce91b38addeee0d654b56) ) // SLDH
+	ROM_LOAD( "u29.bin",  0x80000,  0x40000, CRC(09f4948e) SHA1(21ccf5af6935cf40c0cf73fbee14bff3c4e1d23d) )
 
 	ROM_REGION( 0x40000, "fgtiles", 0 )
 	ROM_LOAD( "u102.bin", 0x00000,  0x20000, CRC(62402ac9) SHA1(bf52d22b119d54410dad4949b0687bb0edf3e143) )
@@ -814,22 +778,21 @@ ROM_START( gakupara102 ) // ARC-0004-1 PCB
 ROM_END
 
 ROM_START( gekiretu )
-	ROM_REGION( 0x110000, "maincpu", 0 )
-	ROM_LOAD( "quiz3-pr.28",  0x00000,  0x08000, CRC(a761e86f) SHA1(85331ef53598491e78c2d123b1ebd358aff46436) )
-	ROM_CONTINUE(             0x18000,  0x78000 ) // banked
-	// empty
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "quiz3-pr.28",  0x00000,  0x80000, CRC(a761e86f) SHA1(85331ef53598491e78c2d123b1ebd358aff46436) )
+	// U29 unpopulated
 
 	ROM_REGION( 0x40000, "fgtiles", 0 )
 	ROM_LOAD( "quiz3.102",    0x00000,  0x20000, CRC(62402ac9) SHA1(bf52d22b119d54410dad4949b0687bb0edf3e143) )
-	// empty
+	// U103 unpopulated
 
 	ROM_REGION( 0x108000, "bgtiles", 0 )
 	ROM_LOAD( "quiz3-bg.100", 0x000000,  0x100000, CRC(cb9272fd) SHA1(cfc1ff93d1fdc7d144e161a77e534cea75d7f181) )
-	// empty
+	// U99 unpopulated
 
 	ROM_REGION( 0x108000, "sprites", 0 )
 	ROM_LOAD( "quiz3-ob.98",  0x000000,  0x100000, CRC(01bed020) SHA1(5cc56c8823ee5e538371debe1cbeb57c4976677b) )
-	// empty
+	// U97 unpopulated
 
 	ROM_REGION( 0x80000, "oki", 0 ) // samples
 	ROM_LOAD( "quiz3-sn.32",  0x000000,  0x040000, CRC(36dca582) SHA1(2607602e942244cfaae931da2ad36da9a8f855f7) )
@@ -839,14 +802,13 @@ ROM_START( gekiretu )
 ROM_END
 
 ROM_START( gekiretup ) // ARC-0005-1 PCB, hand-written labels
-	ROM_REGION( 0x110000, "maincpu", 0 )
-	ROM_LOAD( "quiz3-pr.28",  0x00000,  0x08000, CRC(a761e86f) SHA1(85331ef53598491e78c2d123b1ebd358aff46436) ) // same as final
-	ROM_CONTINUE(             0x18000,  0x78000 ) // banked
-	// empty
+	ROM_REGION( 0x100000, "maincpu", 0 )
+	ROM_LOAD( "quiz3-pr.28",  0x00000,  0x80000, CRC(a761e86f) SHA1(85331ef53598491e78c2d123b1ebd358aff46436) ) // same as final
+	// U29 unpopulated
 
 	ROM_REGION( 0x40000, "fgtiles", 0 )
 	ROM_LOAD( "quiz2_kanji.u102",  0x00000,  0x20000, BAD_DUMP CRC(62402ac9) SHA1(bf52d22b119d54410dad4949b0687bb0edf3e143) ) // using the one from final for now, redump pending
-	// empty
+	// U103 unpopulated
 
 	ROM_REGION( 0x108000, "bgtiles", 0 ) // almost identical to final (some changes in the second ROM - i.e. missing copyright and Gakuen Paradise 2 subtitle in title screen)
 	ROM_LOAD( "bg0mask.u100", 0x000000,  0x80000, CRC(2344be20) SHA1(f6656ec19c0cb8fecf21873ecfb0e1ea1c9ea570) )
