@@ -19395,6 +19395,8 @@ tmkombat                        // Tiger Electronics
 tnmarebc                        // Tiger Electronics
 topaliens                       // Tiger Electronics
 tpitfight                       // Tiger Electronics
+trclchick                       // Tronica
+trdivadv                        // Tronica
 trobhood                        // Tiger Electronics
 trobocop2                       // Tiger Electronics
 trobocop3                       // Tiger Electronics
@@ -20155,7 +20157,7 @@ aplan                           // bootleg (WeaShing)
 bingowng                        // (c) 1993 Wing Co. Ltd
 bingownga                       // (c) 1993 Wing Co. Ltd
 bonusch                         // (c) 1990 Wing Co. Ltd
-feverch                         // (c) 1990 Wing Co. Ltd
+bonuscha                        // (c) 1990 Wing Co. Ltd
 carb2002                        // bootleg
 carb2003                        // bootleg
 cb3                             // (c) 199? Dyna Electronics
@@ -20219,12 +20221,18 @@ crazybon                        // (c) 199? Sang Ho
 crazybona                       // (c) 199? Sang Ho
 crazybonb                       // (c) 199? unknown
 cutyline                        //
+cutylinea                       //
+cutylineb                       //
 eldoradd                        // (c) 1991 Dyna Electronics
 eldoraddo                       // (c) 1991 Dyna Electronics
 eldoraddoa                      // (c) 1991 Dyna Electronics
 eldoraddob                      // (c) 1991 Dyna Electronics
 eldoraddoc                      // (c) 1991 Dyna Electronics
+f16s8l                          //
 fb2010                          // (c) 2009 Amcoe
+feverch                         // (c) 1986 Wing Co. Ltd
+fevercha                        // (c) 1986 Wing Co. Ltd
+feverchtw                       // (c) 1986 Wing Co. Ltd
 fl7_3121                        // (c) 199? Cyberdyne Systems, Inc.
 fl7_50                          // (c) 199? Cyberdyne Systems, Inc.
 fl7_500                         // (c) 199? Cyberdyne Systems, Inc.
@@ -20441,6 +20449,7 @@ jking02                         // (c) 2001
 klxyj                           // (c) 200?
 lhdmg                           // (c) 1999
 lhdmgp                          // (c) 1999
+lhdmgp200c3m                    // (c) 1999
 lhzb3                           // (c) 1999
 lhzb3106c5m                     // (c) 1999
 lhzb3sjb                        // (c) 1999
@@ -24893,9 +24902,10 @@ rungunad                        // GX247 (c) 1993 (World)
 rungunb                         // GX247 (c) 1993 (World)
 rungunbd                        // GX247 (c) 1993 (World)
 rungund                         // GX247 (c) 1993 (World)
-rungunua                        // GX247 (c) 1993 (US)
-rungunuad                       // GX247 (c) 1993 (US)
-rungunud                        // GX247 (c) 1993 (US)
+rungunuaad                      // GX247 (c) 1993 (US)
+rungunuabd                      // GX247 (c) 1993 (US)
+rungunuba                       // GX247 (c) 1993 (US)
+rungunubad                      // GX247 (c) 1993 (US)
 slmdunkj                        // GX247 (c) 1993 (Japan)
 slmdunkjd                       // GX247 (c) 1993 (Japan)
 
@@ -31087,6 +31097,7 @@ awetoss                         // Lazer-Tron Awesome Toss 'Em
 ribrac                          // Lazer-Tron Ribbit Racin
 
 @source:misc/lependu.cpp
+codemagik                       // (c) 198? Voyageur de L'Espace Inc.
 lependu                         // 198? Avenir Amusement Inc.
 
 @source:misc/limenko.cpp
@@ -31253,6 +31264,9 @@ mil4000a                        // (c) 2000 Sure Milano
 mil4000b                        // (c) 2000 Sure Milano
 mil4000c                        // (c) 2000 Sure Milano
 top21                           // (c) 200? Assogiochi Assago (Mi)
+
+@source:misc/mindset.cpp
+mindset                         // (c) 1984
 
 @source:misc/miniboy7.cpp
 bejpoker                        // (c) 1992?, Bonanza Enterprises
@@ -34479,7 +34493,7 @@ korinaim                        // (c) 1988
 kyuhito                         // (c) 1988 ROLLER TRON
 livegal                         // (c) 1987
 mcitylov                        // (c) 1986
-mjcamera                        // (c) 1988 MIKI SYOUJI
+mjcamerao                       // (c) 1988 MIKI SYOUJI
 mjgaiden                        // (c) 1987 Central Denshi
 mjsikakb                        // (c) 1988
 mjsikakc                        // (c) 1988
@@ -34517,7 +34531,8 @@ lovehous                        // (c) 1990
 maiko                           // (c) 1990
 mgion                           // (c) 1989
 mgmen89                         // (c) 1989
-mjcamerb                        // (c) 1989 MIKI SYOUJI
+mjcamera                        // (c) 1989 MIKI SYOUJI
+mjcameram                       // (c) 1988 MIKI SYOUJI
 mjfocus                         // (c) 1989
 mjfocusm                        // (c) 1989
 mjnanpaa                        // (c) 1989 BROOKS
@@ -34525,7 +34540,6 @@ mjnanpas                        // (c) 1989 BROOKS
 mjnanpau                        // (c) 1989 BROOKS
 mladyhtr                        // (c) 1990
 mmaiko                          // (c) 1990
-mmcamera                        // (c) 1988 MIKI SYOUJI
 msjiken                         // (c) 1988
 omotesnd                        // (c) 1989
 pairsnb                         // (c) 1989
@@ -35540,6 +35554,9 @@ drumsta                         //
 
 @source:oberheim/dmx.cpp
 obdmx                           // Oberheim DMX
+
+@source:oberheim/ob8.cpp
+ob8                             // Oberheim OB8
 
 @source:olivetti/m20.cpp
 m20                             //
@@ -42731,9 +42748,6 @@ mightyframe                     // Convergent
 
 @source:skeleton/milwaukee.cpp
 mc1200                          //
-
-@source:skeleton/mindset.cpp
-mindset                         // (c) 1984
 
 @source:skeleton/mini2440.cpp
 mini2440                        //

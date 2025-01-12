@@ -1938,6 +1938,7 @@ void goldnpkr_state::glfever_map(address_map &map)
 	map(0xf000, 0xffff).rom();  // extended rom space
 }
 
+
 void blitz_state::megadpkr_map(address_map &map)
 {
 	map(0x0000, 0x07ff).ram(); //.share("nvram");   // battery backed RAM
@@ -12572,7 +12573,7 @@ ROM_END
   ICP-1 PCB.
 
   Obscure and rare roulette game with zillions of checks
-  and protected with password. See the notes above.
+  and protected with password. See the notes above...
 
 */
 ROM_START( icproul )
@@ -13304,6 +13305,7 @@ GAMEL( 198?, lespendu,  0,        lespendu, lespendu, goldnpkr_state, init_lespe
 GAMEL( 198?, lespenduj, 0,        lespendu, lespendu, goldnpkr_state, init_lespenduj,ROT0,   "Voyageur de L'Espace Inc.", "Le Super Pendu (V1, words set #2)",      0,                layout_lespendu )
 
 GAME(  198?, icproul,   0,        icproul,  icproul,  goldnpkr_state, empty_init,    ROT0,   "<unknown>",                "Roulette (ICP-1 PCB)",                    0 )  // password protected
+
 
 /*************************************** SETS W/IRQ0 ***************************************/
 
