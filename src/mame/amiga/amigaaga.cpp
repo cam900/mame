@@ -41,7 +41,26 @@ TODO:
  *
  *************************************/
 
-void amiga_state::aga_palette_write(int color_reg, uint16_t data)
+u16 amiga_state::aga_palette_read(offs_t color_reg)
+{
+	u8 pal_bank = (CUSTOM_REG(REG_BPLCON3) >> 13) & 0x07;
+
+	int color = (pal_bank * 32) + color_reg;
+
+	u8 cr = m_aga_palette[color].r();
+	u8 cg = m_aga_palette[color].g();
+	u8 cb = m_aga_palette[color].b();
+
+	// LOCT
+	if (BIT(CUSTOM_REG(REG_BPLCON3),9))
+	{
+		return ((cr & 0xf) << 8) | ((cg & 0xf) << 4) | ((cb & 0xf) << 0);
+	}
+
+	return ((cr & 0xf0) << 4) | (cg & 0xf0) | ((cb & 0xf0) >> 4);
+}
+
+void amiga_state::aga_palette_write(offs_t color_reg, uint16_t data)
 {
 	int r,g,b;
 	int cr,cg,cb;
@@ -68,7 +87,9 @@ void amiga_state::aga_palette_write(int color_reg, uint16_t data)
 		cr = (r << 4) | r;
 		cg = (g << 4) | g;
 		cb = (b << 4) | b;
+		// TODO: transparency, bit 15
 	}
+
 	m_aga_palette[color] = rgb_t(cr, cg, cb);
 	// make a copy for Extra Half Brite mode
 	if (pal_bank == 0)
@@ -499,6 +520,7 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 			CUSTOM_REG(REG_VPOSR) ^= VPOSR_LOF;
 
 		m_copper->vblank_sync(true);
+		// TODO: shouldn't be raw color ...
 		m_ham_color = CUSTOM_REG(REG_COLOR00);
 	}
 
@@ -670,8 +692,9 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 			// - https://github.com/dirkwhoffmann/vAmigaTS/blob/master/Agnus/DDF/DDF/ddf1/ddf1_A500_ECS.JPG
 			// - turbojam (gameplay) fmode 3 18 9a lores, particularly when scrolling left (+15 isn't enough).
 			// - aladdin 38 ca fmode 3 lores
-			// - amigames:burnout 34 b8 fmode 3 hires
 			// - fbglory (main menu) 28 a4 lores
+			// - amigames:Burnout.lha 34 b8 fmode 3 hires
+			// - amigames:Wendetta.lha 28 d4 fmode 1 lores
 			if ( (CUSTOM_REG(REG_DDFSTRT) & 6) != (CUSTOM_REG(REG_DDFSTOP) & 6))
 			{
 				ddf_stop_pixel += defbitoffs;
@@ -686,7 +709,9 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 
 			/* extract collision masks */
 			ocolmask = (CUSTOM_REG(REG_CLXCON) >> 6) & 0x15;
+			ocolmask |= m_aga_clxcon2 & 0x40;
 			ecolmask = (CUSTOM_REG(REG_CLXCON) >> 6) & 0x2a;
+			ecolmask |= m_aga_clxcon2 & 0x80;
 		}
 
 		//if ((raw_scanline & 1) == 0)
@@ -858,7 +883,11 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 			/* compute playfield/sprite collisions for first pixel */
 			// NOTE: need to << 2 to please the upgraded get_sprite_pixel bitmask
 			// - dxgalaga player sprite collisions
-			collide = pfpix0 ^ CUSTOM_REG(REG_CLXCON);
+			// TODO: verify CLXCON2 match semantics
+			// - roadkill writes 0xc0
+			// - amigames:Wendetta*.lha writes 0x41 (planes offset below)
+			const u16 clxcon_match = (CUSTOM_REG(REG_CLXCON) | (m_aga_clxcon2 & 0x3) << 6);
+			collide = pfpix0 ^ clxcon_match;
 			if ((collide & ocolmask) == 0)
 				CUSTOM_REG(REG_CLXDAT) |= (sprpix >> (5 + 2)) & 0x01e;
 			if ((collide & ecolmask) == 0)
@@ -867,14 +896,13 @@ void amiga_state::aga_render_scanline(bitmap_rgb32 &bitmap, int scanline)
 				CUSTOM_REG(REG_CLXDAT) |= 0x001;
 
 			/* compute playfield/sprite collisions for second pixel */
-			collide = pfpix1 ^ CUSTOM_REG(REG_CLXCON);
+			collide = pfpix1 ^ clxcon_match;
 			if ((collide & ocolmask) == 0)
 				CUSTOM_REG(REG_CLXDAT) |= (sprpix >> (5 + 2)) & 0x01e;
 			if ((collide & ecolmask) == 0)
 				CUSTOM_REG(REG_CLXDAT) |= (sprpix >> (1 + 2)) & 0x1e0;
 			if ((collide & (ecolmask | ocolmask)) == 0)
 				CUSTOM_REG(REG_CLXDAT) |= 0x001;
-			// TODO: CLXCON2
 
 			/* if we are within the display region, render */
 			if (dst != nullptr && x >= m_diw.left() && x < m_diw.right() && !out_of_beam)
