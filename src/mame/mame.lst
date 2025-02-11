@@ -958,7 +958,14 @@ macpb165c
 macpb170
 macpb180
 macpb180c
+
+@source:apple/macpwrbkmsc.cpp
 macpd210
+macpd230
+macpd250
+macpd270c
+macpd280
+macpd280c
 
 @source:apple/macquadra605.cpp
 macqd605
@@ -35599,6 +35606,9 @@ obdmx
 @source:oberheim/ob8.cpp
 ob8
 
+@source:oberheim/xpander.cpp
+xpander
+
 @source:olivetti/m20.cpp
 m20
 m40
@@ -40427,6 +40437,7 @@ tfrceacj
 tfrceacjpb
 twinsqua
 wwanpanm
+wwanpanmo
 wwmarine
 zunkyou
 
