@@ -40,6 +40,7 @@ aa3010_de
 aa3020
 aa4000
 aa5000a
+av20dev
 
 @source:acorn/accomm.cpp
 accomm
@@ -2194,6 +2195,7 @@ dominos4
 sprint1
 sprint2
 sprint2a
+sprint2bl
 sprint2h
 
 @source:atari/sprint4.cpp
@@ -19347,6 +19349,7 @@ kbilly
 kblades
 kbottom9
 kbucky
+kchqflag
 kcontra
 kdribble
 kgarfld
@@ -19421,6 +19424,7 @@ trobocop3
 trockteer
 trsgkeep
 trshutvoy
+trspacadv
 trspacmis
 trspider
 trsrescue
@@ -20083,6 +20087,9 @@ husky
 
 @source:ibm/ibm3153.cpp
 ibm3153
+
+@source:ibm/ibm3477.cpp
+ibm3477
 
 @source:ibm/ibm5100.cpp
 ibm5100
@@ -20792,6 +20799,16 @@ spk306us
 drw80pk2
 drw80pkr
 
+@source:igt/fortune1.cpp
+babydad
+babypkr
+blckjack
+bpoker
+fortune1
+videocba
+videodad
+videopkr
+
 @source:igt/gkigt.cpp
 bmoonii
 brhino
@@ -21474,16 +21491,6 @@ spset005
 spset015
 spset026
 spss4240
-
-@source:igt/videopkr.cpp
-babydad
-babypkr
-blckjack
-bpoker
-fortune1
-videocba
-videodad
-videopkr
 
 @source:informer/informer_207_100.cpp
 in207100
@@ -42037,6 +42044,9 @@ orao103
 pecom32
 pecom64
 
+@source:sfrj/pmp11.cpp
+pmp11
+
 @source:sfrj/tim011.cpp
 tim011
 
@@ -47151,6 +47161,9 @@ learnwin2
 learnwin1
 learnwinf
 spielmast
+
+@source:vtech/magibook.cpp
+magibooksp                      // (c) 2016 VTech / LeapFrog
 
 @source:vtech/pc1000.cpp
 misterx
