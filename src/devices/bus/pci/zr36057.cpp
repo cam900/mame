@@ -10,14 +10,17 @@ iterations.
 - https://www.kernel.org/doc/html/v6.13/driver-api/media/drivers/zoran.html
 - Currently using DC10+ configuration:
   ZR36067 + ZR36060 (ZR36050 + ZR36016 glued together)
-  SAA7110a (TV decoder, PAL B/G / NTSC M / SECAM) + adv7176 (TV encoder, Linux driver name is adv7175)
+  SAA7110a (TV decoder) + adv7176 (TV encoder, Linux driver name is adv7175)
 ZR36057 is known to have two HW quirks that are been fixed with ZR36067.
 
 TODO:
-- Currently at dc10plus HW test "Error at video decoder", requires SAA7110a to continue;
+- Currently at dc10plus HW test "Error at M-JPEG codec", requires ZR36060 to continue;
 - Hookup busmaster;
-- Stub, eventually decouple AV PCI controller part from the actual client cards;
+- What are i2c 0x8e >> 1 address device checks for?
+\- Can't be adv7175 (0xd4 >> 1) nor adv7176 (0x54 >> 1)
+...
 - Soft Reset & Write lock mechanisms (each register have separate macro-groups);
+- eventually decouple AV PCI controller part from the actual client cards;
 
 Known mix-ins:
 - s3virge.cpp uses SAA7110 for Scenic Highway overlay available with its S3 LPB connector;
@@ -48,6 +51,7 @@ DEFINE_DEVICE_TYPE(ZR36057_PCI, zr36057_device,   "zr36057",   "Zoran ZR36057-ba
 
 zr36057_device::zr36057_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
 	: pci_card_device(mconfig, type, tag, owner, clock)
+	, m_decoder(*this, "decoder")
 {
 	// ZR36057PQC Video cutting chipset
 	// device ID reportedly same for ZR36057 and ZR36067, revision 0x02 for latter.
@@ -69,7 +73,17 @@ zr36057_device::zr36057_device(const machine_config &mconfig, const char *tag, d
 
 void zr36057_device::device_add_mconfig(machine_config &config)
 {
+	// 27'000'000 xtal near ZR36060
 
+	SAA7110A(config, m_decoder, XTAL(26'800'000));
+	m_decoder->sda_callback().set([this](int state) { m_decoder_sdao_state = state; });
+
+	// S-Video input/output
+	// composite video input/output
+
+	// video and audio input/output pins on PCB, for cross connection with other boards
+
+	// DC30 combines the two audio input/output as an external jack option
 }
 
 void zr36057_device::device_start()
@@ -156,7 +170,7 @@ void zr36057_device::asr_map(address_map &map)
 			if (ACCESSING_BITS_24_31)
 			{
 				m_softreset = !!BIT(data, 24);
-				// TODO: will lock all writes in config_map but this bit
+				// TODO: will lock all writes in asr_map but this bit
 				// (inclusive of the "all" group?)
 				if (!m_softreset)
 				{
@@ -199,11 +213,20 @@ void zr36057_device::asr_map(address_map &map)
 		})
 	);
 
-	map(0x044, 0x047).lr32(
+	map(0x044, 0x047).lrw32(
 		NAME([this] (offs_t offset) {
 			LOG("I2C R\n");
 			// avoid win98 stall for now
-			return 0x3;
+			return m_decoder_sdao_state << 1 | 1;
+			//return 3;
+		}),
+		NAME([this] (offs_t offset, u32 data, u32 mem_mask) {
+			//printf("I2C %02x %08x\n", data, mem_mask);
+			if (ACCESSING_BITS_0_7)
+			{
+				m_decoder->sda_write(BIT(data, 1));
+				m_decoder->scl_write(BIT(data, 0));
+			}
 		})
 	);
 }
