@@ -17488,6 +17488,16 @@ rainbow
 rainbow100a
 rainbow190
 
+@source:dec/uvax1.cpp
+uvax1
+
+@source:dec/uvax2.cpp
+uvax2
+
+@source:dec/uvax3.cpp
+mv3400
+mv3500
+
 @source:dec/vax11.cpp
 vax785
 
@@ -20832,6 +20842,7 @@ kov3hd101
 3super8
 jbell
 jinhulu2
+jinhulu2120gi
 spk100
 spk102u
 spk102ua
@@ -31336,6 +31347,7 @@ yoyospel
 @source:misc/menghong.cpp
 crzyddz2
 menghong
+menghonga
 
 @source:misc/meyc8080.cpp
 casbjack
@@ -41226,6 +41238,7 @@ vfremix
 vmahjong
 wasafari
 winterht
+wwshin
 yattrmnp
 znpwfv
 znpwfvt
@@ -43746,6 +43759,7 @@ queenbee
 queenbeeb
 queenbeei
 queenbeesa
+queenbn
 saklove
 squeenb
 strain
