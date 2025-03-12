@@ -15270,6 +15270,7 @@ dkbanans
 dkjfever
 dokodemo
 gekimaka
+katochan
 mariojjl
 masmario
 masmarios
@@ -17632,6 +17633,7 @@ mjmyorntr
 mjmyster
 mjmyuniv
 mjmyunivbl
+mjmyunivbl2
 mjmywrld
 mjreach1
 mjschuka
@@ -17667,6 +17669,7 @@ hjingia
 hnkochou
 hnoridur
 inca
+intrgirl
 jantouki
 janyuki
 majxtal7
@@ -17687,6 +17690,7 @@ mjelctrn
 mjembase
 mjfriday
 mjreach
+mjreacha
 mjreachbl
 mjreachp2
 neruton
@@ -17696,8 +17700,8 @@ ougonhaib1
 ougonhaib2
 ougonhaib3
 quiztvqq
+qyjdzjp
 shpeng
-intrgirl
 sprtmtch
 tenkai
 tenkai2b
@@ -20747,6 +20751,7 @@ kov2p200
 kov2p202
 kov2p203
 kov2p204
+kovgsyx
 kovlsjb
 kovlsjba
 kovlsqh
@@ -20754,7 +20759,6 @@ kovlsqh2
 kovplus
 kovplusa
 kovqhsgs
-kovqhsgs302
 kovsgqyz
 kovsgqyza
 kovsgqyzb
@@ -42577,6 +42581,9 @@ cosmicos
 
 @source:skeleton/cp1.cpp
 cp1
+
+@source:skeleton/css11501sk9.cpp
+css11501sk9
 
 @source:skeleton/ct909e_segadvd.cpp
 megatrix
