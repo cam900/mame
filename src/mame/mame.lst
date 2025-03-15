@@ -15195,6 +15195,7 @@ speedway
 speedwaya
 sstar97
 sstar97a
+sstar97jb
 superb2k
 tigerslt
 
@@ -17499,6 +17500,9 @@ uvax2
 mv3400
 mv3500
 
+@source:dec/uvax3100.cpp
+mv3100m10
+
 @source:dec/vax11.cpp
 vax785
 
@@ -17789,6 +17793,7 @@ cgenienz
 
 @source:edevices/diverboy.cpp
 diverboy
+tumblebed
 
 @source:edevices/fantland.cpp
 borntofi
@@ -20585,6 +20590,9 @@ zhongguo
 
 @source:igs/igs_m027_023vid.cpp
 mxsqy
+
+@source:igs/igs_m027_033vid.cpp
+qiji6
 
 @source:igs/igs_m027_link.cpp
 cjslh
@@ -24502,6 +24510,7 @@ salmndr2
 salmndr2a
 sexyparo
 sexyparoa
+sexyparoebl
 slamdnk2
 soccerss
 soccerssa
@@ -45116,6 +45125,7 @@ ddungeone
 stoffy
 stoffyu
 toffy
+toffya
 tstrike
 tstrikea
 
