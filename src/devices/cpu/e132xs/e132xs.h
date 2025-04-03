@@ -258,6 +258,11 @@ protected:
 	void update_timer_prescale();
 	void compute_tr();
 	void adjust_timer_interrupt();
+	void update_bus_control();
+	void update_memory_control();
+
+	void sdram_mode_w(offs_t offset, uint32_t data);
+	void sdram_control_w(offs_t offset, uint32_t data);
 
 	void e116_16k_iram_map(address_map &map) ATTR_COLD;
 	void e116_4k_iram_map(address_map &map) ATTR_COLD;
@@ -297,7 +302,7 @@ protected:
 
 private:
 	// internal functions
-	template <hyperstone_device::is_timer TIMER> void check_interrupts();
+	template <hyperstone_device::is_timer Timer> void check_interrupts();
 
 	void set_global_register(uint8_t code, uint32_t val);
 	void set_local_register(uint8_t code, uint32_t val);
@@ -313,6 +318,7 @@ private:
 
 	TIMER_CALLBACK_MEMBER(timer_callback);
 
+	void check_delay_pc();
 	uint32_t decode_const();
 	uint32_t decode_immediate_s();
 	void ignore_immediate_s();
@@ -466,16 +472,16 @@ private:
 	std::pair<uint16_t, uint32_t> generate_get_d_code_dis(const opcode_desc *opcode);
 
 	void generate_get_global_register_high(drcuml_block &block, compiler_state &compiler, uint32_t code, uml::parameter dst);
-	void generate_set_global_register(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint32_t dst_code);
-	void generate_set_global_register_low(drcuml_block &block, compiler_state &compiler, uint32_t dst_code, uml::parameter src);
+	void generate_set_global_register_low(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint32_t dst_code, uml::parameter src);
 	void generate_set_global_register_high(drcuml_block &block, compiler_state &compiler, uint32_t dst_code, uml::parameter src);
 
 	void generate_load_operand(drcuml_block &block, compiler_state &compiler, reg_bank global, uint32_t code, uml::parameter dst, uml::parameter localidx);
 	void generate_load_src_addsub(drcuml_block &block, compiler_state &compiler, reg_bank global, uint32_t code, uml::parameter dst, uml::parameter localidx, uml::parameter sr);
 	uml::parameter generate_load_address_ad(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, reg_bank global, uint32_t code, uml::parameter dst, uml::parameter localidx);
 	void generate_load_address_ns(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, reg_bank global, uint32_t code, uml::parameter dst, uml::parameter localidx, uint16_t d_code, uint32_t dis);
-	void generate_load_address_rp(drcuml_block &block, compiler_state &compiler, uint32_t code, uml::parameter dst, uml::parameter localidx, uint32_t dis);
+	void generate_load_address_rp(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint32_t code, uml::parameter dst, uml::parameter localidx, uint32_t dis);
 	void generate_add_dis(drcuml_block &block, compiler_state &compiler, uml::parameter dst, uml::parameter base, uint32_t dis, unsigned alignment);
+	void generate_set_register(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, reg_bank global, uint32_t code, uml::parameter src, uml::parameter localidx, bool calcidx);
 	void generate_set_dst(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, reg_bank global, uint32_t code, uml::parameter src, uml::parameter localidx, bool calcidx);
 	void generate_update_flags_addsub(drcuml_block &block, compiler_state &compiler, uml::parameter sr);
 	void generate_update_flags_addsubc(drcuml_block &block, compiler_state &compiler, uml::parameter sr);
@@ -487,7 +493,9 @@ private:
 	template <trap_exception_or_int TYPE> void generate_trap_exception_or_int(drcuml_block &block, uml::code_label &label, uml::parameter trapno);
 	void generate_software(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc);
 
-	void generate_trap_on_overflow(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uml::parameter sr);
+	void generate_raise_exception(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint8_t trapno, uml::parameter sr);
+	void generate_raise_exception(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint8_t trapno);
+	void generate_exception_on_overflow(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uml::parameter sr);
 	template <reg_bank DstGlobal, reg_bank SrcGlobal, typename T> void generate_logic_op(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, T &&body);
 	template <reg_bank DstGlobal, typename T> void generate_logic_op_imm(drcuml_block &block, compiler_state &compiler, const opcode_desc *desc, uint32_t dst_code, T &&body);
 

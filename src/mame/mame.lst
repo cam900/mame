@@ -15956,7 +15956,9 @@ sfiii3
 sfiii3j
 sfiii3jr1
 sfiii3n
+sfiii3na
 sfiii3nr1
+sfiii3nar1
 sfiii3r1
 sfiii3u
 sfiii3ur1
@@ -17642,9 +17644,9 @@ mjmyornt
 mjmyorntr
 mjmyster
 mjmyuniv
-mjmyunivbl
-mjmyunivbl2
+mjmyunivh
 mjmywrld
+mjmywrldt
 mjreach1
 mjschuka
 mjtenho
@@ -27915,6 +27917,7 @@ schaserm
 searthie
 searthin
 searthina
+searthinc
 supinvsion
 sflush
 shuttlei
@@ -31962,6 +31965,9 @@ spirulo
 
 @source:misc/pachifev.cpp
 pachifev
+
+@source:misc/paracaidista.cpp
+paraca
 
 @source:misc/pasha2.cpp
 pasha2
@@ -41518,6 +41524,7 @@ carnivalca
 carnivalh
 carnivalha
 carnivalmm
+colision
 depthch
 depthcho
 digger
@@ -42856,6 +42863,9 @@ poemzet2
 @source:skeleton/i7000.cpp
 i7000
 
+@source:skeleton/iam2.cpp
+zhonggmj
+
 @source:skeleton/icatel.cpp
 icatel
 
@@ -43042,6 +43052,9 @@ ngenb38
 @source:skeleton/nordlead.cpp
 nordle2x
 
+@source:skeleton/omdisv22.cpp
+omdisv22
+
 @source:skeleton/onyx.cpp
 c5000
 c8002
@@ -43066,9 +43079,6 @@ mpoker2b
 
 @source:skeleton/pap2.cpp
 pap2
-
-@source:skeleton/paracaidista.cpp
-paraca
 
 @source:skeleton/pcksurfer.cpp
 pcksurfer
@@ -44897,6 +44907,7 @@ fisco400
 gunman
 missilex
 srdchamp
+speedrac
 ttblock
 ttsracec
 zzblock
