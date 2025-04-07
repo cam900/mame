@@ -17696,6 +17696,7 @@ mjdialq2
 mjdialq2a
 mjelct3
 mjelct3a
+mjelct3b
 mjelct3bl
 mjelctrb
 mjelctrn
@@ -20887,7 +20888,7 @@ jinhulu2
 jinhulu2100gi
 jinhulu2101is
 jinhulu2120gi
-sleyuan
+sleyuan2
 spk100
 spk102u
 spk102ua
@@ -33946,6 +33947,9 @@ tactcian2
 @source:namco/rbowlorama.cpp
 rbowlorama
 
+@source:namco/sg_vga.cpp
+hplanet
+
 @source:namco/shootaway2.cpp
 shootaw2
 
@@ -40053,6 +40057,7 @@ powsledr
 powsledm
 rascot2
 rchase2
+rchase2a
 schamp
 segawski
 sfight
