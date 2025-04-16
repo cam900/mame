@@ -1546,6 +1546,7 @@ void drcbe_x64::calculate_status_flags_mul_low(Assembler &a, uint32_t instsize, 
 
 void drcbe_x64::shift_op_param(Assembler &a, Inst::Id const opcode, size_t opsize, Operand const &dst, be_parameter const &param, u8 update_flags)
 {
+	// caller must place non-immediate shift in ECX
 	// FIXME: upper bits may not be cleared for 32-bit form when shift count is zero
 	const bool carryin = (opcode == Inst::kIdRcl) || (opcode == Inst::kIdRcr);
 
@@ -1576,12 +1577,7 @@ void drcbe_x64::shift_op_param(Assembler &a, Inst::Id const opcode, size_t opsiz
 		const Gp shift = ecx;
 
 		if (carryin)
-		{
-			a.mov(r10, rax);
-			a.lahf();
-		}
-
-		mov_reg_param(a, shift, param);
+			a.set(CondCode::kC, r10b);
 
 		a.and_(shift, (opsize * 8) - 1);
 
@@ -1593,14 +1589,9 @@ void drcbe_x64::shift_op_param(Assembler &a, Inst::Id const opcode, size_t opsiz
 			a.short_().jnz(calc);
 
 			if (carryin)
-			{
-				a.sahf(); // restore flags to keep carry in for rolc/rorc
-				a.mov(rax, r10);
-			}
+				a.shr(r10b, 1); // restore carry for rolc/rorc
 			else if (update_flags & FLAG_C)
-			{
 				a.clc(); // throw away carry since it'll never be used
-			}
 
 			a.short_().jmp(end);
 
@@ -1608,10 +1599,7 @@ void drcbe_x64::shift_op_param(Assembler &a, Inst::Id const opcode, size_t opsiz
 		}
 
 		if (carryin)
-		{
-			a.sahf(); // restore flags to keep carry in for rolc/rorc
-			a.mov(rax, r10);
-		}
+			a.shr(r10b, 1); // restore carry for rolc/rorc
 
 		a.emit(opcode, dst, cl);
 
@@ -1630,7 +1618,6 @@ void drcbe_x64::shift_op_param(Assembler &a, Inst::Id const opcode, size_t opsiz
 	}
 	else
 	{
-		mov_reg_param(a, ecx, param);
 		a.emit(opcode, dst, cl);
 	}
 }
@@ -3560,7 +3547,7 @@ void drcbe_x64::op_carry(Assembler &a, const instruction &inst)
 	// degenerate case: source is immediate
 	if (srcp.is_immediate() && bitp.is_immediate())
 	{
-		if (srcp.immediate() & ((uint64_t)1 << (bitp.immediate() & (inst.size() * 8 - 1))))
+		if (BIT(srcp.immediate(), bitp.immediate() & ((inst.size() * 8) - 1)))
 			a.stc();
 		else
 			a.clc();
@@ -3569,35 +3556,28 @@ void drcbe_x64::op_carry(Assembler &a, const instruction &inst)
 	}
 
 	// load non-immediate bit numbers into a register
-
-	Gp const bitreg = rcx;
+	Gp const bitreg = (inst.size() == 8) ? Gp(rcx) : Gp(ecx);
 	if (!bitp.is_immediate())
 	{
 		mov_reg_param(a, bitreg, bitp);
-		a.and_(bitreg, inst.size() * 8 - 1);
+		a.and_(bitreg, (inst.size() * 8) - 1);
 	}
 
 	if (srcp.is_memory())
 	{
 		if (bitp.is_immediate())
-			a.bt(MABS(srcp.memory(), inst.size()), (bitp.immediate() & (inst.size() * 8 - 1)));
+			a.bt(MABS(srcp.memory(), inst.size()), bitp.immediate() & ((inst.size() * 8) - 1));
 		else
 			a.bt(MABS(srcp.memory(), inst.size()), bitreg);
 	}
-	else if (srcp.is_int_register())
+	else
 	{
-		Gp const src = Gp::fromTypeAndId(RegType::kX86_Gpq, srcp.ireg());
+		Gp const src = srcp.select_register(Gp(bitreg, Gp::kIdAx));
+		mov_reg_param(a, src, srcp);
 		if (bitp.is_immediate())
-			a.bt(src, (bitp.immediate() & (inst.size() * 8 - 1)));
+			a.bt(src, bitp.immediate() & ((inst.size() * 8) - 1));
 		else
 			a.bt(src, bitreg);
-	}
-	else if (srcp.is_immediate())
-	{
-		a.push(rax);
-		mov_reg_param(a, rax, srcp);
-		a.bt(rax, bitreg);
-		a.pop(rax);
 	}
 }
 
@@ -4108,6 +4088,8 @@ void drcbe_x64::op_rolins(Assembler &a, const instruction &inst)
 		if (!maskimm)
 			mov_reg_param(a, maskreg, maskp);
 
+		if (!shiftp.is_immediate())
+			mov_reg_param(a, ecx, shiftp);
 		shift_op_param(a, Inst::kIdRol, inst.size(), srcreg, shiftp, 0);
 		mov_reg_param(a, dstreg, dstp);
 
@@ -5010,19 +4992,21 @@ void drcbe_x64::op_shift(Assembler &a, const uml::instruction &inst)
 	if (dstp.is_memory() && ((inst.size() == 8) || !dstp.is_cold_register()) && (dstp == src1p))
 	{
 		// dstp == src1p in memory
+		if (!src2p.is_immediate())
+			mov_reg_param(a, ecx, src2p, carryin);
 		shift_op_param(a, Opcode, inst.size(), MABS(dstp.memory(), inst.size()), src2p, inst.flags());
 	}
 	else
 	{
 		// general case
 
-		// pick a target register
-		const Gp dstreg = dstp.select_register((inst.size() == 4) ? Gp(eax) : Gp(rax), src2p);
+		if (!src2p.is_immediate())
+			mov_reg_param(a, ecx, src2p, carryin); // do this first as shift and dst may be the same register
 
-		if (carryin)
-			mov_reg_param(a, dstreg, src1p, true);
-		else
-			mov_reg_param(a, dstreg, src1p);
+		// pick a target register
+		const Gp dstreg = dstp.select_register((inst.size() == 4) ? Gp(eax) : Gp(rax));
+		mov_reg_param(a, dstreg, src1p, carryin);
+
 		shift_op_param(a, Opcode, inst.size(), dstreg, src2p, inst.flags());
 		mov_param_reg(a, dstp, dstreg);
 	}
