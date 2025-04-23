@@ -39,6 +39,7 @@ public:
 	void SetProperty(uint8_t attr, uint32_t data);
 	void DumpSampleROM(uint8_t type, memory_region* region);
 	void DumpSampleROM(uint8_t type, address_space& space);
+	
 private:
 	void SetupPCMCache(uint32_t size);
 	void FlushPCMCache(void);
@@ -131,8 +132,12 @@ public:
 		uint8_t bytESReserved;
 		uint32_t lngHzX1_010;
 		uint32_t lngHzC352;
-		
 		uint32_t lngHzGA20;
+
+		uint32_t lngHzMikey;
+		uint32_t lngHzK007232;
+		uint32_t lngHzMSM5205;
+		uint32_t lngHzBSMT2000;
 		uint8_t bytReserved[0x1C];
 	};	// -> 0x100 Bytes
 	struct GD3_TAG
@@ -263,6 +268,11 @@ enum ChipTypes : uint8_t
 	VGMC_X1_010		= 0x26,
 	VGMC_C352		= 0x27,
 	VGMC_GA20		= 0x28,
+	// v1.72
+	VGMC_MIKEY      = 0x29,
+	VGMC_K007232    = 0x2A,
+	VGMC_MSM5205    = 0x2B,
+	VGMC_BSMT2000   = 0x2C,
 
 	//VGMC_OKIM6376	= 0xFF,
 };

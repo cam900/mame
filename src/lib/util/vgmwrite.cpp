@@ -447,6 +447,18 @@ void VGMLogger::Stop(void)
 			case VGMC_GA20:
 				vh.lngHzGA20 &= clock_mask;
 				break;
+			case VGMC_MIKEY:
+				vh.lngHzMikey &= clock_mask;
+				break;
+			case VGMC_K007232:
+				vh.lngHzK007232 &= clock_mask;
+				break;
+			case VGMC_MSM5205:
+				vh.lngHzMSM5205 &= clock_mask;
+				break;
+			case VGMC_BSMT2000:
+				vh.lngHzBSMT2000 &= clock_mask;
+				break;
 		//	case VGMC_OKIM6376:
 		//		vh.lngHzOKIM6376 &= clock_mask;
 		//		break;
@@ -748,6 +760,18 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		case VGMC_GA20:
 			chip_val = vh.lngHzGA20;
 			break;
+		case VGMC_MIKEY:
+			chip_val = vh.lngHzMikey;
+			break;
+		case VGMC_K007232:
+			chip_val = vh.lngHzK007232;
+			break;
+		case VGMC_MSM5205:
+			chip_val = vh.lngHzMSM5205;
+			break;
+		case VGMC_BSMT2000:
+			chip_val = vh.lngHzBSMT2000;
+			break;
 	//	case VGMC_OKIM6376:
 	//		chip_val = vh.lngHzOKIM6376;
 	//		use_two = 0x00;
@@ -947,6 +971,19 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_GA20:
 		vh.lngHzGA20 = clock;
 		break;
+	case VGMC_MIKEY:
+		vh.lngHzMikey = clock;
+		break;
+	case VGMC_K007232:
+		vh.lngHzK007232 = clock;
+		break;
+	case VGMC_MSM5205:
+		vh.lngHzMSM5205 = clock;
+		break;
+	case VGMC_BSMT2000:
+		vh.lngHzBSMT2000 = clock;
+		break;
+
 //	case VGMC_OKIM6376:
 //		vh.lngHzOKIM6376 = clock;
 //		break;
@@ -1007,7 +1044,11 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		Header_SizeCheck(*vfPtr, 0x171, 0xE0);
 		break;
 	case VGMC_GA20:
-		Header_SizeCheck(*vfPtr, 0x171, 0x100);
+	case VGMC_MIKEY:
+	case VGMC_K007232:
+	case VGMC_MSM5205:
+	case VGMC_BSMT2000:
+		Header_SizeCheck(*vfPtr, 0x172, 0xF4);
 		break;
 	}
 	
@@ -1312,6 +1353,14 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 		}
 		break;
 	case VGMC_GA20:
+		break;
+	case VGMC_MIKEY:
+		break;
+	case VGMC_K007232:
+		break;
+	case VGMC_MSM5205:
+		break;
+	case VGMC_BSMT2000:
 		break;
 //	case VGMC_OKIM6376:
 //		break;
@@ -1820,6 +1869,30 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.Data[0x02] = v;
 		wrtCmd.CmdLen = 0x03;
 		break;
+	case VGMC_MIKEY:
+		wrtCmd.Data[0x00] = 0x40 + cm;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
+	case VGMC_K007232:
+		wrtCmd.Data[0x00] = 0x41;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
+	case VGMC_MSM5205:
+		wrtCmd.Data[0x00] = 0x32;	//(VC->ChipType & 0x80) ? 0x33 : 0x32 ;
+		wrtCmd.Data[0x01] = v ;	//| (VC->ChipType & 0x80);
+		wrtCmd.CmdLen = 0x02;
+		break;
+	case VGMC_BSMT2000:
+		wrtCmd.Data[0x00] = 0xC9;
+		wrtCmd.Data[0x01] = (r & 0xFF00) >> 8;
+		wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;
+		wrtCmd.Data[0x03] = v;
+		wrtCmd.CmdLen = 0x04;
+		break;
 //	case VGMC_OKIM6376:
 //		wrtCmd.Data[0x00] = 0x31;
 //		wrtCmd.Data[0x01] = v;
@@ -2154,6 +2227,30 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 			break;
 		case 0x01:	// ROM Data
 			blkType = 0x93;	// Type: GA20 ROM Data
+			break;
+		}
+		break;
+	case VGMC_MIKEY:
+		break;
+	case VGMC_K007232:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0x94;	// Type: K007232 ROM Data
+			break;
+		}
+		break;
+	case VGMC_MSM5205:
+		break;
+	case VGMC_BSMT2000:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0x95;	// Type: BSMT2000 ROM Data
 			break;
 		}
 		break;
