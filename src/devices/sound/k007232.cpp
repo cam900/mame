@@ -26,6 +26,7 @@
 #include "emu.h"
 #include "k007232.h"
 #include "wavwrite.h"
+#include "vgmwrite.hpp"
 #include <algorithm>
 
 #define K007232_LOG_PCM (0)
@@ -42,6 +43,7 @@ k007232_device::k007232_device(const machine_config &mconfig, const char *tag, d
 	, m_bank(0)
 	, m_stream(nullptr)
 	, m_port_write_handler(*this)
+	, m_vgm_log(VGMLogger::GetDummyChip())
 {
 	std::fill(std::begin(m_wreg), std::end(m_wreg), 0);
 }
@@ -89,6 +91,14 @@ void k007232_device::device_start()
 
 	m_stream = stream_alloc(0, 2, clock()/128);
 
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_K007232, clock());
+	m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
+	//if (memregion(DEVICE_SELF) != nullptr)
+		//m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
+	//else
+		//m_vgm_log->DumpSampleROM(0x01, space());
+	
+	
 	save_item(STRUCT_MEMBER(m_channel, vol));
 	save_item(STRUCT_MEMBER(m_channel, addr));
 	save_item(STRUCT_MEMBER(m_channel, counter));
@@ -127,6 +137,8 @@ void k007232_device::write(offs_t offset, u8 data)
 {
 	m_stream->update();
 
+	m_vgm_log->Write(0x00, offset, data);
+	
 	m_wreg[offset] = data; // standard data write
 
 	if (offset == 12)
