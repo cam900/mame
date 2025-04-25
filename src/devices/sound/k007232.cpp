@@ -137,8 +137,10 @@ void k007232_device::write(offs_t offset, u8 data)
 {
 	m_stream->update();
 
-	m_vgm_log->Write(0x00, offset, data);
-	
+	// safety check
+	if (m_vgm_log && m_vgm_log->IsValid() && (offset != 12) && (offset <= 13))
+		m_vgm_log->Write(0x00, offset, data);
+
 	m_wreg[offset] = data; // standard data write
 
 	if (offset == 12)
@@ -208,6 +210,15 @@ void k007232_device::set_volume(int channel, int vol_a, int vol_b)
 {
 	m_channel[channel].vol[0] = vol_a;
 	m_channel[channel].vol[1] = vol_b;
+
+	// --- FIX: Log volume changes as register writes ---
+	// This ensures VGM logs contain the volume register changes,
+	// so libvgm will see the register writes to 0x10,0x12 and 0x11,0x13.
+	if (m_vgm_log && m_vgm_log->IsValid())
+	{
+		m_vgm_log->Write(0x00, 0x10 | (channel << 1), vol_a);
+		m_vgm_log->Write(0x00, 0x11 | (channel << 1), vol_b);
+	}
 }
 
 void k007232_device::set_bank(int chan_a_bank, int chan_b_bank)
