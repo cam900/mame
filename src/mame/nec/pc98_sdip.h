@@ -15,9 +15,15 @@ class pc98_sdip_device : public device_t,
 public:
 	pc98_sdip_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	template <unsigned port> u8 read(offs_t offset);
-	template <unsigned port> void write(offs_t offset, u8 data);
-	void bank_w(offs_t offset, u8 data);
+	u8 read(offs_t offset);
+	void write(offs_t offset, u8 data);
+	void bank_w(int state);
+
+	// legacy i/f
+	// TODO: not necessarily linear
+	ioport_value dsw1_r() { return m_sdip_ram[0]; }
+	ioport_value dsw2_r() { return m_sdip_ram[1]; }
+	ioport_value dsw3_r() { return m_sdip_ram[2]; }
 
 protected:
 	virtual void device_start() override ATTR_COLD;

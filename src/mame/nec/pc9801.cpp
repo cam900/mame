@@ -35,18 +35,6 @@
         - Export mouse support to an actual PC9871 device;
         - Implement IF-SEGA/98 support (Sega Saturn peripheral compatibility for Windows,
           cfr. BeOS PnP driver);
-    - Incomplete SDIP support:
-        - SDIP never returns a valid state and returns default values even if machine is
-          soft resetted. By logic should read-back the already existing state, instead
-          all machines just returns a "set SDIP" warning message at POST no matter what;
-        - SDIP bank hookup is different across machines, either unmapped or diverging
-          implementation wise both in port select and behaviour;
-        - In theory SDIP can be initialized via a BIOS menu, callable by holding down
-          HELP key at POST. This actually doesn't work for any machine, is it expected to
-          have key repeat support? Later BIOSes actually have strings for an extended menu
-          with 3 or 4 pages strings, may be also requiring a jump/bankswitch to unmapped area?
-        - Expose SDIP to an actual device_nvram_interface;
-        - Derive defaults off what the model sets up at POST;
     - clean-up functions/variables naming by actual documentation nomenclature;
     - derive machine configs & romsets by actual default options, examples:
         - 3.5 built-in floppy drives vs. default 5.25;
@@ -75,13 +63,10 @@
       it's not a 286 CPU;
     - Floppy boot fails;
 
-    TODO (PC-9801US):
+    TODO (PC-9801US / PC-9801FS):
     - "Invalid Command Byte 13" for bitmap upd7220 at POST (?)
-    - "SYSTEM SHUTDOWN" after BIOS sets up the SDIP values;
-
-    TODO (PC-9801FS):
     - RAM check detects more RAM than what's really installed (and saves previous detection in MEMSW);
-    - Crashes with Japanese error for "HDD failure" when mounted with IDE BIOS,
+    - pc9801fs at least: Crashes with Japanese error for "HDD failure" when mounted with IDE BIOS,
       incompatible with 512 bps or IDE itself?
 
     TODO (PC-9801BX2)
@@ -100,6 +85,7 @@
     This series features a huge number of models released between 1982 and 1997. They
     were not IBM PC-compatible, but they had similar hardware (and software: in the
     1990s, they run MS Windows as OS)
+    TODO: move this table in a markdown, upgrade
 
     Models:
 
@@ -348,18 +334,6 @@ Ext Video F/F (i/o 0x6a):
 1000 111x related to GFX accelerator cards (like Vision864)
 1100 010x chart GDC operating mode (?)
 (everything else is undocumented / unknown)
-
-Keyboard TX commands:
-0xfa ACK
-0xfc NACK
-0x95
----- --xx extension key settings (00 normal 11 Win and App Keys enabled)
-0x96 identification codes
-0x9c
--xx- ---- key delay (11 = 1000 ms, 10 = 500 ms, 01 = 500 ms, 00 = 250 ms)
----x xxxx repeat rate (slow 11111 -> 00001 fast)
-0x9d keyboard LED settings
-0x9f keyboard ID
 
 **************************************************************************************************/
 
@@ -807,6 +781,8 @@ void pc9801vm_state::a20_ctrl_w(offs_t offset, uint8_t data)
 			m_gate_a20 = 1;
 		else if(data == 0x03)
 			m_gate_a20 = 0;
+		else
+			logerror("CPU port $00f6: unmapped data write %02x\n", data);
 	}
 	m_maincpu->set_input_line(INPUT_LINE_A20, m_gate_a20);
 }
@@ -1252,19 +1228,25 @@ void pc9801us_state::pc9801us_io(address_map &map)
 {
 	pc9801rs_io(map);
 	map(0x0430, 0x0433).rw(FUNC(pc9801us_state::ide_ctrl_r), FUNC(pc9801us_state::ide_ctrl_w)).umask16(0x00ff);
-	map(0x841e, 0x841e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x0>), FUNC(pc98_sdip_device::write<0x0>));
-	map(0x851e, 0x851e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x1>), FUNC(pc98_sdip_device::write<0x1>));
-	map(0x861e, 0x861e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x2>), FUNC(pc98_sdip_device::write<0x2>));
-	map(0x871e, 0x871e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x3>), FUNC(pc98_sdip_device::write<0x3>));
-	map(0x881e, 0x881e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x4>), FUNC(pc98_sdip_device::write<0x4>));
-	map(0x891e, 0x891e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x5>), FUNC(pc98_sdip_device::write<0x5>));
-	map(0x8a1e, 0x8a1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x6>), FUNC(pc98_sdip_device::write<0x6>));
-	map(0x8b1e, 0x8b1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x7>), FUNC(pc98_sdip_device::write<0x7>));
-	map(0x8c1e, 0x8c1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x8>), FUNC(pc98_sdip_device::write<0x8>));
-	map(0x8d1e, 0x8d1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0x9>), FUNC(pc98_sdip_device::write<0x9>));
-	map(0x8e1e, 0x8e1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0xa>), FUNC(pc98_sdip_device::write<0xa>));
-	map(0x8f1e, 0x8f1e).rw(m_sdip, FUNC(pc98_sdip_device::read<0xb>), FUNC(pc98_sdip_device::write<0xb>));
-	map(0x8f1f, 0x8f1f).w(m_sdip, FUNC(pc98_sdip_device::bank_w));
+	map(0x00f6, 0x00f6).lw8(NAME([this] (offs_t offset, u8 data) {
+		// despite what undocumented mem claims US and FS actually access this for SDIP banking
+		if (data == 0xa0 || data == 0xe0)
+			m_sdip->bank_w(BIT(data, 6));
+		else
+			a20_ctrl_w(3, data);
+	}));
+
+	// 0x841e ~ 0x8f1e SDIP I/O mapping
+	// NOTE: split in half for pleasing emumem
+	map(0x841e, 0x841e).select(0x300).lrw8(
+		NAME([this] (offs_t offset) { return m_sdip->read(offset >> 8); }),
+		NAME([this] (offs_t offset, u8 data) { m_sdip->write(offset >> 8, data); })
+	);
+	map(0x881e, 0x881e).select(0x700).lrw8(
+		NAME([this] (offs_t offset) { return m_sdip->read((offset >> 8) + 4); }),
+		NAME([this] (offs_t offset, u8 data) { m_sdip->write((offset >> 8) + 4, data); })
+	);
+//	map(0x8f1f, 0x8f1f).w(m_sdip, FUNC(pc98_sdip_device::bank_w));
 }
 
 void pc9801bx_state::pc9801bx2_map(address_map &map)
@@ -1320,8 +1302,17 @@ void pc9801bx_state::gdc_31kHz_w(offs_t offset, u8 data)
 void pc9801bx_state::pc9801bx2_io(address_map &map)
 {
 	pc9801us_io(map);
+	// NOP legacy SDIP bank access
+	map(0x00f6, 0x00f6).lw8(NAME([this] (offs_t offset, u8 data) { a20_ctrl_w(3, data); }));
 	map(0x0534, 0x0534).r(FUNC(pc9801bx_state::i486_cpu_mode_r));
 	map(0x09a8, 0x09a8).rw(FUNC(pc9801bx_state::gdc_31kHz_r), FUNC(pc9801bx_state::gdc_31kHz_w));
+	map(0x8f1f, 0x8f1f).lw8(NAME([this] (offs_t offset, u8 data) {
+		// BA2 onward and every PC-9821 uses this method for SDIP bank
+		if (data == 0x80 || data == 0xc0)
+			m_sdip->bank_w(BIT(data, 6));
+		else
+			logerror("SDIP: I/O $8f1f unrecognized write %02x\n", data);
+	}));
 }
 
 /*uint8_t pc9801_state::winram_r(offs_t offset)
@@ -1752,6 +1743,7 @@ void pc9801_state::dack3_w(int state) { /*logerror("%02x 3\n",state);*/ set_dma_
 
 u8 pc9801_state::ppi_sys_portb_r()
 {
+	// TODO: should be active low for rs232
 	u8 res = 0;
 
 	res |= BIT(m_dsw1->read(), 0) << 3;
@@ -2239,6 +2231,18 @@ void pc9801_atapi_devices(device_slot_interface &device)
 	device.option_add("pc98_cd", PC98_CD);
 }
 
+void pc9801_state::config_video(machine_config &config)
+{
+	m_hgdc[0]->set_addrmap(0, &pc9801_state::upd7220_1_map);
+	m_hgdc[0]->set_draw_text(FUNC(pc9801_state::hgdc_draw_text));
+	m_hgdc[0]->vsync_wr_callback().set(m_hgdc[1], FUNC(upd7220_device::ext_sync_w));
+	m_hgdc[0]->vsync_wr_callback().append(FUNC(pc9801_state::vrtc_irq));
+
+	m_hgdc[1]->set_addrmap(0, &pc9801_state::upd7220_2_map);
+	m_hgdc[1]->set_display_pixels(FUNC(pc9801_state::hgdc_display_pixels));
+}
+
+
 void pc9801_state::config_keyboard(machine_config &config)
 {
 	I8251(config, m_sio_kbd, 0);
@@ -2355,6 +2359,7 @@ void pc9801vm_state::pc9801_ide(machine_config &config)
 
 	INPUT_MERGER_ANY_HIGH(config, "ideirq").output_handler().set("pic8259_slave", FUNC(pic8259_device::ir1_w));
 
+	SOFTWARE_LIST(config, "hdd_list").set_original("pc98_hdd");
 	SOFTWARE_LIST(config, "cd_list").set_original("pc98_cd");
 }
 
@@ -2439,14 +2444,8 @@ void pc9801_state::pc9801_common(machine_config &config)
 	m_screen->set_screen_update(FUNC(pc9801_state::screen_update));
 
 	UPD7220(config, m_hgdc[0], 21.0526_MHz_XTAL / 8, "screen");
-	m_hgdc[0]->set_addrmap(0, &pc9801_state::upd7220_1_map);
-	m_hgdc[0]->set_draw_text(FUNC(pc9801_state::hgdc_draw_text));
-	m_hgdc[0]->vsync_wr_callback().set(m_hgdc[1], FUNC(upd7220_device::ext_sync_w));
-	m_hgdc[0]->vsync_wr_callback().append(FUNC(pc9801_state::vrtc_irq));
-
 	UPD7220(config, m_hgdc[1], 21.0526_MHz_XTAL / 8, "screen");
-	m_hgdc[1]->set_addrmap(0, &pc9801_state::upd7220_2_map);
-	m_hgdc[1]->set_display_pixels(FUNC(pc9801_state::hgdc_display_pixels));
+	config_video(config);
 
 	SPEAKER(config, "mono").front_center();
 
@@ -2552,6 +2551,17 @@ void pc9801vm_state::pc9801vm(machine_config &config)
 	MCFG_MACHINE_RESET_OVERRIDE(pc9801vm_state, pc9801_common)
 }
 
+// UV is essentially a VM with 3.5 drives
+// Released as UV2 (384KB RAM), UV21 (640KB RAM) then UV11 (UV21 but smaller?)
+void pc9801vm_state::pc9801uv(machine_config &config)
+{
+	pc9801vm(config);
+
+	config_floppy_35hd(config);
+
+	m_ram->set_default_size("640K").set_extra_options("384K");
+}
+
 void pc9801vm_state::pc9801ux(machine_config &config)
 {
 	pc9801rs(config);
@@ -2598,12 +2608,18 @@ void pc9801vm_state::pc9801vx(machine_config &config)
 void pc9801us_state::pc9801us(machine_config &config)
 {
 	pc9801rs(config);
-	I386SX(config.replace(), m_maincpu, MAIN_CLOCK_X1*8); // unknown clock
+	const XTAL xtal = BASE_CLOCK / 2; // ~16 MHz
+	I386SX(config.replace(), m_maincpu, xtal);
 	m_maincpu->set_addrmap(AS_PROGRAM, &pc9801us_state::pc9801rs_map);
 	m_maincpu->set_addrmap(AS_IO, &pc9801us_state::pc9801us_io);
 	m_maincpu->set_irq_acknowledge_callback("pic8259_master", FUNC(pic8259_device::inta_cb));
 
 	config_floppy_35hd(config);
+
+	pit_clock_config(config, xtal / 4);
+
+	PC98_119_KBD(config.replace(), m_keyb, 0);
+	m_keyb->rxd_callback().set("sio_kbd", FUNC(i8251_device::write_rxd));
 
 	PC98_SDIP(config, "sdip", 0);
 }
@@ -2623,6 +2639,9 @@ void pc9801us_state::pc9801fs(machine_config &config)
 	// optional SCSI HDD
 
 	pit_clock_config(config, xtal / 4);
+
+//	PC98_119_KBD(config.replace(), m_keyb, 0);
+//	m_keyb->rxd_callback().set("sio_kbd", FUNC(i8251_device::write_rxd));
 
 	PC98_SDIP(config, "sdip", 0);
 }
@@ -2730,7 +2749,8 @@ ROM_START( pc9801f )
 
 	ROM_REGION16_LE( 0x1000, "fdc_bios_2hd", ROMREGION_ERASEFF )
 
-	ROM_REGION( 0x20000, "fdc_data", ROMREGION_ERASEFF ) // 2dd fdc bios, presumably bad size (should be 0x800 for each rom)
+	ROM_REGION( 0x20000, "fdc_data", ROMREGION_ERASEFF )
+	// 2dd fdc bios, presumably bad size (should be 0x800 for each rom)
 	ROM_LOAD16_BYTE( "urf01-01.bin", 0x00000, 0x4000, BAD_DUMP CRC(2f5ae147) SHA1(69eb264d520a8fc826310b4fce3c8323867520ee) )
 	ROM_LOAD16_BYTE( "urf02-01.bin", 0x00001, 0x4000, BAD_DUMP CRC(62a86928) SHA1(4160a6db096dbeff18e50cbee98f5d5c1a29e2d1) )
 	ROM_LOAD( "2hdif.rom", 0x10000, 0x1000, BAD_DUMP CRC(9652011b) SHA1(b607707d74b5a7d3ba211825de31a8f32aec8146) ) // needs dumping from a board
@@ -2766,6 +2786,37 @@ ROM_START( pc9801vm )
 	ROM_LOAD16_BYTE( "cpu_board_3a_23c256e.bin",   0x08000, 0x4000, CRC(4128276e) SHA1(32acb7eee779a31838a17ce51b05a9a987af4099) )
 	ROM_CONTINUE( 0x00000, 0x4000 )
 
+	ROM_REGION( 0x80000, "chargen", 0 )
+//  ROM_LOAD( "font_vm.rom",     0x000000, 0x046800, BAD_DUMP CRC(456d9fc7) SHA1(78ba9960f135372825ab7244b5e4e73a810002ff) )
+	// TODO: contains 8x8 "graphics" characters but we don't use them
+	ROM_LOAD( "main_board_12f_d2364ec.bin", 0x000000, 0x002000, CRC(11197271) SHA1(8dbd2f25daeed545ea2c74d849f0a209ceaf4dd7) )
+
+	ROM_REGION( 0x80000, "raw_kanji", ROMREGION_ERASEFF )
+	// on main board, uPD23100 type roms
+	// kanji and most other 16x16 characters
+	ROM_LOAD16_BYTE( "main_board_12h_231000.bin", 0x00000, 0x20000, CRC(ecc2c062) SHA1(36c935c0f26c02a2b1ea46f5b6cd03fc11c7b003) )
+	ROM_LOAD16_BYTE( "main_board_10h_231000.bin", 0x00001, 0x20000, CRC(91d78281) SHA1(85a18ad40e281e68071f91800201e43d78fb4f1c) )
+	// 8x16 characters and the remaining 16x16 characters, with inverted bit order like 12f
+	ROM_LOAD16_BYTE( "main_board_8h_d23256ac.bin", 0x40000, 0x04000, CRC(62a32ba6) SHA1(cdab480ae0dad9d128e52afb15e6c0b2b122cc3f) )
+	ROM_CONTINUE( 0x40001, 0x04000 )
+
+	ROM_REGION( 0x100000, "kanji", ROMREGION_ERASEFF )
+	ROM_REGION( 0x80000, "new_chargen", ROMREGION_ERASEFF )
+
+//  LOAD_KANJI_ROMS
+//  LOAD_IDE_ROM
+ROM_END
+
+ROM_START( pc9801uv2 )
+	ROM_REGION16_LE( 0x30000, "ipl", ROMREGION_ERASEFF )
+	ROM_LOAD16_BYTE( "d23c128ec-195.bin", 0x10000, 0x4000, CRC(082c86eb) SHA1(6f503b75906fd4932152f45c6d37c1e230934773) )
+	ROM_LOAD16_BYTE( "d23c128ec-196.bin", 0x10001, 0x4000, CRC(d90b730b) SHA1(27f9b67c0454ee6107db20912f08f87ff682adcc) )
+	ROM_LOAD16_BYTE( "d23c256ec-164.bin", 0x08000, 0x4000, CRC(d6cd9fef) SHA1(4ade6f891ee4c5ccb31031a520ab5ba757a6944c) )
+	ROM_CONTINUE( 0x00000, 0x4000 )
+	ROM_LOAD16_BYTE( "d23c256ec-165.bin", 0x08001, 0x4000, CRC(2d348381) SHA1(a1c7ebb7727380bcb879b2c609a1fe6cd5bfa0bb) )
+	ROM_CONTINUE( 0x00001, 0x4000 )
+
+	// borrowed from pc9801vm
 	ROM_REGION( 0x80000, "chargen", 0 )
 //  ROM_LOAD( "font_vm.rom",     0x000000, 0x046800, BAD_DUMP CRC(456d9fc7) SHA1(78ba9960f135372825ab7244b5e4e73a810002ff) )
 	// TODO: contains 8x8 "graphics" characters but we don't use them
@@ -3146,6 +3197,8 @@ COMP( 1983, pc9801f,    pc9801,   0, pc9801,    pc9801,   pc9801_state, init_pc9
 
 // VM class (V30)
 COMP( 1985, pc9801vm,   0,        0, pc9801vm,  pc9801rs, pc9801vm_state, init_pc9801vm_kanji, "NEC",   "PC-9801VM",                     MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND ) // genuine dump
+// UV class (V30)
+COMP( 1986, pc9801uv2,  pc9801vm, 0, pc9801uv,  pc9801rs, pc9801vm_state, init_pc9801vm_kanji, "NEC",   "PC-9801UV2",                     MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND ) // genuine dump
 
 // UX class (i286)
 COMP( 1987, pc9801ux,   0,        0, pc9801ux,  pc9801rs, pc9801vm_state, init_pc9801_kanji,   "NEC",   "PC-9801UX",                     MACHINE_NOT_WORKING | MACHINE_IMPERFECT_SOUND )
