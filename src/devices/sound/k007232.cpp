@@ -135,10 +135,13 @@ device_memory_interface::space_config_vector k007232_device::memory_space_config
 
 void k007232_device::write(offs_t offset, u8 data)
 {
+	if (offset > 13)
+		return;
+
 	m_stream->update();
 
 	// safety check
-	if (m_vgm_log && m_vgm_log->IsValid() && (offset != 12) && (offset <= 13))
+	if (m_vgm_log && m_vgm_log->IsValid() && (offset != 12))
 		m_vgm_log->Write(0x00, offset, data);
 
 	m_wreg[offset] = data; // standard data write
@@ -192,13 +195,20 @@ u8 k007232_device::read(offs_t offset)
 {
 	if (offset == 5 || offset == 11)
 	{
-		channel_t *channel = &m_channel[(offset == 11) ? 1 : 0];
-
-		if (channel->start < m_pcmlimit)
+		if (!machine().side_effects_disabled())
 		{
-			channel->play = true;
-			channel->addr = channel->start;
-			channel->counter = 0x1000;
+			// safety check
+			if (m_vgm_log && m_vgm_log->IsValid())
+				m_vgm_log->Write(0x00, offset, 0); // data don't care
+
+			channel_t *channel = &m_channel[(offset == 11) ? 1 : 0];
+
+			if (channel->start < m_pcmlimit)
+			{
+				channel->play = true;
+				channel->addr = channel->start;
+				channel->counter = 0x1000;
+			}
 		}
 	}
 	return 0;
