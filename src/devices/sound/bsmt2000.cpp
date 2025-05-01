@@ -15,6 +15,7 @@
 
 #include "emu.h"
 #include "bsmt2000.h"
+#include "vgmwrite.hpp"
 
 
 // device type definition
@@ -75,6 +76,8 @@ bsmt2000_device::bsmt2000_device(const machine_config &mconfig, const char *tag,
 	, m_left_data(0)
 	, m_right_data(0)
 	, m_write_pending(false)
+	, m_vgm_log(VGMLogger::GetDummyChip())
+
 {
 }
 
@@ -117,7 +120,11 @@ void bsmt2000_device::device_start()
 	// internally at 24MHz the max output sample rate is 32kHz
 	// divided by 128 gives us 6x the max output rate which is plenty for oversampling
 	m_stream = stream_alloc(0, 2, clock() / 128);
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_BSMT2000, clock());
+	m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
 
+
+	
 	// register for save states
 	save_item(NAME(m_register_select));
 	save_item(NAME(m_write_data));
@@ -224,6 +231,9 @@ uint16_t bsmt2000_device::read_status()
 void bsmt2000_device::write_reg(uint16_t data)
 {
 	m_deferred_reg_write->adjust(attotime::zero, data);
+	m_vgm_log->Write(0x00, m_write_data, data);
+
+
 }
 
 
@@ -235,6 +245,7 @@ void bsmt2000_device::write_reg(uint16_t data)
 void bsmt2000_device::write_data(uint16_t data)
 {
 	m_deferred_data_write->adjust(attotime::zero, data);
+	m_vgm_log->Write(0x00, m_write_data, data);
 
 	// boost the interleave on a write so that the caller detects the status more accurately
 	machine().scheduler().add_quantum(attotime::from_usec(1), attotime::from_usec(10));

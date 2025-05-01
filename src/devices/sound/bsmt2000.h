@@ -88,6 +88,8 @@ private:
 	emu_timer *                 m_deferred_reset;
 	emu_timer *                 m_deferred_reg_write;
 	emu_timer *                 m_deferred_data_write;
+	VGMDeviceLog *        m_vgm_log;
+
 
 	int tms_write_pending_r();
 };
