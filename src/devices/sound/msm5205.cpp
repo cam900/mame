@@ -20,8 +20,8 @@
  */
 
 #include "emu.h"
+#include "vgmwrite.hpp"
 #include "msm5205.h"
-
 /*
 
     MSM 5205 ADPCM chip:
@@ -74,6 +74,7 @@ msm5205_device::msm5205_device(const machine_config &mconfig, device_type type, 
 	, m_s2(false)
 	, m_bitwidth(4)
 	, m_dac_bits(dac_bits)
+	, m_vgm_log(VGMLogger::GetDummyChip())
 	, m_vck_cb(*this)
 	, m_vck_legacy_cb(*this)
 {
@@ -96,6 +97,7 @@ void msm5205_device::device_start()
 
 	/* stream system initialize */
 	m_stream = stream_alloc(0, 1, clock());
+
 	m_vck_timer = timer_alloc(FUNC(msm5205_device::toggle_vck), this);
 	m_capture_timer = timer_alloc(FUNC(msm5205_device::update_adpcm), this);
 
@@ -108,6 +110,7 @@ void msm5205_device::device_start()
 	save_item(NAME(m_bitwidth));
 	save_item(NAME(m_signal));
 	save_item(NAME(m_step));
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5205, clock());
 }
 
 //-------------------------------------------------
@@ -185,7 +188,6 @@ TIMER_CALLBACK_MEMBER(msm5205_device::update_adpcm)
 {
 	int val;
 	int new_signal;
-
 	// callback user handler and latch next data
 	if (!m_vck_legacy_cb.isunset())
 		m_vck_legacy_cb(1);
@@ -244,6 +246,7 @@ void msm5205_device::vclk_w(int state)
 
 void msm5205_device::reset_w(int state)
 {
+	m_stream->update();
 	m_reset = state;
 }
 
@@ -253,6 +256,7 @@ void msm5205_device::reset_w(int state)
 
 void msm5205_device::data_w(uint8_t data)
 {
+	m_vgm_log->Write( 0x00, 0x00, (m_reset ? 0x80 : 0) | (m_bitwidth == 4 ? 0x40 : 0) | (m_s2 ? 0x20 : 0) | (m_s1 ? 0x10 : 0) | (m_bitwidth == 4 ? (m_data & 0x0f) : ((m_data >> 1) % 0x07)) );
 	if (m_bitwidth == 4)
 		m_data = data & 0x0f;
 	else

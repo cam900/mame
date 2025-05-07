@@ -141,7 +141,7 @@ void k007232_device::write(offs_t offset, u8 data)
 	m_stream->update();
 
 	// safety check
-	if (m_vgm_log && m_vgm_log->IsValid() && (offset != 12))
+		if (m_vgm_log && m_vgm_log->IsValid())
 		m_vgm_log->Write(0x00, offset, data);
 
 	m_wreg[offset] = data; // standard data write
@@ -199,7 +199,7 @@ u8 k007232_device::read(offs_t offset)
 		{
 			// safety check
 			if (m_vgm_log && m_vgm_log->IsValid())
-				m_vgm_log->Write(0x00, offset, 0); // data don't care
+				m_vgm_log->Write(0x00, 0x1F, offset);
 
 			channel_t *channel = &m_channel[(offset == 11) ? 1 : 0];
 
