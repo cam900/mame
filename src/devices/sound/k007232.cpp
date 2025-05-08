@@ -238,7 +238,7 @@ void k007232_device::set_bank(int chan_a_bank, int chan_b_bank)
 
 	// --- FIX: Log bank switches as register writes ---
 	// This ensures VGM logs contain the bank register changes,
-	// so libvgm will see the register writes to 0x0E and 0x0F.
+	// so libvgm will see the register writes to 0x14 and 0x15.
 	if (m_vgm_log && m_vgm_log->IsValid())
 	{
 		m_vgm_log->Write(0x00, 0x14, chan_a_bank);
