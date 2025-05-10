@@ -159,7 +159,7 @@ VGMDeviceLog::VGMDeviceLog()
 	, _vgmlog(nullptr)
 {
 }
-
+VGMLogger* g_vgm_logger = nullptr;
 bool VGMDeviceLog::IsValid(void) const
 {
 	return (_vgmlog != nullptr);
@@ -1359,6 +1359,12 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 	case VGMC_K007232:
 		break;
 	case VGMC_MSM5205:
+		switch(attr)
+		{
+		case 0x00:	// Chip Type (5205/6585)
+			vh.lngHzMSM5205 = (vh.lngHzMSM5205 & 0x7FFFFFFF) | (data << 31);
+			break;
+		}
 		break;
 	case VGMC_BSMT2000:
 		break;
