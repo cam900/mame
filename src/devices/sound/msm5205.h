@@ -80,6 +80,7 @@ protected:
 	u8 m_dac_bits;              // DAC output bits (10 for MSM5205, 12 for MSM6585)
 	int m_diff_lookup[49*16];
 
+	VGMDeviceLog* m_vgm_log;
 	devcb_write_line m_vck_cb;
 	devcb_write_line m_vck_legacy_cb;
 };
@@ -100,6 +101,7 @@ protected:
 	virtual int get_prescaler() const override;
 	virtual double adpcm_capture_divisor() const override { return 2.0; }
 
+	virtual void device_start() override ATTR_COLD;
 	// sound stream update overrides
 	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 };
