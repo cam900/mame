@@ -89,6 +89,7 @@ msm6585_device::msm6585_device(const machine_config &mconfig, const char *tag, d
 //-------------------------------------------------
 //  device_start - device-specific startup
 //-------------------------------------------------
+
 void msm5205_device::device_start()
 {
 	/* compute the difference tables */
@@ -110,22 +111,15 @@ void msm5205_device::device_start()
 	save_item(NAME(m_signal));
 	save_item(NAME(m_step));
 	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5205, clock());
-	m_vgm_log->SetProperty(0x01, 0); // 0 = MSM5205
-	m_vgm_log->SetProperty(0x02, m_bitwidth); // 3 or 4
-	m_vgm_log->SetProperty(0x03, 10); // DAC width
+	m_vgm_log->SetProperty(0x00, 0x00);	// MSM5205
 }
 
 void msm6585_device::device_start()
 {
     msm5205_device::device_start();
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5205, clock());
-	m_vgm_log->SetProperty(0x01, 1); // 1 = MSM6585 mode (distinguish in VGM)
-	m_vgm_log->SetProperty(0x02, 4); // always 4-bit
-	m_vgm_log->SetProperty(0x03, 12); // DAC width
+	m_vgm_log->SetProperty(0x00, 0x01);	// MSM6585	
 }
 
-
-//-------------------------------------------------
 //  device_reset - device-specific reset
 //-------------------------------------------------
 
@@ -242,14 +236,15 @@ TIMER_CALLBACK_MEMBER(msm5205_device::update_adpcm)
  */
 void msm5205_device::vclk_w(int state)
 {
-	if (get_prescaler() != 0)
-		logerror("Error: vclk_w() called but VCK selected master mode\n");
-	else
-	{
-		if (m_vck && !state)
-			m_capture_timer->adjust(attotime::from_hz(clock()/6)); // 15.6 usec at 384KHz
-		m_vck = state;
-	}
+    if (get_prescaler() != 0)
+        logerror("Error: vclk_w() called but VCK selected master mode\n");
+    else
+    {
+       m_vgm_log->Write( 0x00, 0x01, state );
+        if (m_vck && !state)
+            m_capture_timer->adjust(attotime::from_hz(clock()/6)); // 15.6 usec at 384KHz
+        m_vck = state;
+    }
 }
 
 /*
@@ -268,12 +263,11 @@ void msm5205_device::reset_w(int state)
 
 void msm5205_device::data_w(uint8_t data)
 {
-   if (m_vgm_log && m_vgm_log->IsValid())
-       m_vgm_log->Write( 0x00, 0x00, (m_reset ? 0x80 : 0) | (m_bitwidth == 4 ? 0x40 : 0) | (m_s2 ? 0x20 : 0) | (m_s1 ? 0x10 : 0) | (m_bitwidth == 4 ? (m_data & 0x0f) : ((m_data >> 1) % 0x07)) );
-   if (m_bitwidth == 4)
-       m_data = data & 0x0f;
-   else
-       m_data = (data & 0x07) << 1; /* unknown */
+	m_vgm_log->Write( 0x00, 0x00, (m_reset ? 0x80 : 0) | (m_bitwidth == 4 ? 0x40 : 0) | (m_s2 ? 0x20 : 0) | (m_s1 ? 0x10 : 0) | (m_bitwidth == 4 ? (data & 0x0f) : (data & 0x07)) );
+	if (m_bitwidth == 4)
+		m_data = data & 0x0f;
+	else
+		m_data = (data & 0x07) << 1; /* unknown */
 }
 
 int msm5205_device::get_prescaler() const

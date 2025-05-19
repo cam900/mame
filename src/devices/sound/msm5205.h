@@ -36,7 +36,6 @@ public:
 
 	// adpcmata is latched after vclk_interrupt callback
 	void data_w(uint8_t data);
-
 	// VCLK slave mode option
 	// if VCLK and reset or data is changed at the same time,
 	// call vclk_w after data_w and reset_w.
@@ -96,12 +95,12 @@ public:
 	static constexpr int S20   = 7 + 8;  /* prescaler 1/20(32KHz), data 4bit */
 
 	msm6585_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
-
+	
 protected:
+	virtual void device_start() override ATTR_COLD;
 	virtual int get_prescaler() const override;
 	virtual double adpcm_capture_divisor() const override { return 2.0; }
 
-	virtual void device_start() override ATTR_COLD;
 	// sound stream update overrides
 	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
 };
