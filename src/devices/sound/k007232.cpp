@@ -24,9 +24,9 @@
 
 
 #include "emu.h"
+#include "vgmwrite.hpp"
 #include "k007232.h"
 #include "wavwrite.h"
-#include "vgmwrite.hpp"
 #include <algorithm>
 
 #define K007232_LOG_PCM (0)
@@ -42,8 +42,8 @@ k007232_device::k007232_device(const machine_config &mconfig, const char *tag, d
 	, m_pcmlimit(~0)
 	, m_bank(0)
 	, m_stream(nullptr)
-	, m_port_write_handler(*this)
 	, m_vgm_log(VGMLogger::GetDummyChip())
+	, m_port_write_handler(*this)
 {
 	std::fill(std::begin(m_wreg), std::end(m_wreg), 0);
 }
@@ -71,6 +71,9 @@ void k007232_device::device_start()
 	}
 	space(0).cache(m_cache);
 
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_K007232, clock());
+	m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
+
 	/* Set up the chips */
 	for (int i = 0; i < KDAC_A_PCM_MAX; i++)
 	{
@@ -91,14 +94,6 @@ void k007232_device::device_start()
 
 	m_stream = stream_alloc(0, 2, clock()/128);
 
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_K007232, clock());
-	m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
-	//if (memregion(DEVICE_SELF) != nullptr)
-		//m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
-	//else
-		//m_vgm_log->DumpSampleROM(0x01, space());
-	
-	
 	save_item(STRUCT_MEMBER(m_channel, vol));
 	save_item(STRUCT_MEMBER(m_channel, addr));
 	save_item(STRUCT_MEMBER(m_channel, counter));
@@ -135,16 +130,10 @@ device_memory_interface::space_config_vector k007232_device::memory_space_config
 
 void k007232_device::write(offs_t offset, u8 data)
 {
-	if (offset > 13)
-		return;
-
 	m_stream->update();
 
-	// safety check
-		if (m_vgm_log && m_vgm_log->IsValid())
-		m_vgm_log->Write(0x00, offset, data);
-
 	m_wreg[offset] = data; // standard data write
+	m_vgm_log->Write(0x00, offset & 0xFF, data);
 
 	if (offset == 12)
 	{
@@ -195,20 +184,14 @@ u8 k007232_device::read(offs_t offset)
 {
 	if (offset == 5 || offset == 11)
 	{
-		if (!machine().side_effects_disabled())
+		channel_t *channel = &m_channel[(offset == 11) ? 1 : 0];
+		m_vgm_log->Write(0x00, 0x1F, offset & 0xFF);	// capture read as special register 0x1F
+
+		if (channel->start < m_pcmlimit)
 		{
-			// safety check
-			if (m_vgm_log && m_vgm_log->IsValid())
-				m_vgm_log->Write(0x00, 0x1F, offset);
-
-			channel_t *channel = &m_channel[(offset == 11) ? 1 : 0];
-
-			if (channel->start < m_pcmlimit)
-			{
-				channel->play = true;
-				channel->addr = channel->start;
-				channel->counter = 0x1000;
-			}
+			channel->play = true;
+			channel->addr = channel->start;
+			channel->counter = 0x1000;
 		}
 	}
 	return 0;
@@ -220,30 +203,16 @@ void k007232_device::set_volume(int channel, int vol_a, int vol_b)
 {
 	m_channel[channel].vol[0] = vol_a;
 	m_channel[channel].vol[1] = vol_b;
-
-	// --- FIX: Log volume changes as register writes ---
-	// This ensures VGM logs contain the volume register changes,
-	// so libvgm will see the register writes to 0x10,0x12 and 0x11,0x13.
-	if (m_vgm_log && m_vgm_log->IsValid())
-	{
-		m_vgm_log->Write(0x00, 0x10 | (channel << 1), vol_a);
-		m_vgm_log->Write(0x00, 0x11 | (channel << 1), vol_b);
-	}
+	m_vgm_log->Write(0x00, 0x10 | (channel << 1), vol_a);	// capture external volume control with special registers 0x10..0x13
+	m_vgm_log->Write(0x00, 0x11 | (channel << 1), vol_b);
 }
 
 void k007232_device::set_bank(int chan_a_bank, int chan_b_bank)
 {
 	m_channel[0].bank = chan_a_bank << 17;
 	m_channel[1].bank = chan_b_bank << 17;
-
-	// --- FIX: Log bank switches as register writes ---
-	// This ensures VGM logs contain the bank register changes,
-	// so libvgm will see the register writes to 0x14 and 0x15.
-	if (m_vgm_log && m_vgm_log->IsValid())
-	{
-		m_vgm_log->Write(0x00, 0x14, chan_a_bank);
-		m_vgm_log->Write(0x00, 0x15, chan_b_bank);
-	}
+	m_vgm_log->Write(0x00, 0x14, chan_a_bank);
+	m_vgm_log->Write(0x00, 0x15, chan_b_bank);
 }
 
 /*****************************************************************************/

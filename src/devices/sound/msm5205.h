@@ -22,12 +22,7 @@ public:
 
 	msm5205_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
 
-	void set_prescaler_selector(int select)
-	{
-		m_s1 = BIT(select, 1);
-		m_s2 = BIT(select, 0);
-		m_bitwidth = (select & 4) ? 4 : 3;
-	}
+	void set_prescaler_selector(int select);
 	auto vck_callback() { return m_vck_cb.bind(); }
 	auto vck_legacy_callback() { return m_vck_legacy_cb.bind(); }
 
@@ -36,6 +31,7 @@ public:
 
 	// adpcmata is latched after vclk_interrupt callback
 	void data_w(uint8_t data);
+
 	// VCLK slave mode option
 	// if VCLK and reset or data is changed at the same time,
 	// call vclk_w after data_w and reset_w.
@@ -66,6 +62,7 @@ protected:
 
 	// internal state
 	sound_stream *m_stream;     // number of stream system
+	VGMDeviceLog *m_vgm_log;
 	emu_timer *m_vck_timer;     // VCK callback timer
 	emu_timer *m_capture_timer; // delay after VCK active edge for ADPCM input capture
 	u8 m_data;                  // next adpcm data
@@ -79,7 +76,6 @@ protected:
 	u8 m_dac_bits;              // DAC output bits (10 for MSM5205, 12 for MSM6585)
 	int m_diff_lookup[49*16];
 
-	VGMDeviceLog* m_vgm_log;
 	devcb_write_line m_vck_cb;
 	devcb_write_line m_vck_legacy_cb;
 };
@@ -95,9 +91,8 @@ public:
 	static constexpr int S20   = 7 + 8;  /* prescaler 1/20(32KHz), data 4bit */
 
 	msm6585_device(const machine_config &mconfig, const char *tag, device_t *owner, u32 clock);
-	
+
 protected:
-	virtual void device_start() override ATTR_COLD;
 	virtual int get_prescaler() const override;
 	virtual double adpcm_capture_divisor() const override { return 2.0; }
 

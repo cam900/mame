@@ -33,7 +33,7 @@ public:
 
 protected:
 	// device-level overrides
-	virtual void device_start() override;
+	virtual void device_start() override ATTR_COLD;
 	virtual void device_clock_changed() override;
 
 	// sound stream update overrides
@@ -73,9 +73,8 @@ private:
 	u32           m_bank;
 
 	sound_stream *m_stream;
+	VGMDeviceLog *m_vgm_log;
 	devcb_write8  m_port_write_handler;
-	
-	VGMDeviceLog* m_vgm_log;
 };
 
 DECLARE_DEVICE_TYPE(K007232, k007232_device)
