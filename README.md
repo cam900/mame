@@ -1,3 +1,8 @@
+# IMPORTANT
+
+This fork is based on [ValleyBell's fork](https://github.com/ValleyBell/mame/tree/tmp), with VGM logging support.
+
+Modified by: Mao, cam900
 
 # **MAME** #
 
