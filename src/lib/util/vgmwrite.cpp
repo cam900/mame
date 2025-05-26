@@ -465,6 +465,9 @@ void VGMLogger::Stop(void)
 			case VGMC_MSM5232:
 				vh.lngHzMSM5232 &= clock_mask;
 				break;
+			case VGMC_BSMT2000:
+				vh.lngHzBSMT2000 &= clock_mask;
+				break;
 		//	case VGMC_OKIM6376:
 		//		vh.lngHzOKIM6376 &= clock_mask;
 		//		break;
@@ -804,6 +807,9 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		case VGMC_MSM5232:
 			chip_val = vh.lngHzMSM5232;
 			break;
+		case VGMC_BSMT2000:
+			chip_val = vh.lngHzBSMT2000;
+			break;
 	//	case VGMC_OKIM6376:
 	//		chip_val = vh.lngHzOKIM6376;
 	//		use_two = 0x00;
@@ -1021,6 +1027,9 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_MSM5232:
 		vh.lngHzMSM5232 = clock;
 		break;
+	case VGMC_BSMT2000:
+		vh.lngHzBSMT2000 = clock;
+		break;
 //	case VGMC_OKIM6376:
 //		vh.lngHzOKIM6376 = clock;
 //		break;
@@ -1089,6 +1098,7 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_OKIM5205:
 	case VGMC_ICS2115:
 	case VGMC_MSM5232:
+	case VGMC_BSMT2000:
 		Header_SizeCheck(*vfPtr, 0x172, 0x100);
 		break;
 	}
@@ -1420,6 +1430,8 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 	case VGMC_ICS2115:
 		break;
 	case VGMC_MSM5232:
+		break;
+	case VGMC_BSMT2000:
 		break;
 //	case VGMC_OKIM6376:
 //		break;
@@ -1963,6 +1975,13 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.Data[0x02] = v;
 		wrtCmd.CmdLen = 0x03;
 		break;
+	case VGMC_BSMT2000:
+		wrtCmd.Data[0x00] = 0x46;
+		wrtCmd.Data[0x01] = v | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = (r & 0xFF00) >> 8; // Data MSB
+		wrtCmd.Data[0x03] = (r & 0x00FF) >> 0; // Data LSB
+		wrtCmd.CmdLen = 0x04;
+		break;
 //	case VGMC_OKIM6376:
 //		wrtCmd.Data[0x00] = 0x31;
 //		wrtCmd.Data[0x01] = v;
@@ -2335,6 +2354,16 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		}
 		break;
 	case VGMC_MSM5232:
+		break;
+	case VGMC_BSMT2000:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0x95;	// Type: BSMT2000 ROM Data
+			break;
+		}
 		break;
 //	case VGMC_OKIM6376:
 //		switch(type)

@@ -123,8 +123,6 @@ void bsmt2000_device::device_start()
 	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_BSMT2000, clock());
 	m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
 
-
-	
 	// register for save states
 	save_item(NAME(m_register_select));
 	save_item(NAME(m_write_data));
@@ -182,6 +180,7 @@ TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reg_write)
 TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_data_write)
 {
 	m_write_data = param & 0xffff;
+	m_vgm_log->Write(0x00, m_write_data, m_register_select & 0x7f);
 	if (m_write_pending) logerror("BSMT2000: Missed data\n");
 	m_write_pending = true;
 }
@@ -231,9 +230,6 @@ uint16_t bsmt2000_device::read_status()
 void bsmt2000_device::write_reg(uint16_t data)
 {
 	m_deferred_reg_write->adjust(attotime::zero, data);
-	m_vgm_log->Write(0x00, m_write_data, data);
-
-
 }
 
 
@@ -245,7 +241,6 @@ void bsmt2000_device::write_reg(uint16_t data)
 void bsmt2000_device::write_data(uint16_t data)
 {
 	m_deferred_data_write->adjust(attotime::zero, data);
-	m_vgm_log->Write(0x00, m_write_data, data);
 
 	// boost the interleave on a write so that the caller detects the status more accurately
 	machine().scheduler().add_quantum(attotime::from_usec(1), attotime::from_usec(10));

@@ -3,6 +3,7 @@
 #include "emu.h"
 #include "vgmwrite.hpp"
 #include "msm5232.h"
+#include "vgmwrite.hpp"
 
 #define CLOCK_RATE_DIVIDER 16
 
@@ -325,7 +326,7 @@ void msm5232_device::write(offs_t offset, uint8_t data)
 		m_vgm_log->Write(0, offset & 0x7f, data);
 	
 	m_stream->update ();
-
+	
 	if (offset < 0x08) /* pitch */
 	{
 		int ch = offset&7;
