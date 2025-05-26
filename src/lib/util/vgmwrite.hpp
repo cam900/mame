@@ -137,7 +137,10 @@ public:
 		uint32_t lngHzMikey;
 		uint32_t lngHzK007232;
 		uint32_t lngHzMSM5205;
-		uint32_t lngHzBSMT2000;
+		uint32_t lngHzK005289;
+		uint32_t lngHzICS2115;
+		uint32_t lngHzMSM5232;
+		//uint32_t lngHzBSMT2000;
 		uint8_t bytReserved[0x1C];
 	};	// -> 0x100 Bytes
 	struct GD3_TAG
@@ -272,8 +275,10 @@ enum ChipTypes : uint8_t
 	VGMC_MIKEY      = 0x29,
 	VGMC_K007232    = 0x2A,
 	VGMC_MSM5205    = 0x2B,
-	VGMC_BSMT2000   = 0x2C,
-
+	VGMC_K005289	= 0x2C,
+	VGMC_ICS2115	= 0x2D,
+	VGMC_MSM5232    = 0x2E,
+	//VGMC_BSMT2000   = 0x2F,
 	//VGMC_OKIM6376	= 0xFF,
 };
 

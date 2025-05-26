@@ -159,7 +159,7 @@ VGMDeviceLog::VGMDeviceLog()
 	, _vgmlog(nullptr)
 {
 }
-VGMLogger* g_vgm_logger = nullptr;
+
 bool VGMDeviceLog::IsValid(void) const
 {
 	return (_vgmlog != nullptr);
@@ -459,6 +459,12 @@ void VGMLogger::Stop(void)
 			case VGMC_K005289:
 				vh.lngHzK005289 &= clock_mask;
 				break;
+			case VGMC_ICS2115:
+				vh.lngHzICS2115 &= clock_mask;
+				break;
+			case VGMC_MSM5232:
+				vh.lngHzMSM5232 &= clock_mask;
+				break;
 			//case VGMC_BSMT2000:
 				//vh.lngHzBSMT2000 &= clock_mask;
 				//break;
@@ -524,7 +530,7 @@ void VGMLogger::Header_PostWrite(VGM_INF& vf)
 		VGM_ROM_DATA& vrd = vf.DataBlk[curcmd];
 		uint32_t dataLen = vrd.dataSize & 0x7FFFFFFF;
 		const void* data = vrd.data;
-		uint32_t blkSize = 0x08 | (vrd.dataSize & 0x80000000);
+		uint32_t blkSize = vrd.dataSize & 0x80000000;
 		uint32_t startOfs = 0x00;
 		
 		PatchROMBlock(vrd.type, dataLen, data, startOfs, romPatchBuf, vh);
@@ -534,10 +540,30 @@ void VGMLogger::Header_PostWrite(VGM_INF& vf)
 		fputc(0x67, vf.hFile);
 		fputc(0x66, vf.hFile);
 		fputc(vrd.type, vf.hFile);
-		fwrite(&blkSize, 0x04, 0x01, vf.hFile);		// Data Block Size
-		fwrite(&dataLen, 0x04, 0x01, vf.hFile);		// ROM Size
-		startOfs |= (vrd.dstart_msb << 24);
-		fwrite(&startOfs, 0x04, 0x01, vf.hFile);	// Data Base Address
+		switch(vrd.type & 0xE0)
+		{
+		case 0x80:	// ROM Image
+		case 0xA0:
+			blkSize += 0x08;
+			fwrite(&blkSize, 0x04, 0x01, vf.hFile);		// Data Block Size
+			fwrite(&dataLen, 0x04, 0x01, vf.hFile);		// ROM Size
+			startOfs |= (vrd.dstart_msb << 24);
+			fwrite(&startOfs, 0x04, 0x01, vf.hFile);	// Data Base Address
+			break;
+		case 0xC0:	// RAM Writes (16-bit address)
+			blkSize += 0x02;
+			fwrite(&blkSize, 0x04, 0x01, vf.hFile);		// Data Block Size
+			fwrite(&startOfs, 0x02, 0x01, vf.hFile);	// Data Address
+			break;
+		case 0xE0:	// RAM Writes (32-bit address)
+			blkSize += 0x04;
+			fwrite(&blkSize, 0x04, 0x01, vf.hFile);		// Data Block Size
+			fwrite(&startOfs, 0x04, 0x01, vf.hFile);	// Data Address
+			break;
+		default:
+			fwrite(&blkSize, 0x04, 0x01, vf.hFile);		// Data Block Size
+			break;
+		}
 		if (data == nullptr && dumpEmptyBlocks)
 			DumpEmptyData(vf.hFile, dataLen, 0x00);
 		else if (data != nullptr)
@@ -775,6 +801,12 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		case VGMC_K005289:
 			chip_val = vh.lngHzK005289;
 			break;
+		case VGMC_ICS2115:
+			chip_val = vh.lngHzICS2115;
+			break;
+		case VGMC_MSM5232:
+			chip_val = vh.lngHzMSM5232;
+			break;
 		//case VGMC_BSMT2000:
 			//chip_val = vh.lngHzBSMT2000;
 			//break;
@@ -989,10 +1021,15 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_K005289:
 		vh.lngHzK005289 = clock;
 		break;
+	case VGMC_ICS2115:
+		vh.lngHzICS2115 = clock;
+		break;
+	case VGMC_MSM5232:
+		vh.lngHzMSM5232 = clock;
+		break;
 	//case VGMC_BSMT2000:
 		//vh.lngHzBSMT2000 = clock;
 		//break;
-
 //	case VGMC_OKIM6376:
 //		vh.lngHzOKIM6376 = clock;
 //		break;
@@ -1053,12 +1090,16 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		Header_SizeCheck(*vfPtr, 0x171, 0xE0);
 		break;
 	case VGMC_GA20:
+		Header_SizeCheck(*vfPtr, 0x171, 0x100);
+		break;
 	case VGMC_MIKEY:
 	case VGMC_K007232:
 	case VGMC_MSM5205:
 	case VGMC_K005289:
+	case VGMC_ICS2115:
+	case VGMC_MSM5232:
 	//case VGMC_BSMT2000:
-		Header_SizeCheck(*vfPtr, 0x172, 0xF4);
+		Header_SizeCheck(*vfPtr, 0x172, 0x100);
 		break;
 	}
 	
@@ -1371,15 +1412,29 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 	case VGMC_MSM5205:
 		switch(attr)
 		{
-		case 0x00:	// Chip Type (5205/6585)
+		case 0x00:	// Chip Type (0 = MSM5205, 1 = MSM6585)
 			vh.lngHzMSM5205 = (vh.lngHzMSM5205 & 0x7FFFFFFF) | (data << 31);
 			break;
+		#if 0
+		case 0x01:	// Clock Divider
+			vh.bytMSM5205Flags &= ~(0x03 << 0);
+			vh.bytMSM5205Flags |= (data & 0x03) << 0;
+			break;
+		case 0x02:	// ADPCM Type
+			vh.bytMSM5205Flags &= ~(0x01 << 2);
+			vh.bytMSM5205Flags |= (data & 0x01) << 2;
+			break;
+		#endif
 		}
 		break;
 	case VGMC_K005289:
 		break;
-	//case VGMC_BSMT2000:
+	case VGMC_ICS2115:
 		break;
+	case VGMC_MSM5232:
+		break;
+//	case VGMC_BSMT2000:
+//		break;
 //	case VGMC_OKIM6376:
 //		break;
 	}
@@ -1888,7 +1943,7 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.CmdLen = 0x03;
 		break;
 	case VGMC_MIKEY:
-		wrtCmd.Data[0x00] = 0x40 + cm;
+		wrtCmd.Data[0x00] = 0x40;
 		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
 		wrtCmd.Data[0x02] = v;
 		wrtCmd.CmdLen = 0x03;
@@ -1906,12 +1961,23 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
         wrtCmd.CmdLen = 0x03;
         break;
 	case VGMC_K005289:
-		wrtCmd.Data[0x00] = 0xD7;
-		wrtCmd.Data[0x01] = (port << 4) | ((r & 0xF00) >> 8);
+		wrtCmd.Data[0x00] = 0x43;
+		wrtCmd.Data[0x01] = (_chipType & 0x80) | (port << 4) | ((r & 0xF00) >> 8);
 		wrtCmd.Data[0x02] = r & 0xFF;
 		wrtCmd.CmdLen = 0x03;
 		break;
-		
+	case VGMC_ICS2115:
+		wrtCmd.Data[0x00] = 0x44;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
+	case VGMC_MSM5232:
+		wrtCmd.Data[0x00] = 0x45;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
 	//case VGMC_BSMT2000:
 		//wrtCmd.Data[0x00] = 0xC9;
 		//wrtCmd.Data[0x01] = (r & 0xFF00) >> 8;
@@ -2276,9 +2342,21 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		case 0x00:
 			break;
 		case 0x01:	// ROM Data
-			blkType = 0x95;	// Type: K005289 PROM wavetable data
+			blkType = 0xC3;	// Type: K005289 ROM Data (treated as RAM due to being small and fixed-size)
 			break;
 		}
+		break;
+	case VGMC_ICS2115:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0x96;	// Type: ICS2115 ROM Data
+			break;
+		}
+		break;
+	case VGMC_MSM5232:
 		break;
 	//case VGMC_BSMT2000:
 		//switch(type)
@@ -2312,22 +2390,26 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 	
 	if (! vf.WroteHeader)
 	{
+		bool doWrite = false;
 		switch(blkType & 0xC0)
 		{
 		case 0x80:	// ROM Image
-			if (vf.DataCount < 0x20)
-			{
-				VGMLogger::VGM_ROM_DATA& vrd = vf.DataBlk[vf.DataCount];
-				vf.DataCount ++;
-				
-				vrd.type = blkType;
-				vrd.dstart_msb = dstart_msb;
-				vrd.dataSize = blockSize | ((_chipType & 0x80) << 24);
-				vrd.data = data;
-			}
+			doWrite = true;
 			break;
 		case 0xC0:	// RAM Writes
+			if (blkType == 0xC3)
+				doWrite = true;	// save/rewrite this as well
 			break;
+		}
+		if (doWrite && vf.DataCount < 0x20)
+		{
+			VGMLogger::VGM_ROM_DATA& vrd = vf.DataBlk[vf.DataCount];
+			vf.DataCount ++;
+			
+			vrd.type = blkType;
+			vrd.dstart_msb = dstart_msb;
+			vrd.dataSize = blockSize | ((_chipType & 0x80) << 24);
+			vrd.data = data;
 		}
 		return;
 	}
@@ -2369,8 +2451,8 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		}
 		
 		PatchROMBlock(blkType, dataLen, data, startOfs, romPatchBuf, vf.header);
-		finalSize = 0x08 + dataLen;
-		finalSize |= (_chipType & 0x80) << 24;
+		finalSize = dataLen | ((_chipType & 0x80) << 24);
+		finalSize += 0x08;
 		startOfs |= (dstart_msb << 24);
 		
 		fwrite(&finalSize, 0x04, 0x01, vf.hFile);	// Data Block Size
@@ -2400,19 +2482,16 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		}
 		
 		PatchROMBlock(blkType, dataLen, data, startOfs, romPatchBuf, vf.header);
+		finalSize = dataLen | ((_chipType & 0x80) << 24);
 		if (! (blkType & 0x20))
 		{
-			finalSize = 0x02 + dataLen;
-			finalSize |= (_chipType & 0x80) << 24;
-			
+			finalSize += 0x02;
 			fwrite(&finalSize, 0x04, 0x01, vf.hFile);	// Data Block Size
 			fwrite(&startOfs, 0x02, 0x01, vf.hFile);	// Data Address
 		}
 		else
 		{
-			finalSize = 0x04 + dataLen;
-			finalSize |= (_chipType & 0x80) << 24;
-			
+			finalSize += 0x04;
 			fwrite(&finalSize, 0x04, 0x01, vf.hFile);	// Data Block Size
 			fwrite(&startOfs, 0x04, 0x01, vf.hFile);	// Data Address
 		}
@@ -2535,19 +2614,16 @@ void VGMDeviceLog::FlushPCMCache(void)
 		fputc(0x67, vf.hFile);
 		fputc(0x66, vf.hFile);
 		fputc(blkType, vf.hFile);
+		finalSize = _pcmCache.Pos | ((_chipType & 0x80) << 24);
 		if (! (blkType & 0x20))
 		{
-			finalSize = 0x02 + _pcmCache.Pos;
-			finalSize |= (_chipType & 0x80) << 24;
-			
+			finalSize += 0x02;
 			fwrite(&finalSize, 0x04, 0x01, vf.hFile);	// Data Block Size
 			fwrite(&_pcmCache.Start, 0x02, 0x01, vf.hFile);		// Data Address
 		}
 		else
 		{
-			finalSize = 0x04 + _pcmCache.Pos;
-			finalSize |= (_chipType & 0x80) << 24;
-			
+			finalSize += 0x04;
 			fwrite(&finalSize, 0x04, 0x01, vf.hFile);	// Data Block Size
 			fwrite(&_pcmCache.Start, 0x04, 0x01, vf.hFile);		// Data Address
 		}
