@@ -139,7 +139,8 @@ public:
 		uint32_t lngHzK005289;
 		uint32_t lngHzOKIM5205;
 		uint32_t lngHzICS2115;
-		uint8_t bytReserved[0x08];
+		uint32_t lngHzMSM5232;
+		uint8_t bytReserved[0x04];
 	};	// -> 0x100 Bytes
 	struct GD3_TAG
 	{
@@ -275,6 +276,7 @@ enum ChipTypes : uint8_t
 	VGMC_K005289	= 0x2B,
 	VGMC_OKIM5205	= 0x2C,
 	VGMC_ICS2115	= 0x2D,
+	VGMC_MSM5232	= 0x2E,
 
 	//VGMC_OKIM6376	= 0xFF,
 };
