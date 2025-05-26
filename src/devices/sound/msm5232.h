@@ -87,6 +87,7 @@ private:
 
 	double  m_external_capacitance[8]; // in Farads, eg 0.39e-6 = 0.36 uF (microFarads)
 	devcb_write_line m_gate_handler_cb;// callback called when the GATE output pin changes state
+	VGMDeviceLog* m_vgm_log;
 
 	void init_tables();
 	void init_voice(int i);
