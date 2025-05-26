@@ -141,7 +141,7 @@ public:
 		uint32_t lngHzICS2115;
 		uint32_t lngHzMSM5232;
 		//uint32_t lngHzBSMT2000;
-		uint8_t bytReserved[0x1C];
+		uint8_t bytReserved[0x04];
 	};	// -> 0x100 Bytes
 	struct GD3_TAG
 	{
