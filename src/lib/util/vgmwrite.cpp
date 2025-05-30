@@ -1976,11 +1976,21 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.CmdLen = 0x03;
 		break;
 	case VGMC_BSMT2000:
-		wrtCmd.Data[0x00] = 0x46;
-		wrtCmd.Data[0x01] = v | (_chipType & 0x80);
-		wrtCmd.Data[0x02] = (r & 0xFF00) >> 8; // Data MSB
-		wrtCmd.Data[0x03] = (r & 0x00FF) >> 0; // Data LSB
-		wrtCmd.CmdLen = 0x04;
+		switch (port)
+		{
+			case 0: // Register write
+				wrtCmd.Data[0x00] = 0x46;
+				wrtCmd.Data[0x01] = (v & 0x7F) | (_chipType & 0x80);
+				wrtCmd.Data[0x02] = (r & 0xFF00) >> 8; // Data MSB
+				wrtCmd.Data[0x03] = (r & 0x00FF) >> 0; // Data LSB
+				wrtCmd.CmdLen = 0x04;
+				break;
+			case 1: // Mode change
+				wrtCmd.Data[0x00] = 0x47;
+				wrtCmd.Data[0x01] = (r & 0x7F) | (_chipType & 0x80);
+				wrtCmd.CmdLen = 0x02;
+				break;
+		}
 		break;
 //	case VGMC_OKIM6376:
 //		wrtCmd.Data[0x00] = 0x31;

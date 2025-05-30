@@ -156,6 +156,7 @@ void bsmt2000_device::device_reset()
 
 TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reset)
 {
+	m_vgm_log->Write(0x01, m_register_select & 0x7f, 0);
 	m_stream->update();
 	m_cpu->reset();
 }
