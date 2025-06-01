@@ -22,6 +22,7 @@ public:
 	template <typename T> void set_region2(T &&tag) { m_region2.set_tag(std::forward<T>(tag)); }
 	template <typename T> void set_region3(T &&tag) { m_region3.set_tag(std::forward<T>(tag)); }
 	void set_channels(int channels) { m_channels = channels; }
+	void exbank_w(offs_t offset, u8 data);
 
 	u32 get_voice_index() { return m_voice_index; }
 
@@ -144,6 +145,8 @@ protected:
 	std::vector<s32> m_scratch;
 	void *      m_wavraw;                 // raw waveform
 #endif
+
+	VGMDeviceLog* m_vgm_log;
 
 	optional_memory_region m_region0;             // memory region where the sample ROM lives
 	optional_memory_region m_region1;             // memory region where the sample ROM lives

@@ -639,9 +639,7 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	if (_logging != 0xDD)
 	{
 		// prevent it from logging chips with known audible errors in VGM logs
-		if (chipType == VGMC_ES5506)
-			return &dummyDevice;	// logging needs to be reworked for this one
-		else if (chipType == VGMC_SCSP)
+		if (chipType == VGMC_SCSP)
 			return &dummyDevice;	// timing is horribly off (see Fighting Vipers)
 	}
 	
@@ -1900,21 +1898,31 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		}
 		break;
 	case VGMC_ES5506:
-		switch(port & 0x80)
+		if (port == 0xff) // Bank write
 		{
-		case 0x00:	// 8-bit register write
-			wrtCmd.Data[0x00] = 0xBE;
+			wrtCmd.Data[0x00] = 0xD8;
 			wrtCmd.Data[0x01] = r | (_chipType & 0x80);
 			wrtCmd.Data[0x02] = v;
 			wrtCmd.CmdLen = 0x03;
-			break;
-		case 0x80:		// 16-bit register write
-			wrtCmd.Data[0x00] = 0xD6;
-			wrtCmd.Data[0x01] = v | (_chipType & 0x80);
-			wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;	// Data LSB
-			wrtCmd.Data[0x03] = (r & 0xFF00) >> 8;	// Data MSB
-			wrtCmd.CmdLen = 0x04;
-			break;
+		}
+		else
+		{
+			switch(port & 0x80)
+			{
+			case 0x00:	// 8-bit register write
+				wrtCmd.Data[0x00] = 0xBE;
+				wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+				wrtCmd.Data[0x02] = v;
+				wrtCmd.CmdLen = 0x03;
+				break;
+			case 0x80:		// 16-bit register write
+				wrtCmd.Data[0x00] = 0xD6;
+				wrtCmd.Data[0x01] = v | (_chipType & 0x80);
+				wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;	// Data LSB
+				wrtCmd.Data[0x03] = (r & 0xFF00) >> 8;	// Data MSB
+				wrtCmd.CmdLen = 0x04;
+				break;
+			}
 		}
 		break;
 	case VGMC_X1_010:
@@ -2296,8 +2304,18 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		break;
 	case VGMC_ES5506:
 		// "type" tells us the actual region
-		blkType = 0x90;	// Type: ES5506 ROM Data
-		dstart_msb = type << 4;
+		switch (type)
+		{
+		case 0x00:
+			break;
+		case 0x01:
+		case 0x02:
+		case 0x03:
+		case 0x04:
+			blkType = 0x90;	// Type: ES5506 ROM Data
+			dstart_msb = (type - 1) << 4;
+			break;
+		}
 		break;
 	case VGMC_X1_010:
 		switch(type)
@@ -2693,10 +2711,10 @@ void VGMDeviceLog::DumpSampleROM(uint8_t type, address_space& space)
 		return;
 	}
 	
-	uint32_t dataSize = space.addrmask() + 1;
+	uint32_t dataSize = (space.addrmask() + 1) << (-space.addr_shift());
 	const uint8_t* dataPtrA = static_cast<const uint8_t*>(space.get_read_ptr(0));
 	const uint8_t* dataPtrB = static_cast<const uint8_t*>(space.get_read_ptr(space.addrmask()));
-	if ((dataPtrB - dataPtrA) == space.addrmask())
+	if ((dataPtrB - dataPtrA) == (space.addrmask() << (-space.addr_shift())))
 	{
 		print_info("VGM - Dumping Device-Space %s: size 0x%X, space-ptr %p\n", space.name(), dataSize, dataPtrA);
 		WriteLargeData(type, dataSize, 0x00, 0x00, dataPtrA);

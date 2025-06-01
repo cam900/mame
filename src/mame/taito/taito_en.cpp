@@ -91,6 +91,7 @@ void taito_en_device::en_es5505_bank_w(offs_t offset, uint16_t data)
 	/* mask out unused bits */
 	m_otisbank[offset] = data;
 	m_calculated_otisbank[offset] = (m_otisbank[offset] & m_bankmask) << 20;
+	m_ensoniq->exbank_w(offset, data);
 }
 
 void taito_en_device::en_volume_w(offs_t offset, uint8_t data)
@@ -248,6 +249,8 @@ void taito_en_device::device_add_mconfig(machine_config &config)
 	m_ensoniq->sample_rate_changed().set(FUNC(taito_en_device::es5505_clock_changed));
 	m_ensoniq->set_addrmap(0, &taito_en_device::en_otis_map);
 	m_ensoniq->set_addrmap(1, &taito_en_device::en_otis_map);
+	m_ensoniq->set_region0("ensoniq");
+	m_ensoniq->set_region1("ensoniq");
 	m_ensoniq->set_channels(4);
 	m_ensoniq->add_route(0, "pump", 0.18, 0);
 	m_ensoniq->add_route(1, "pump", 0.18, 1);

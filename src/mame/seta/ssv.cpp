@@ -679,6 +679,8 @@ void ssv_state::srmp7_sound_bank_w(offs_t offset, uint16_t data, uint16_t mem_ma
 	{
 		m_srmp7_esbank[0]->set_entry(data & 1);
 		m_srmp7_esbank[1]->set_entry(data & 1);
+		for (int i = 0; i < 32; i++)
+			m_ensoniq->exbank_w(i, (data & 1) << 1);
 	}
 //  popmessage("%04X",data);
 }
@@ -3879,11 +3881,13 @@ ROM_START( srmp7 )
 	ROM_LOAD( "sx015-12.d2", 0x3800000, 0x400000, CRC(80336523) SHA1(ec66e21fe1401fdb438e03657542a7b6b0cbc5ce) )
 	ROM_LOAD( "sx015-11.d3", 0x3c00000, 0x400000, CRC(134c8e28) SHA1(669118b58f27d5e2e08052debe904f95d9ab32a3) )
 
-	ROM_REGION16_BE( 0x400000, "ensoniq.0", ROMREGION_ERASE00 )   // Samples
+	ROM_REGION16_BE( 0x800000, "ensoniq.0", ROMREGION_ERASE00 )   // Samples
 	ROM_LOAD16_BYTE( "sx015-06.s0", 0x000000, 0x200000, CRC(0d5a206c) SHA1(2fdaf2a56b6608f20a788eb79a8426102ff33e14) )
+	ROM_COPY("ensoniq.0", 0x000000, 0x400000, 0x400000)
 
-	ROM_REGION16_BE( 0x400000, "ensoniq.1", ROMREGION_ERASE00 )   // Samples
+	ROM_REGION16_BE( 0x800000, "ensoniq.1", ROMREGION_ERASE00 )   // Samples
 	ROM_LOAD16_BYTE( "sx015-05.s1", 0x000000, 0x200000, CRC(bb8cebe2) SHA1(3691e5fb4e963f69c1fe01cb5d968433029c4833) )
+	ROM_COPY("ensoniq.1", 0x000000, 0x400000, 0x400000)
 
 	ROM_REGION16_BE( 0x800000, "ensoniq.2", ROMREGION_ERASE00 )   // Samples
 	ROM_LOAD16_BYTE( "sx015-04.s2", 0x000000, 0x200000, CRC(f6e933df) SHA1(7cb69515a0ffc62fbac2be3a5fb322538560bd38) )

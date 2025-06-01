@@ -83,6 +83,7 @@ Ensoniq OTIS - ES5505                                            Ensoniq OTTO - 
 ***********************************************************************************************/
 
 #include "emu.h"
+#include "vgmwrite.hpp"
 #include "es5506.h"
 #include <algorithm>
 
@@ -167,6 +168,7 @@ es550x_device::es550x_device(const machine_config &mconfig, device_type type, co
 #if ES5506_MAKE_WAVS
 	, m_wavraw(nullptr)
 #endif
+	, m_vgm_log(VGMLogger::GetDummyChip())
 	, m_region0(*this, finder_base::DUMMY_TAG)
 	, m_region1(*this, finder_base::DUMMY_TAG)
 	, m_region2(*this, finder_base::DUMMY_TAG)
@@ -262,6 +264,42 @@ void es5506_device::device_start()
 
 	// initialize the rest of the structure
 	m_channels = channels;
+
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_ES5506, clock());
+	m_vgm_log->SetProperty(0x00, 1);
+	m_vgm_log->SetProperty(0x01, m_channels);
+	if (m_region0 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x01, m_region0);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x01, space(0));	// try to look up the ROM via space
+	}
+	if (m_region1 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x02, m_region1);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x02, space(1));	// try to look up the ROM via space
+	}
+	if (m_region2 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x03, m_region2);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x03, space(2));	// try to look up the ROM via space
+	}
+	if (m_region3 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x04, m_region3);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x04, space(3));	// try to look up the ROM via space
+	}
 
 	// KT-76 assumes all voices are active on an ES5506 without setting them!
 	m_active_voices = 31;
@@ -384,6 +422,26 @@ void es5505_device::device_start()
 
 	// initialize the rest of the structure
 	m_channels = channels;
+
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_ES5506, clock());
+	m_vgm_log->SetProperty(0x00, 0);
+	m_vgm_log->SetProperty(0x01, m_channels);
+	if (m_region0 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x01, m_region0);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x01, space(0));	// try to look up the ROM via space
+	}
+	if (m_region1 != nullptr)
+	{
+		m_vgm_log->DumpSampleROM(0x02, m_region1);
+	}
+	else
+	{
+		m_vgm_log->DumpSampleROM(0x02, space(1));	// try to look up the ROM via space
+	}
 
 	// 20 bit integer and 9 bit fraction
 	get_accum_mask(ADDRESS_INTEGER_BIT_ES5505, ADDRESS_FRAC_BIT_ES5505);
@@ -1325,6 +1383,7 @@ inline void es5506_device::reg_write_test(es550x_voice *voice, offs_t offset, u3
 
 void es5506_device::write(offs_t offset, u8 data)
 {
+	m_vgm_log->Write(0x00, offset & 0x7f, data);
 	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
 	int shift = 8 * (offset & 3);
 
@@ -1854,6 +1913,15 @@ void es5505_device::write(offs_t offset, u16 data, u16 mem_mask)
 
 	// force an update
 	m_stream->update();
+	if (mem_mask == 0xffff)
+		m_vgm_log->Write(0x80, data, offset & 0x7f);
+	else
+	{
+		if (ACCESSING_BITS_0_7)
+			m_vgm_log->Write(0x00, ((offset << 1) | 0) & 0x7f, data & 0xff);
+		if (ACCESSING_BITS_8_15)
+			m_vgm_log->Write(0x00, ((offset << 1) | 1) & 0x7f, data >> 8);
+	}
 
 	// switch off the page and register
 	if (m_current_page < 0x20)
@@ -2086,6 +2154,10 @@ u16 es5505_device::read(offs_t offset)
 	return result;
 }
 
+void es550x_device::exbank_w(offs_t offset, u8 data)
+{
+	m_vgm_log->Write(0xff, offset & 0x1f, data);
+}
 
 //-------------------------------------------------
 //  sound_stream_update - handle a stream update

@@ -1023,6 +1023,7 @@ void macrossp_state::macrossp(machine_config &config)
 
 	es5506_device &ensoniq(ES5506(config, "ensoniq", 32_MHz_XTAL / 2));    // 16 MHz
 	ensoniq.set_region0("ensoniq.0");
+	ensoniq.set_region1("ensoniq.1");
 	ensoniq.set_addrmap(1, &macrossp_state::es5506_bank1_map);
 	ensoniq.set_channels(1);
 	ensoniq.irq_cb().set(FUNC(macrossp_state::irqhandler));
@@ -1037,6 +1038,7 @@ void macrossp_state::quizmoon(machine_config &config)
 
 	es5506_device *ensoniq = subdevice<es5506_device>("ensoniq");
 	ensoniq->set_region2("ensoniq.2");
+	ensoniq->set_region3("ensoniq.3");
 	ensoniq->set_addrmap(3, &macrossp_state::es5506_bank3_map);
 }
 
@@ -1080,6 +1082,9 @@ ROM_START( macrossp )
 
 	ROM_REGION16_BE( 0x800000, "ensoniq.0", ROMREGION_ERASEFF )
 	ROM_LOAD16_BYTE( "bp964a.u24", 0x000000, 0x400000, CRC(93f90336) SHA1(75daa2f8cedc732cf5ef98254f61748c94b94aea) )
+
+	ROM_REGION16_BE( 0x400000, "ensoniq.1", ROMREGION_ERASEFF )
+	ROM_COPY("ensoniq.0", 0x400000, 0x000000, 0x400000)
 
 	ROM_REGION( 0x0600, "plds", 0 )
 	ROM_LOAD( "u8.u8",     0x0000, 0x0117, CRC(99bd3cc1) SHA1(b0d3ac93cb5d2857cf9c184c7a2b4afa0211d588) ) // unprotected GAL16V8B
@@ -1127,9 +1132,15 @@ ROM_START( quizmoon )
 	ROM_LOAD16_BYTE( "u26.bin", 0x0000000, 0x0400000, CRC(6c8f30d4) SHA1(7e215589e4a52cbce7f2bb31b333f874a9f83d00) )
 	ROM_LOAD16_BYTE( "u24.bin", 0x0000001, 0x0400000, CRC(5b12d0b1) SHA1(c5ddff2053148a1da0710a10f48689bf5c736ae4) )
 
+	ROM_REGION16_BE( 0x400000, "ensoniq.1", ROMREGION_ERASEFF )
+	ROM_COPY("ensoniq.0", 0x400000, 0x000000, 0x400000)
+
 	ROM_REGION16_BE( 0x800000, "ensoniq.2", 0 )
 	ROM_LOAD16_BYTE( "u27.bin", 0x0000000, 0x0400000, CRC(bd75d165) SHA1(2da770d15c812cbfdb4e3048d320071edffccfa1) )
 	ROM_LOAD16_BYTE( "u25.bin", 0x0000001, 0x0400000, CRC(3b9689bc) SHA1(0857c3d3e9810f9468f7c17f8b795825c55a9f08) )
+
+	ROM_REGION16_BE( 0x400000, "ensoniq.3", ROMREGION_ERASEFF )
+	ROM_COPY("ensoniq.2", 0x400000, 0x000000, 0x400000)
 ROM_END
 
 
