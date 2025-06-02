@@ -266,7 +266,7 @@ void es5506_device::device_start()
 	m_channels = channels;
 
 	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_ES5506, clock());
-	m_vgm_log->SetProperty(0x00, 1);
+	m_vgm_log->SetProperty(0x00, 1); // ES5506
 	m_vgm_log->SetProperty(0x01, m_channels);
 	if (m_region0 != nullptr)
 	{
@@ -424,7 +424,7 @@ void es5505_device::device_start()
 	m_channels = channels;
 
 	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_ES5506, clock());
-	m_vgm_log->SetProperty(0x00, 0);
+	m_vgm_log->SetProperty(0x00, 0); // ES5505
 	m_vgm_log->SetProperty(0x01, m_channels);
 	if (m_region0 != nullptr)
 	{
@@ -1383,13 +1383,26 @@ inline void es5506_device::reg_write_test(es550x_voice *voice, offs_t offset, u3
 
 void es5506_device::write(offs_t offset, u8 data)
 {
-	m_vgm_log->Write(0x00, offset & 0x7f, data);
 	es550x_voice *voice = &m_voice[m_current_page & 0x1f];
 	int shift = 8 * (offset & 3);
+	static int lastofs = -1;
 
 	// accumulate the data
 	m_write_latch = (m_write_latch & ~(0xff000000 >> shift)) | (data << (24 - shift));
 
+	//m_vgm_log->Write(0x00, offset & 0x3f, data);
+	if (offset & 1)
+	{
+		u16 logdata;
+
+		if (lastofs != -1 && lastofs != offset-1)
+			logerror("ES5506: Last Offset %02X, New Offset %02X\n", lastofs, offset);
+		logdata = (offset & 2) ? (m_write_latch & 0xFFFF) : (m_write_latch >> 16);
+		m_vgm_log->Write(0x80, logdata, offset & ~1);
+	}
+	else if (lastofs != -1 && ! (lastofs & 1))
+		logerror("ES5506: Last Offset %02X, New Offset %02X\n", lastofs, offset);
+	lastofs = offset;
 	// wait for a write to complete
 	if (shift != 24)
 		return;
@@ -1914,13 +1927,13 @@ void es5505_device::write(offs_t offset, u16 data, u16 mem_mask)
 	// force an update
 	m_stream->update();
 	if (mem_mask == 0xffff)
-		m_vgm_log->Write(0x80, data, offset & 0x7f);
+		m_vgm_log->Write(0x80, data, (offset << 1) & 0x7f);
 	else
 	{
 		if (ACCESSING_BITS_0_7)
-			m_vgm_log->Write(0x00, ((offset << 1) | 0) & 0x7f, data & 0xff);
+			m_vgm_log->Write(0x00, ((offset << 1) | 0) & 0x7f, data >> 8);
 		if (ACCESSING_BITS_8_15)
-			m_vgm_log->Write(0x00, ((offset << 1) | 1) & 0x7f, data >> 8);
+			m_vgm_log->Write(0x00, ((offset << 1) | 1) & 0x7f, data & 0xff);
 	}
 
 	// switch off the page and register
@@ -2156,7 +2169,7 @@ u16 es5505_device::read(offs_t offset)
 
 void es550x_device::exbank_w(offs_t offset, u8 data)
 {
-	m_vgm_log->Write(0xff, offset & 0x1f, data);
+	m_vgm_log->Write(0x00, 0x40 | (offset & 0x1f), data);
 }
 
 //-------------------------------------------------

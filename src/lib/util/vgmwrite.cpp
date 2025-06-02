@@ -1898,31 +1898,21 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		}
 		break;
 	case VGMC_ES5506:
-		if (port == 0xff) // Bank write
+		switch(port & 0x80)
 		{
-			wrtCmd.Data[0x00] = 0xD8;
+		case 0x00:	// 8-bit register write
+			wrtCmd.Data[0x00] = 0xBE;
 			wrtCmd.Data[0x01] = r | (_chipType & 0x80);
 			wrtCmd.Data[0x02] = v;
 			wrtCmd.CmdLen = 0x03;
-		}
-		else
-		{
-			switch(port & 0x80)
-			{
-			case 0x00:	// 8-bit register write
-				wrtCmd.Data[0x00] = 0xBE;
-				wrtCmd.Data[0x01] = r | (_chipType & 0x80);
-				wrtCmd.Data[0x02] = v;
-				wrtCmd.CmdLen = 0x03;
-				break;
-			case 0x80:		// 16-bit register write
-				wrtCmd.Data[0x00] = 0xD6;
-				wrtCmd.Data[0x01] = v | (_chipType & 0x80);
-				wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;	// Data LSB
-				wrtCmd.Data[0x03] = (r & 0xFF00) >> 8;	// Data MSB
-				wrtCmd.CmdLen = 0x04;
-				break;
-			}
+			break;
+		case 0x80:		// 16-bit register write
+			wrtCmd.Data[0x00] = 0xD6;
+			wrtCmd.Data[0x01] = v | (_chipType & 0x80);
+			wrtCmd.Data[0x02] = (r & 0xFF00) >> 8;	// Data MSB
+			wrtCmd.Data[0x03] = (r & 0x00FF) >> 0;	// Data LSB
+			wrtCmd.CmdLen = 0x04;
+			break;
 		}
 		break;
 	case VGMC_X1_010:
