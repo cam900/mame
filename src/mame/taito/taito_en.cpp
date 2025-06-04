@@ -91,7 +91,7 @@ void taito_en_device::en_es5505_bank_w(offs_t offset, uint16_t data)
 	/* mask out unused bits */
 	m_otisbank[offset] = data;
 	m_calculated_otisbank[offset] = (m_otisbank[offset] & m_bankmask) << 20;
-	m_ensoniq->exbank_w(offset, data);
+	m_ensoniq->exbank_w(offset, m_otisbank[offset] & m_bankmask);
 }
 
 void taito_en_device::en_volume_w(offs_t offset, uint8_t data)
