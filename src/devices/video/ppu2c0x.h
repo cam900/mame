@@ -32,7 +32,6 @@
 /* constant definitions */
 #define VISIBLE_SCREEN_WIDTH         (32*8) /* Visible screen width */
 #define VISIBLE_SCREEN_HEIGHT        (30*8) /* Visible screen height */
-#define SPRITERAM_SIZE          0x100   /* spriteram size */
 
 ///*************************************************************************
 //  TYPE DEFINITIONS
@@ -149,7 +148,7 @@ protected:
 	// device_config_memory_interface overrides
 	virtual space_config_vector memory_space_config() const override;
 
-	virtual u32 palette_entries() const noexcept override { return 0x40 * 8; } 
+	virtual u32 palette_entries() const noexcept override { return 0x40 * 8; }
 
 	TIMER_CALLBACK_MEMBER(hblank_tick);
 	TIMER_CALLBACK_MEMBER(nmi_tick);
@@ -159,6 +158,8 @@ protected:
 	void apply_color_emphasis_and_clamp(bool is_pal_or_dendy, int color_emphasis, double& R, double& G, double& B);
 	rgb_t nespal_to_RGB(int color_intensity, int color_num, int color_emphasis, bool is_pal_or_dendy);
 	virtual void init_palette_tables();
+
+	virtual void write_to_spriteram_with_increment(u8 data);
 
 	virtual void read_tile_plane_data(int address, int color);
 	virtual void shift_tile_plane_data(u8 &pix);
@@ -197,7 +198,7 @@ protected:
 	int                         m_vblank_first_scanline;  /* the very first scanline where VBLANK occurs */
 
 	// used in rendering
-	u8 m_planebuf[2];
+	u8 m_planebuf[8]; // temp buffer used for fetching tile data
 	s32                    m_scanline;         /* scanline count */
 	std::unique_ptr<u8[]>  m_spriteram;           /* sprite ram */
 
@@ -215,6 +216,8 @@ protected:
 	bool                        m_toggle;               /* used to latch hi-lo scroll */
 	s32                         m_tilecount;            /* MMC5 can change attributes to subsets of the 34 visible tiles */
 	latch_delegate              m_latch;
+
+	u16                         m_spriteramsize;
 
 	u8 readbyte(offs_t address);
 
@@ -309,7 +312,7 @@ public:
 protected:
 	virtual void device_start() override ATTR_COLD;
 
-	virtual u32 palette_entries() const noexcept override { return 0x40 * 2; } 
+	virtual u32 palette_entries() const noexcept override { return 0x40 * 2; }
 
 	virtual void draw_background(u8 *line_priority) override;
 	virtual void draw_sprite_pixel(int sprite_xpos, int color, int pixel, u8 pixel_data, bitmap_rgb32 &bitmap) override;

@@ -406,7 +406,7 @@ void drifto94_state::drifto94_map(address_map &map)
 	ssv_map(map, 0xc00000);
 //  map(0x210002, 0x210003).nopw();                                      // ? 1 at the start
 	map(0x400000, 0x47ffff).nopw();                                       // ?
-	map(0x480000, 0x480001).rw(m_dsp, FUNC(upd96050_device::data_r), FUNC(upd96050_device::data_w));
+	map(0x480000, 0x480000).rw(m_dsp, FUNC(upd96050_device::data_r), FUNC(upd96050_device::data_w));
 	map(0x482000, 0x482fff).rw(FUNC(drifto94_state::dsp_r), FUNC(drifto94_state::dsp_w)).umask16(0x00ff);
 	map(0x483000, 0x485fff).nopw();                                        // ?
 	map(0x500000, 0x500001).nopw();                                        // ??
@@ -765,7 +765,7 @@ void drifto94_state::twineag2_map(address_map &map)
 	ssv_map(map, 0xe00000);
 	map(0x010000, 0x03ffff).ram();                         // More RAM
 	map(0x210000, 0x210001).r("watchdog", FUNC(watchdog_timer_device::reset16_r)); // Watchdog (also value is cmp.b with mem 8)
-	map(0x480000, 0x480001).rw(m_dsp, FUNC(upd96050_device::data_r), FUNC(upd96050_device::data_w));
+	map(0x480000, 0x480000).rw(m_dsp, FUNC(upd96050_device::data_r), FUNC(upd96050_device::data_w));
 	map(0x482000, 0x482fff).rw(FUNC(drifto94_state::dsp_r), FUNC(drifto94_state::dsp_w)).umask16(0x00ff);
 }
 
@@ -2445,8 +2445,7 @@ void ssv_state::ssv(machine_config &config)
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 0x8000);
 
 	// sound hardware
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
 	ES5506(config, m_ensoniq, SSV_MASTER_CLOCK);
 	m_ensoniq->set_region0("ensoniq.0");
@@ -2454,8 +2453,8 @@ void ssv_state::ssv(machine_config &config)
 	m_ensoniq->set_region2("ensoniq.2");
 	m_ensoniq->set_region3("ensoniq.3");
 	m_ensoniq->set_channels(1);
-	m_ensoniq->add_route(0, "lspeaker", 0.075);
-	m_ensoniq->add_route(1, "rspeaker", 0.075);
+	m_ensoniq->add_route(0, "speaker", 0.075, 0);
+	m_ensoniq->add_route(1, "speaker", 0.075, 1);
 }
 
 void drifto94_state::drifto94(machine_config &config)

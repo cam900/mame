@@ -938,25 +938,20 @@ cause higher audio quality but slower emulation speed. The default is
 .B \-[no]samples
 Use samples if available. The default is ON (\-samples).
 .TP
-.B \-[no]compressor
-Enable audio compressor. It temporarily reduces the overall volume when
-the audio output is overdriven. The default is ON (\-compressor).
-.TP
 .B \-volume, \-vol \fIvalue
 Sets the startup volume. It can later be changed with the user interface
-(see Keys section). The volume is an attenuation in dB: e.g.,
+(see Keys section). The volume is in dB: e.g.,
 "\-volume \-12" will start with \-12dB attenuation. The default is 0.
 .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 .\" SDL specific
 .\" +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 .TP
 .B \-audio_latency \fIvalue
-This controls the amount of latency built into the audio streaming.
-The exact behavior depends on the selected audio output module (see
-the \-sound option).  Smaller values provide less audio delay while
-requiring better system performance.  Higher values increase audio
-delay but may help avoid buffer under-runs and audio interruptions.
-The default is 1.
+This controls the amount of latency in seconds built into the audio streaming.
+Smaller values provide less audio delay while requiring better system
+performance.  Higher values increase audio delay but may help avoid
+buffer under-runs and audio interruptions.  The default is 0.0 and will pick
+a sane duration.
 .\"
 .\" *******************************************************
 .SS Input options

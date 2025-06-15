@@ -2950,26 +2950,12 @@ Core Sound Options
 
             mame qbert -nosamples
 
-.. _mame-commandline-nocompressor:
-
-**-[no]compressor**
-
-    Enable audio compressor. It temporarily reduces the overall volume when
-    the audio output is overdriven.
-
-    The default is ON (**-compressor**).
-
-    Example:
-        .. code-block:: bash
-
-            mame popeye -nocompressor
-
 .. _mame-commandline-volume:
 
 **-volume** / **-vol** *<value>*
 
     Sets the initial sound volume.  It can be changed later with the user
-    interface (see Keys section).  The volume is an attenuation in decibels:
+    interface (see Keys section).  The volume is in decibels:
     e.g. "**-volume -12**" will start with -12 dB attenuation.  Note that if the
     volume is changed in the user interface it will be saved to the
     configuration file for the system.  The value from the configuration file
@@ -2984,13 +2970,15 @@ Core Sound Options
 
 .. _mame-commandline-sound:
 
-**-sound** *<dsound | coreaudio | sdl | xaudio2 | portaudio | none>*
+**-sound** *<wasapi | xaudio2 | dsound | coreaudio | pipewire | pulse | sdl | portaudio | none>*
 
-    Specifies which sound subsystem to use. Selecting ``none`` disables sound
-    output altogether (sound hardware is still emulated).
+    Specifies which sound module to use.  Selecting ``none`` disables sound
+    output and input altogether (sound hardware is still emulated).
 
-    On Windows and Linux, *portaudio* is likely to give the lowest possible
-    latency, while Mac users will find *coreaudio* provides the best results.
+    Available features, performance and latency vary between sound modules.  The
+    exact interpretation and useful range of the :ref:`latency option
+    <mame-commandline-audiolatency>` varies between sound modules.  You may have
+    to change the value of the latency option if you change the sound module.
 
     When using the ``sdl`` sound subsystem, the audio API to use may be selected
     by setting the *SDL_AUDIODRIVER* environment variable.  Available audio APIs
@@ -3005,58 +2993,104 @@ Core Sound Options
 
             mame pacman -sound portaudio
 
-.. list-table:: Supported sound subsystems per-platform
-    :header-rows: 0
+.. list-table:: Sound module supported platforms and features
+    :header-rows: 1
     :stub-columns: 0
 
-    * - **Microsoft Windows**
-      - dsound
-      - xaudio2
-      - portaudio
-      -
-      - sdl [#SoundWinSDL]_.
-      - none
-    * - **macOS**
-      -
-      -
-      - portaudio
-      - coreaudio
-      - sdl
-      - none
-    * - **Linux** and others
-      -
-      -
-      - portaudio
-      -
-      - sdl
-      - none
+    * - Module
+      - Supported OS
+      - Output
+      - Input
+      - Output monitoring
+      - Multi-channel
+      - Device changes
+    * - ``wasapi``
+      - Windows
+      - Yes
+      - Yes
+      - Yes (Windows 10 1703 or later)
+      - Yes
+      - Yes
+    * - ``xaudio2``
+      - Windows 8 or later
+      - Yes
+      - No
+      - No
+      - Yes
+      - Yes
+    * - ``dsound``
+      - Windows
+      - Yes
+      - No
+      - No
+      - No
+      - No
+    * - ``coreaudio``
+      - macOS
+      - Yes
+      - No
+      - No
+      - No
+      - No
+    * - ``pipewire``
+      - Linux
+      - Yes
+      - Yes
+      - ?
+      - Yes
+      - Yes
+    * - ``pulse``
+      - Linux
+      - Yes
+      - No
+      - No
+      - Yes
+      - Yes
+    * - ``sdl``
+      - All [#SoundWinSDL]_
+      - Yes
+      - No
+      - No
+      - Yes
+      - No
+    * - ``portaudio``
+      - All
+      - Yes
+      - Yes
+      - Yes [#SoundPortAudioMonitoring]_
+      - Yes
+      - No
 
 
 ..  rubric:: Footnotes
 
-..  [#SoundWinSDL] While SDL is not a supported option on official builds for Windows, you can compile MAME with SDL support on Windows.
+..  [#SoundWinSDL] While SDL is not a supported option on official MAME builds
+    for Windows, you can compile MAME with SDL support on Windows.
+
+..  [#SoundPortAudioMonitoring] PortAudio support for output monitoring depends
+    on the platform and sound API.
 
 .. _mame-commandline-audiolatency:
 
 **-audio_latency** *<value>*
 
-    The exact behavior depends on the selected audio output module.  Smaller
-    values provide less audio delay while requiring better system performance.
-    Higher values increase audio delay but may help avoid buffer under-runs and
-    audio interruptions.
+    Audio latency in seconds, up to a maximum of 0.5 seconds.  Smaller values
+    provide less audio delay while requiring better system performance.  Larger
+    values increase audio delay but may help avoid buffer under-runs and audio
+    interruptions.  A value of 0.0 will use the default for the selected sound
+    module.
 
-    The default is ``1``.
+    The exact interpretation and useful range of values for this option depends
+    on the selected sound module.  You may need to change the value of this
+    option if you change the sound module using the :ref:`sound option
+    <mame-commandline-sound>`.
 
-    * For PortAudio, see the section on :ref:`-pa_latency <mame-commandline-palatency>`.
-    * XAudio2 calculates audio_latency as 10ms steps.
-    * DSound calculates audio_latency as 10ms steps.
-    * CoreAudio calculates audio_latency as 25ms steps.
-    * SDL calculates audio_latency as Xms steps.
+    The default is ``0.0``.
 
     Example:
         .. code-block:: bash
 
-            mame galaga -audio_latency 1
+            mame galaga -audio_latency 0.1
 
 
 .. _mame-commandline-inputoptions:
@@ -4203,96 +4237,3 @@ HTTP Server Options
         .. code-block:: bash
 
             mame apple2 -http -http_port 6502 -http_root C:\Users\me\appleweb\root
-
-
-.. _mame-commandline-portaudio:
-
-PortAudio Options
------------------
-
-.. _mame-commandline-paapi:
-
-**-pa_api** *API*
-
-    Choose which API that PortAudio should use to talk to your sound hardware. You can use **-verbose** to see which APIs are available.
-
-    The default is ``none``.
-
-    Example 1:
-        .. code-block:: bash
-
-            mame -sound portaudio -verbose
-            Attempting load of mame.ini
-            ...
-            PortAudio: API MME has 20 devices
-            PortAudio: MME: " - Input"
-            PortAudio: MME: "Microphone (3- USB Camera-B4.09"
-            PortAudio: MME: "Line (AVerMedia Live Gamer HD 2"
-            PortAudio: MME: "Digital Audio Interface (AVerMe"
-            PortAudio: MME: "Headset Microphone (Razer Krake"
-            ...
-            PortAudio: MME: " - Output"
-            PortAudio: MME: "Headset Earphone (Razer Kraken "
-            PortAudio: MME: "Digital Audio (S/PDIF) (High De"
-            PortAudio: MME: "NX-EDG27 (NVIDIA High Definitio"
-            ...
-            PortAudio: API Windows DirectSound has 20 devices
-            PortAudio: Windows DirectSound: "Primary Sound Capture Driver"
-            PortAudio: Windows DirectSound: "Headset Microphone (Razer Kraken 7.1 V2)"
-            PortAudio: Windows DirectSound: "Primary Sound Driver" (default)
-            PortAudio: Windows DirectSound: "Headset Earphone (Razer Kraken 7.1 V2)"
-            PortAudio: Windows DirectSound: "Digital Audio (S/PDIF) (High Definition Audio Device)"
-            PortAudio: Windows DirectSound: "NX-EDG27 (NVIDIA High Definition Audio)"
-            ...
-            PortAudio: API Windows WASAPI has 18 devices
-            PortAudio: Windows WASAPI: "Headset Earphone (Razer Kraken 7.1 V2)"
-            PortAudio: Windows WASAPI: "Digital Audio (S/PDIF) (High Definition Audio Device)"
-            PortAudio: Windows WASAPI: "NX-EDG27 (NVIDIA High Definition Audio)"
-            PortAudio: Windows WASAPI: "Headset Microphone (Razer Kraken 7.1 V2)"
-            ...
-            PortAudio: API Windows WDM-KS has 22 devices
-            PortAudio: Windows WDM-KS: "Output (NVIDIA High Definition Audio)"
-            PortAudio: Windows WDM-KS: "SPDIF Out (HD Audio SPDIF out)"
-            PortAudio: Windows WDM-KS: "Headset Microphone (Razer Kraken 7.1 V2)"
-            PortAudio: Windows WDM-KS: "Headset Earphone (Razer Kraken 7.1 V2)"
-            PortAudio: Windows WDM-KS: "Microphone (VDVAD Wave)"
-            PortAudio: Windows WDM-KS: "Speakers (VDVAD Wave)"
-            ...
-            PortAudio: Sample rate is 48000 Hz, device output latency is 218.67 ms
-            PortAudio: Allowed additional buffering latency is 18.00 ms/864 frames
-
-    Example 2:
-        .. code-block:: bash
-
-            mame suprmrio -sound portaudio -pa_api "Windows WASAPI"
-
-.. _mame-commandline-padevice:
-
-**-pa_device** *device*
-
-    Choose which sound device to output through. This would typically be one of
-    the outputs on your sound card or a USB headset.
-
-    The default is ``none``.
-
-    Example:
-        .. code-block:: bash
-
-            mame suprmrio -sound portaudio -pa_api "Windows WASAPI" -pa_device "NX-EDG27 (NVIDIA High Definition Audio)"
-
-.. _mame-commandline-palatency:
-
-**-pa_latency** *latency*
-
-    Choose the buffer size for PortAudio output; this is specified in seconds.
-    Lower numbers have less latency but may increase stutter in the sound.
-    Decimal places are supported. Try starting from 0.20 and decrease or
-    increase until you find the best number your hardware and OS are capable of
-    handling.
-
-    The default is ``0``.
-
-    Example:
-        .. code-block:: bash
-
-            mame suprmrio -sound portaudio -pa_api "Windows WASAPI" -pa_device "NX-EDG27 (NVIDIA High Definition Audio)" -pa_latency 0.20

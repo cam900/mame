@@ -38,7 +38,7 @@ public:
 		m_graph(nullptr),
 		m_node_count(0),
 		m_sample_rate(0),
-		m_audio_latency(0),
+		m_audio_latency(0.0f),
 		m_sample_bytes(0),
 		m_headroom(0),
 		m_buffer_size(0),
@@ -46,7 +46,6 @@ public:
 		m_playpos(0),
 		m_writepos(0),
 		m_in_underrun(false),
-		m_scale(128),
 		m_overflows(0),
 		m_underflows(0)
 	{
@@ -60,8 +59,7 @@ public:
 
 	// sound_module
 
-	virtual void update_audio_stream(bool is_throttled, int16_t const *buffer, int samples_this_frame) override;
-	virtual void set_mastervolume(int attenuation) override;
+	virtual void stream_sink_update(uint32_t, int16_t const *buffer, int samples_this_frame) override;
 
 private:
 	struct node_detail
@@ -74,22 +72,11 @@ private:
 
 	enum
 	{
-		LATENCY_MIN = 1,
-		LATENCY_MAX = 5,
 		EFFECT_COUNT_MAX = 10
 	};
 
-	uint32_t clamped_latency() const { return unsigned(std::clamp<int>(m_audio_latency, LATENCY_MIN, LATENCY_MAX)); }
 	uint32_t buffer_avail() const { return ((m_writepos >= m_playpos) ? m_buffer_size : 0) + m_playpos - m_writepos; }
 	uint32_t buffer_used() const { return ((m_playpos > m_writepos) ? m_buffer_size : 0) + m_writepos - m_playpos; }
-
-	void copy_scaled(void *dst, void const *src, uint32_t bytes) const
-	{
-		bytes /= sizeof(int16_t);
-		int16_t const *s = (int16_t const *)src;
-		for (int16_t *d = (int16_t *)dst; bytes > 0; bytes--, s++, d++)
-			*d = (*s * m_scale) >> 7;
-	}
 
 	bool create_graph(osd_options const &options);
 	bool add_output(char const *name);
@@ -170,7 +157,7 @@ private:
 	node_detail m_node_details[EFFECT_COUNT_MAX + 2];
 
 	int         m_sample_rate;
-	int         m_audio_latency;
+	float       m_audio_latency;
 	uint32_t    m_sample_bytes;
 	uint32_t    m_headroom;
 	uint32_t    m_buffer_size;
@@ -178,7 +165,6 @@ private:
 	uint32_t    m_playpos;
 	uint32_t    m_writepos;
 	bool        m_in_underrun;
-	int32_t     m_scale;
 	unsigned    m_overflows;
 	unsigned    m_underflows;
 };
@@ -188,11 +174,10 @@ int sound_coreaudio::init(osd_interface &osd, const osd_options &options)
 {
 	OSStatus err;
 
-	// Don't bother with any of this if sound is disabled
 	m_sample_rate = options.sample_rate();
 	m_audio_latency = options.audio_latency();
-	if (m_sample_rate == 0)
-		return 0;
+	if (m_audio_latency == 0.0f)
+		m_audio_latency = 0.05f;
 
 	// Create the output graph
 	osd_printf_verbose("Audio: Start initialization\n");
@@ -226,8 +211,8 @@ int sound_coreaudio::init(osd_interface &osd, const osd_options &options)
 	m_sample_bytes = format.mBytesPerFrame;
 
 	// Allocate buffer
-	m_headroom = m_sample_bytes * (clamped_latency() * m_sample_rate / 40);
-	m_buffer_size = m_sample_bytes * std::max<uint32_t>(m_sample_rate * (clamped_latency() + 3) / 40, 256U);
+	m_headroom = m_sample_bytes * m_audio_latency * m_sample_rate;
+	m_buffer_size = m_sample_bytes * std::max<uint32_t>(m_sample_rate * (m_audio_latency + 0.1f), 256U);
 	try
 	{
 		m_buffer = std::make_unique<int8_t []>(m_buffer_size);
@@ -240,7 +225,6 @@ int sound_coreaudio::init(osd_interface &osd, const osd_options &options)
 	m_playpos = 0;
 	m_writepos = m_headroom;
 	m_in_underrun = false;
-	m_scale = 128;
 	m_overflows = m_underflows = 0;
 
 	// Initialise and start
@@ -290,7 +274,7 @@ void sound_coreaudio::exit()
 }
 
 
-void sound_coreaudio::update_audio_stream(bool is_throttled, int16_t const *buffer, int samples_this_frame)
+void sound_coreaudio::stream_sink_update(uint32_t, int16_t const *buffer, int samples_this_frame)
 {
 	if ((m_sample_rate == 0) || !m_buffer)
 		return;
@@ -315,13 +299,6 @@ void sound_coreaudio::update_audio_stream(bool is_throttled, int16_t const *buff
 		memcpy(&m_buffer[0], (int8_t *)buffer + chunk, bytes_this_frame - chunk);
 		m_writepos += bytes_this_frame - chunk;
 	}
-}
-
-
-void sound_coreaudio::set_mastervolume(int attenuation)
-{
-	int const clamped_attenuation = std::clamp(attenuation, -32, 0);
-	m_scale = (-32 == clamped_attenuation) ? 0 : (int32_t)(pow(10.0, clamped_attenuation / 20.0) * 128);
 }
 
 
@@ -984,7 +961,7 @@ OSStatus sound_coreaudio::render(
 	}
 
 	uint32_t const chunk = std::min(m_buffer_size - m_playpos, number_bytes);
-	copy_scaled((int8_t *)data->mBuffers[0].mData, &m_buffer[m_playpos], chunk);
+	memcpy((int8_t *)data->mBuffers[0].mData, &m_buffer[m_playpos], chunk);
 	m_playpos += chunk;
 	if (m_playpos >= m_buffer_size)
 		m_playpos = 0;
@@ -993,7 +970,7 @@ OSStatus sound_coreaudio::render(
 	{
 		assert(0U == m_playpos);
 		assert(m_writepos >= (number_bytes - chunk));
-		copy_scaled((int8_t *)data->mBuffers[0].mData + chunk, &m_buffer[0], number_bytes - chunk);
+		memcpy((int8_t *)data->mBuffers[0].mData + chunk, &m_buffer[0], number_bytes - chunk);
 		m_playpos += number_bytes - chunk;
 	}
 

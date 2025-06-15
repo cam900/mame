@@ -7,6 +7,7 @@
 
 #include "315-5881_crypt.h"
 #include "315-5838_317-0229_comp.h"
+#include "dsb2.h"
 #include "dsbz80.h"
 #include "m2comm.h"
 #include "segabill.h"
@@ -52,6 +53,7 @@ public:
 		m_soundram(*this, "soundram"),
 		m_maincpu(*this,"maincpu"),
 		m_dsbz80(*this, "dsbz80"),
+		m_dsb2(*this, "dsb2"),
 		m_m1audio(*this, M1AUDIO_TAG),
 		m_uart(*this, "uart"),
 		m_m2comm(*this, "m2comm"),
@@ -113,7 +115,8 @@ protected:
 	optional_shared_ptr<u16> m_soundram;
 
 	required_device<i960_cpu_device> m_maincpu;
-	optional_device<dsbz80_device> m_dsbz80;    // Z80-based MPEG Digital Sound Board
+	optional_device<dsbz80_device> m_dsbz80;        // Z80-based MPEG Digital Sound Board
+	optional_device<dsb2_device> m_dsb2;            // 68k-based MPEG Digital Sound Board
 	optional_device<segam1audio_device> m_m1audio;  // Model 1 standard sound board
 	required_device<i8251_device> m_uart;
 	optional_device<m2comm_device> m_m2comm;        // Model 2 communication board
@@ -768,7 +771,7 @@ struct model2_state::triangle
 	u8              luma = 0;
 	int16_t         viewport[4] = { 0, 0, 0, 0 };
 	int16_t         center[2] = { 0, 0 };
-	u8				window = 0;
+	u8              window = 0;
 };
 
 struct model2_state::quad_m2
@@ -823,8 +826,8 @@ struct model2_state::raster_state
 	u16             max_z = 0;                      // Maximum sortable Z value
 	u16             texture_ram[0x10000];           // Texture RAM pointer
 	u8              log_ram[0x40000];               // Log RAM pointer
-	u8				cur_window = 0;					// Current window
-	plane			clip_plane[4][4];				// Polygon clipping planes
+	u8              cur_window = 0;                 // Current window
+	plane           clip_plane[4][4];               // Polygon clipping planes
 };
 
 /*******************************************

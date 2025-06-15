@@ -2903,6 +2903,8 @@ if (BUSES["VME"]~=null) then
 		MAME_DIR .. "src/devices/bus/vme/tp880v.h",
 		MAME_DIR .. "src/devices/bus/vme/tp881v.cpp",
 		MAME_DIR .. "src/devices/bus/vme/tp881v.h",
+		MAME_DIR .. "src/devices/bus/vme/tsvme104.cpp",
+		MAME_DIR .. "src/devices/bus/vme/tsvme104.h",
 	}
 end
 
@@ -3252,8 +3254,6 @@ if (BUSES["NUBUS"]~=null) then
 		MAME_DIR .. "src/devices/bus/nubus/nubus_asntmc3b.h",
 		MAME_DIR .. "src/devices/bus/nubus/nubus_image.cpp",
 		MAME_DIR .. "src/devices/bus/nubus/nubus_image.h",
-		MAME_DIR .. "src/devices/bus/nubus/nubus_wsportrait.cpp",
-		MAME_DIR .. "src/devices/bus/nubus/nubus_wsportrait.h",
 		MAME_DIR .. "src/devices/bus/nubus/8lc.cpp",
 		MAME_DIR .. "src/devices/bus/nubus/8lc.h",
 		MAME_DIR .. "src/devices/bus/nubus/bootbug.cpp",
@@ -3274,8 +3274,6 @@ if (BUSES["NUBUS"]~=null) then
 		MAME_DIR .. "src/devices/bus/nubus/pds30_sigmalview.h",
 		MAME_DIR .. "src/devices/bus/nubus/pds30_30hr.cpp",
 		MAME_DIR .. "src/devices/bus/nubus/pds30_30hr.h",
-		MAME_DIR .. "src/devices/bus/nubus/pds30_mc30.cpp",
-		MAME_DIR .. "src/devices/bus/nubus/pds30_mc30.h",
 	}
 end
 
@@ -5861,5 +5859,19 @@ if (BUSES["AMIGA_CPUSLOT"]~=null) then
 		MAME_DIR .. "src/devices/bus/amiga/cpuslot/action_replay.h",
 		MAME_DIR .. "src/devices/bus/amiga/cpuslot/megamix500.cpp",
 		MAME_DIR .. "src/devices/bus/amiga/cpuslot/megamix500.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/bus/st/stcart.h,BUSES["STCART_CONNECTOR"] = true
+---------------------------------------------------
+
+if (BUSES["STCART_CONNECTOR"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/bus/st/stcart.cpp",
+		MAME_DIR .. "src/devices/bus/st/stcart.h",
+		MAME_DIR .. "src/devices/bus/st/replay.cpp",
+		MAME_DIR .. "src/devices/bus/st/replay.h",
 	}
 end
