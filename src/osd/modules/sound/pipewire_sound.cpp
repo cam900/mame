@@ -497,6 +497,9 @@ int sound_pipewire::init(osd_interface &osd, osd_options const &options)
 	if(!m_core)
 		return 1;
 
+	if(options.audio_latency() > 0.0f)
+		osd_printf_verbose("Sound: %s module does not support audio_latency option\n", name());
+
 	pw_core_add_listener(m_core, &m_core_listener, &core_events, this);
 
 	m_registry = pw_core_get_registry(m_core, PW_VERSION_REGISTRY, 0);
@@ -547,6 +550,12 @@ void sound_pipewire::exit()
 	pw_context_destroy(m_context);
 	pw_thread_loop_destroy(m_loop);
 	pw_deinit();
+
+	m_nodes.clear();
+	m_node_osdid_to_id.clear();
+	m_streams.clear();
+	m_default_audio_sink = "";
+	m_default_audio_source = "";
 }
 
 uint32_t sound_pipewire::get_generation()
@@ -568,6 +577,7 @@ osd::audio_info sound_pipewire::get_information()
 	uint32_t node = 0;
 	for(auto &inode : m_nodes) {
 		result.m_nodes[node].m_name = inode.second.m_name;
+		result.m_nodes[node].m_display_name = inode.second.m_name;
 		result.m_nodes[node].m_id = inode.second.m_osdid;
 		result.m_nodes[node].m_rate = inode.second.m_rate;
 		result.m_nodes[node].m_sinks = inode.second.m_sinks;

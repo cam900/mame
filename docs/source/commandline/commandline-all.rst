@@ -2970,22 +2970,21 @@ Core Sound Options
 
 .. _mame-commandline-sound:
 
-**-sound** *<wasapi | xaudio2 | dsound | coreaudio | pipewire | pulse | sdl | portaudio | none>*
+**-sound** *<wasapi | xaudio2 | coreaudio | pipewire | pulse | sdl | portaudio | none>*
 
     Specifies which sound module to use.  Selecting ``none`` disables sound
     output and input altogether (sound hardware is still emulated).
 
-    Available features, performance and latency vary between sound modules.  The
-    exact interpretation and useful range of the :ref:`latency option
-    <mame-commandline-audiolatency>` varies between sound modules.  You may have
-    to change the value of the latency option if you change the sound module.
+    Available features, performance and latency vary between sound modules.
+    You may have to change the value of the :ref:`latency option
+    <mame-commandline-audiolatency>` if you change the sound module.
 
     When using the ``sdl`` sound subsystem, the audio API to use may be selected
     by setting the *SDL_AUDIODRIVER* environment variable.  Available audio APIs
     depend on the operating system.  On Windows, it may be necessary to set
     ``SDL_AUDIODRIVER=directsound`` if no sound output is produced by default.
 
-    The default is ``dsound`` on Windows. On Mac, ``coreaudio`` is the default.
+    The default is ``wasapi`` on Windows.  On Mac, ``coreaudio`` is the default.
     On all other platforms, ``sdl`` is the default.
 
     Example:
@@ -2999,7 +2998,6 @@ Core Sound Options
 
     * - Module
       - Supported OS
-      - Output
       - Input
       - Output monitoring
       - Multi-channel
@@ -3007,27 +3005,17 @@ Core Sound Options
     * - ``wasapi``
       - Windows
       - Yes
-      - Yes
-      - Yes (Windows 10 1703 or later)
+      - Yes [#SoundWASAPIMonitoring]_
       - Yes
       - Yes
     * - ``xaudio2``
-      - Windows 8 or later
-      - Yes
+      - Windows [#SoundXAudio2OS]_
       - No
       - No
       - Yes
       - Yes
-    * - ``dsound``
-      - Windows
-      - Yes
-      - No
-      - No
-      - No
-      - No
     * - ``coreaudio``
       - macOS
-      - Yes
       - No
       - No
       - No
@@ -3035,27 +3023,23 @@ Core Sound Options
     * - ``pipewire``
       - Linux
       - Yes
-      - Yes
       - ?
       - Yes
       - Yes
     * - ``pulse``
       - Linux
-      - Yes
       - No
       - No
       - Yes
       - Yes
     * - ``sdl``
       - All [#SoundWinSDL]_
-      - Yes
       - No
       - No
-      - Yes
+      - Yes [#SoundSDLMultiChannel]_
       - No
     * - ``portaudio``
       - All
-      - Yes
       - Yes
       - Yes [#SoundPortAudioMonitoring]_
       - Yes
@@ -3064,33 +3048,41 @@ Core Sound Options
 
 ..  rubric:: Footnotes
 
+..  [#SoundWASAPIMonitoring] MAME requires Windows 10 1703 or later to use
+    output monitoring with WASAPI.
+
+..  [#SoundXAudio2OS] MAME requires Windows 8 or later to use XAudio2.
+
 ..  [#SoundWinSDL] While SDL is not a supported option on official MAME builds
     for Windows, you can compile MAME with SDL support on Windows.
+
+..  [#SoundSDLMultiChannel] MAME requires SDL 2.0.16 or later for multi-channel
+    sound support.
 
 ..  [#SoundPortAudioMonitoring] PortAudio support for output monitoring depends
     on the platform and sound API.
 
 .. _mame-commandline-audiolatency:
 
-**-audio_latency** *<value>*
+**-audio_latency** *<value>* / **-alat** *<value>*
 
-    Audio latency in seconds, up to a maximum of 0.5 seconds.  Smaller values
-    provide less audio delay while requiring better system performance.  Larger
-    values increase audio delay but may help avoid buffer under-runs and audio
-    interruptions.  A value of 0.0 will use the default for the selected sound
-    module.
+    Audio latency, conventionally in number of audio frames (1 audio frame is 20ms).
+    It is not required to supply whole numbers, eg. a value of ``1.5`` is 30ms).
+    Smaller values provide less audio delay while requiring better system
+    performance.  Larger values increase audio delay but may help avoid buffer
+    under-runs and audio interruptions.  A value of ``0`` will use the default
+    for the selected sound module.
 
-    The exact interpretation and useful range of values for this option depends
-    on the selected sound module.  You may need to change the value of this
-    option if you change the sound module using the :ref:`sound option
-    <mame-commandline-sound>`.
+    You may need to change the value of this option if you change the sound module
+    using the :ref:`sound option <mame-commandline-sound>`.  This option is
+    unsupported on sound modules ``pipewire``, ``pulse``, ``sdl``.
 
-    The default is ``0.0``.
+    The default is ``0``.
 
     Example:
         .. code-block:: bash
 
-            mame galaga -audio_latency 0.1
+            mame galaga -audio_latency 2
 
 
 .. _mame-commandline-inputoptions:
@@ -3983,7 +3975,7 @@ Core Misc Options
 
     Activates the cheat menu with autofire options and other tricks from the
     cheat database, if present. This also activates additional options on the
-    slider menu for overclocking/underclocking.
+    slider menu for overall speed and overclocking/underclocking.
 
     *Be advised that savestates created with cheats on may not work correctly
     with this turned off and vice-versa.*

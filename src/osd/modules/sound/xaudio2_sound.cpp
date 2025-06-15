@@ -23,15 +23,18 @@
 #include "strconv.h"
 #include "windows/winutil.h"
 
+// MAME utility library
+#include "util/corealloc.h"
+
 // stdlib includes
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstring>
 #include <condition_variable>
 #include <iterator>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -61,7 +64,7 @@ namespace {
 //  Constants
 //============================================================
 
-constexpr unsigned SUBMIT_FREQUENCY_TARGET_MS = 10;
+constexpr float SUBMIT_INTERVAL_TARGET = 10e-3;
 constexpr float RESAMPLE_TOLERANCE = 1.20F;
 
 //============================================================
@@ -85,13 +88,6 @@ constexpr float RESAMPLE_TOLERANCE = 1.20F;
 //============================================================
 //  Structs and typedefs
 //============================================================
-
-// A structure to hold a pointer and the count of bytes of the data it points to
-struct xaudio2_buffer
-{
-	std::unique_ptr<BYTE[]> AudioData;
-	DWORD                   AudioSize;
-};
 
 // Custom deleter with overloads to free smart pointer types used in the implementations
 struct xaudio2_custom_deleter
@@ -129,9 +125,10 @@ using x_audio_2_ptr       = Microsoft::WRL::ComPtr<IXAudio2>;
 class bufferpool
 {
 private:
+	std::vector<std::unique_ptr<BYTE []> > m_pool;
+	CRITICAL_SECTION m_critical_section;
 	int m_initial;
 	int m_buffersize;
-	std::queue<std::unique_ptr<BYTE []>> m_queue;
 
 public:
 	// constructor
@@ -139,28 +136,33 @@ public:
 		m_initial(capacity),
 		m_buffersize(bufferSize)
 	{
+		InitializeCriticalSectionAndSpinCount(&m_critical_section, 4096);
+
+		m_pool.reserve(m_initial * 2);
 		for (int i = 0; i < m_initial; i++)
-		{
-			auto newBuffer = std::make_unique<BYTE []>(m_buffersize);
-			memset(newBuffer.get(), 0, m_buffersize);
-			m_queue.push(std::move(newBuffer));
-		}
+			m_pool.emplace_back(util::make_unique_clear<BYTE []>(m_buffersize));
+	}
+
+	~bufferpool()
+	{
+		DeleteCriticalSection(&m_critical_section);
 	}
 
 	// get next buffer element from the pool
 	std::unique_ptr<BYTE []> next()
 	{
 		std::unique_ptr<BYTE []> next_buffer;
-		if (!m_queue.empty())
+
+		EnterCriticalSection(&m_critical_section);
+		if (!m_pool.empty())
 		{
-			next_buffer = std::move(m_queue.front());
-			m_queue.pop();
+			next_buffer = std::move(m_pool.back());
+			m_pool.pop_back();
 		}
-		else
-		{
-			next_buffer.reset(new BYTE[m_buffersize]);
-			memset(next_buffer.get(), 0, m_buffersize);
-		}
+		LeaveCriticalSection(&m_critical_section);
+
+		if (!next_buffer)
+			next_buffer = util::make_unique_clear<BYTE []>(m_buffersize);
 
 		return next_buffer;
 	}
@@ -170,7 +172,17 @@ public:
 	{
 		assert(buffer);
 		memset(buffer.get(), 0, m_buffersize);
-		m_queue.push(std::move(buffer));
+		EnterCriticalSection(&m_critical_section);
+		try
+		{
+			m_pool.emplace_back(std::move(buffer));
+			LeaveCriticalSection(&m_critical_section);
+		}
+		catch (...)
+		{
+			LeaveCriticalSection(&m_critical_section);
+			throw;
+		}
 	}
 };
 
@@ -195,9 +207,6 @@ public:
 		m_generation(1),
 		m_exiting(false),
 		m_audio_latency(0.0F),
-		m_hEventNeedUpdate(nullptr),
-		m_hEventEngineError(nullptr),
-		m_hEventExiting(nullptr),
 		m_overflows(0),
 		m_underflows(0)
 	{
@@ -259,8 +268,7 @@ private:
 		std::unique_ptr<float []>   volume_matrix;
 
 	private:
-		void roll_buffer();
-		void submit_buffer(std::unique_ptr<BYTE []> &&data, DWORD length) const;
+		void submit_buffer(std::unique_ptr<BYTE []> &&data, DWORD length);
 
 		virtual void STDMETHODCALLTYPE OnVoiceProcessingPassStart(UINT32 BytesRequired) noexcept override;
 		virtual void STDMETHODCALLTYPE OnVoiceProcessingPassEnd() noexcept override { }
@@ -270,16 +278,15 @@ private:
 		virtual void STDMETHODCALLTYPE OnLoopEnd(void *pBufferContext) noexcept override { }
 		virtual void STDMETHODCALLTYPE OnVoiceError(void *pBufferContext, HRESULT error) noexcept override;
 
-		sound_xaudio2 &             m_host;
-		std::unique_ptr<bufferpool> m_buffer_pool;
-		std::unique_ptr<BYTE []>    m_current_buffer;
-		std::queue<xaudio2_buffer>  m_buffer_queue;
-		uint32_t                    m_buffer_size;
-		unsigned const              m_sample_bytes;
-		unsigned                    m_buffer_count;
-		uint32_t                    m_write_position;
-		bool                        m_need_update;
-		bool                        m_underflowing;
+		static uint32_t calculate_packet_bytes(WAVEFORMATEX const &format);
+
+		sound_xaudio2 &     m_host;
+		bufferpool          m_buffer_pool;
+		abuffer             m_buffer;
+		uint32_t const      m_packet_bytes;
+		unsigned const      m_sample_bytes;
+		std::atomic<bool>   m_need_update;
+		bool                m_underflowing;
 	};
 
 	using device_info_ptr = std::unique_ptr<device_info>;
@@ -334,9 +341,9 @@ private:
 	bool                        m_exiting;
 
 	float                       m_audio_latency;
-	HANDLE                      m_hEventNeedUpdate;
-	HANDLE                      m_hEventEngineError;
-	HANDLE                      m_hEventExiting;
+	handle_ptr                  m_need_update_event;
+	handle_ptr                  m_engine_error_event;
+	handle_ptr                  m_exiting_event;
 	std::thread                 m_audioThread;
 	std::atomic<uint32_t>       m_overflows;
 	std::atomic<uint32_t>       m_underflows;
@@ -365,12 +372,12 @@ int sound_xaudio2::init(osd_interface &osd, osd_options const &options)
 	// make sure our XAudio2Create entry point is bound
 	if (!OSD_DYNAMIC_API_TEST(XAudio2Create))
 	{
-		osd_printf_error("Could not find XAudio2. Please try to reinstall DirectX runtime package.\n");
+		osd_printf_error("Sound: Could not find XAudio2 library.\n");
 		return 1;
 	}
 
 	// get relevant options
-	m_audio_latency = options.audio_latency();
+	m_audio_latency = options.audio_latency() * 20e-3;
 	if (m_audio_latency == 0.0F)
 		m_audio_latency = 0.03F;
 	m_audio_latency = std::clamp(m_audio_latency, 0.01F, 1.0F);
@@ -384,13 +391,18 @@ int sound_xaudio2::init(osd_interface &osd, osd_options const &options)
 		m_endpoint_notifications = true;
 
 		{
+			m_default_sink_id.clear();
+			m_default_sink = 0;
 			co_task_wstr_ptr default_id;
 			result = get_default_audio_device_id(*m_device_enum.Get(), eRender, eMultimedia, default_id);
-			if (FAILED(result) || !default_id)
+			if (HRESULT_FROM_WIN32(ERROR_NOT_FOUND) == result)
+			{
+				// no active output devices, hence no default
+			}
+			else if (FAILED(result) || !default_id)
 			{
 				// this is non-fatal, they just might get the wrong default output device
 				osd_printf_error("Sound: Error getting default audio output device ID. Error: 0x%X\n", result);
-				m_default_sink_id.clear();
 			}
 			else
 			{
@@ -398,6 +410,9 @@ int sound_xaudio2::init(osd_interface &osd, osd_options const &options)
 				std::wstring_view default_id_str(default_id.get());
 				m_default_sink_id.reserve(default_id_str.length() * 2);
 				m_default_sink_id = default_id_str;
+				osd_printf_verbose(
+						"Sound: Got default output device ID: %s\n",
+						osd::text::from_wstring(m_default_sink_id));
 			}
 		}
 
@@ -447,10 +462,10 @@ int sound_xaudio2::init(osd_interface &osd, osd_options const &options)
 
 					osd_printf_verbose(
 							"Sound: Found audio device %s (%s), assigned ID %u.\n",
+							devinfo->info.m_display_name,
 							devinfo->info.m_name,
-							osd::text::from_wstring(devinfo->device_id),
 							devinfo->info.m_id);
-					if (!m_default_sink && (devinfo->device_id == m_default_sink_id))
+					if (devinfo->device_id == m_default_sink_id)
 						m_default_sink = devinfo->info.m_id;
 					m_device_info.emplace(pos, std::move(devinfo));
 
@@ -469,9 +484,11 @@ int sound_xaudio2::init(osd_interface &osd, osd_options const &options)
 	m_cleanup_thread = std::thread([] (sound_xaudio2 *self) { self->cleanup_task(); }, this);
 
 	// Initialize our events
-	m_hEventNeedUpdate = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	m_hEventEngineError = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	m_hEventExiting = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	m_need_update_event.reset(CreateEvent(nullptr, FALSE, FALSE, nullptr));
+	m_engine_error_event.reset(CreateEvent(nullptr, FALSE, FALSE, nullptr));
+	m_exiting_event.reset(CreateEvent(nullptr, FALSE, FALSE, nullptr));
+	if (!m_need_update_event || !m_engine_error_event || !m_exiting_event)
+		goto Error;
 
 	// Start the thread listening
 	m_audioThread = std::thread([] (sound_xaudio2 *self) { self->audio_task(); }, this);
@@ -525,29 +542,15 @@ void sound_xaudio2::exit()
 	}
 
 	// Wait on processing thread to end
-	if (m_hEventExiting)
-		SetEvent(m_hEventExiting);
+	if (m_exiting_event)
+		SetEvent(m_exiting_event.get());
 
 	if (m_audioThread.joinable())
 		m_audioThread.join();
 
-	if (m_hEventNeedUpdate)
-	{
-		CloseHandle(m_hEventNeedUpdate);
-		m_hEventNeedUpdate = nullptr;
-	}
-
-	if (m_hEventEngineError)
-	{
-		CloseHandle(m_hEventEngineError);
-		m_hEventEngineError = nullptr;
-	}
-
-	if (m_hEventExiting)
-	{
-		CloseHandle(m_hEventExiting);
-		m_hEventExiting = nullptr;
-	}
+	m_need_update_event.reset();
+	m_engine_error_event.reset();
+	m_exiting_event.reset();
 
 	if (m_cleanup_thread.joinable())
 	{
@@ -557,6 +560,7 @@ void sound_xaudio2::exit()
 			m_cleanup_condition.notify_all();
 		}
 		m_cleanup_thread.join();
+		m_exiting = false;
 	}
 
 	// just to be extra sure
@@ -569,6 +573,8 @@ void sound_xaudio2::exit()
 
 	if (m_overflows != 0 || m_underflows != 0)
 		osd_printf_verbose("Sound: overflows=%u, underflows=%u\n", m_overflows, m_underflows);
+	m_overflows.store(0, std::memory_order_relaxed);
+	m_underflows.store(0, std::memory_order_relaxed);
 
 	osd_printf_verbose("Sound: XAudio2 deinitialized\n");
 }
@@ -646,7 +652,7 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 				(*device)->engine = nullptr;
 				osd_printf_error(
 						"Sound: Error creating XAudio2 engine for audio device %s. Error: 0x%X\n",
-						(*device)->info.m_name,
+						(*device)->info.m_display_name,
 						result);
 				return 0;
 			}
@@ -657,14 +663,14 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 				(*device)->engine = nullptr;
 				osd_printf_error(
 						"Sound: Error registering to receive XAudio2 engine callbacks for audio device %s. Error: 0x%X\n",
-						(*device)->info.m_name,
+						(*device)->info.m_display_name,
 						result);
 				return 0;
 			}
 
 			osd_printf_verbose(
 					"Sound: Created XAudio2 engine for audio device %s.\n",
-					(*device)->info.m_name);
+					(*device)->info.m_display_name);
 		}
 
 		// create a mastering voice if we don't already have one for this device
@@ -685,19 +691,19 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 				(*device)->mastering_voice.reset();
 				osd_printf_error(
 						"Sound: Error creating mastering voice for audio device %s. Error: 0x%X\n",
-						(*device)->info.m_name,
+						(*device)->info.m_display_name,
 						result);
 				return 0;
 			}
 
 			osd_printf_verbose(
 					"Sound: Created XAudio2 mastering voice for audio device %s.\n",
-					(*device)->info.m_name);
+					(*device)->info.m_display_name);
 		}
 
 		// set up desired input format
-		WAVEFORMATEX format;
-		populate_wave_format(format, (*device)->info.m_sinks, rate);
+		WAVEFORMATEXTENSIBLE format;
+		populate_wave_format(format, (*device)->info.m_sinks, rate, std::nullopt);
 
 		// set up destinations
 		XAUDIO2_SEND_DESCRIPTOR destination;
@@ -708,16 +714,19 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 		sends.pSends = &destination;
 
 		// create the voice info object
-		voice_info_ptr info = std::make_unique<voice_info>(*this, format);
+		voice_info_ptr info = std::make_unique<voice_info>(*this, format.Format);
 		info->info.m_node = node;
 		info->info.m_volumes.resize((*device)->info.m_sinks, 0.0F);
 
 		// create a source voice for this stream
 		IXAudio2SourceVoice *source_voice_raw = nullptr;
+		UINT32 flags = XAUDIO2_VOICE_NOPITCH;
+		if (rate == (*device)->info.m_rate.m_default_rate)
+			flags |= XAUDIO2_VOICE_NOSRC;
 		result = (*device)->engine->CreateSourceVoice(
 				&source_voice_raw,
-				&format,
-				XAUDIO2_VOICE_NOPITCH,
+				&format.Format,
+				flags,
 				1.0F,
 				info.get(),
 				&sends,
@@ -727,27 +736,27 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 		{
 			osd_printf_error(
 					"Sound: Error creating source voice for audio device %s. Error: 0x%X\n",
-					(*device)->info.m_name,
+					(*device)->info.m_display_name,
 					result);
 			return 0;
 		}
 		osd_printf_verbose(
 				"Sound: Created XAudio2 source voice for %s on audio device %s.\n",
 				name,
-				(*device)->info.m_name);
+				(*device)->info.m_display_name);
 
 		// set the channel mapping
 		result = info->voice->SetOutputMatrix(
 				nullptr,
-				format.nChannels,
-				format.nChannels,
+				format.Format.nChannels,
+				format.Format.nChannels,
 				info->volume_matrix.get(),
 				XAUDIO2_COMMIT_NOW);
 		if (FAILED(result))
 		{
 			osd_printf_error(
 					"Sound: Error setting source voice output matrix for audio device %s. Error: 0x%X\n",
-					(*device)->info.m_name,
+					(*device)->info.m_display_name,
 					result);
 			return 0;
 		}
@@ -758,7 +767,7 @@ uint32_t sound_xaudio2::stream_sink_open(uint32_t node, std::string name, uint32
 		{
 			osd_printf_error(
 					"Sound: Error starting source voice for audio device %s. Error: 0x%X\n",
-					(*device)->info.m_name,
+					(*device)->info.m_display_name,
 					result);
 			return 0;
 		}
@@ -900,11 +909,11 @@ void sound_xaudio2::device_info::OnCriticalError(HRESULT error)
 	{
 		std::lock_guard device_lock(m_host.m_device_mutex);
 		engine_error = true;
-		SetEvent(m_host.m_hEventEngineError);
+		SetEvent(m_host.m_engine_error_event.get());
 
 		try
 		{
-			name = info.m_name;
+			name = info.m_display_name;
 		}
 		catch (std::bad_alloc const &)
 		{
@@ -927,8 +936,10 @@ void sound_xaudio2::device_info::OnCriticalError(HRESULT error)
 sound_xaudio2::voice_info::voice_info(sound_xaudio2 &host, WAVEFORMATEX const &format) :
 	volume_matrix(std::make_unique<float []>(format.nChannels * format.nChannels)),
 	m_host(host),
+	m_buffer_pool(4, calculate_packet_bytes(format)),
+	m_buffer(format.nChannels),
+	m_packet_bytes(calculate_packet_bytes(format)),
 	m_sample_bytes(format.nBlockAlign),
-	m_write_position(0),
 	m_need_update(false),
 	m_underflowing(false)
 {
@@ -938,21 +949,6 @@ sound_xaudio2::voice_info::voice_info(sound_xaudio2 &host, WAVEFORMATEX const &f
 		for (unsigned j = 0; format.nChannels > j; ++j)
 			volume_matrix[(format.nChannels * i) + j] = (i == j) ? 1.0F : 0.0F;
 	}
-
-	// calculate required buffer size
-	int const audio_latency_ms = std::max(unsigned((m_host.m_audio_latency * 1000.0F) + 0.5F), SUBMIT_FREQUENCY_TARGET_MS);
-	uint32_t const buffer_total = m_sample_bytes * format.nSamplesPerSec * (audio_latency_ms / 1000.0F) * RESAMPLE_TOLERANCE;
-	m_buffer_count = audio_latency_ms / SUBMIT_FREQUENCY_TARGET_MS;
-	m_buffer_size = std::max<uint32_t>(1024, buffer_total / m_buffer_count);
-
-	// force to a whole number of samples
-	uint32_t const remainder = m_buffer_size % m_sample_bytes;
-	if (remainder)
-		m_buffer_size += m_sample_bytes - remainder;
-
-	// allocate the initial buffers
-	m_buffer_pool = std::make_unique<bufferpool>(m_buffer_count, m_buffer_size);
-	m_current_buffer = m_buffer_pool->next();
 }
 
 //============================================================
@@ -972,25 +968,15 @@ sound_xaudio2::voice_info::~voice_info()
 
 void sound_xaudio2::voice_info::update(int16_t const *buffer, int samples_this_frame)
 {
-	uint32_t const bytes_this_frame = samples_this_frame * m_sample_bytes;
-	uint32_t bytes_left = bytes_this_frame;
-	while (bytes_left)
+	try
 	{
-		uint32_t const chunk = std::min(uint32_t(m_buffer_size), bytes_left);
-
-		// roll buffer if the chunk won't fit
-		if ((m_write_position + chunk) >= m_buffer_size)
-			roll_buffer();
-
-		// copy sample data
-		memcpy(&m_current_buffer[m_write_position], buffer, chunk);
-		m_write_position += chunk;
-		buffer += chunk / 2;
-		bytes_left -= chunk;
+		m_buffer.push(buffer, samples_this_frame);
 	}
-
-	m_need_update = true;
-	SetEvent(m_host.m_hEventNeedUpdate);
+	catch (...)
+	{
+	}
+	m_need_update.store(true, std::memory_order_relaxed);
+	SetEvent(m_host.m_need_update_event.get());
 }
 
 //============================================================
@@ -999,7 +985,7 @@ void sound_xaudio2::voice_info::update(int16_t const *buffer, int samples_this_f
 
 void sound_xaudio2::voice_info::submit_if_needed()
 {
-	if (!m_need_update)
+	if (!m_need_update.load(std::memory_order_relaxed))
 		return;
 
 	m_need_update = false;
@@ -1007,34 +993,37 @@ void sound_xaudio2::voice_info::submit_if_needed()
 	XAUDIO2_VOICE_STATE state;
 	voice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
 
-	// If we have buffers queued into XAudio and our current in-memory buffer
-	// isn't yet full, there's no need to submit it
-	if ((1 <= state.BuffersQueued) && m_buffer_queue.empty())
+	uint32_t available_bytes = m_buffer.available() * m_sample_bytes;
+
+	// if there's at least one packet queued and we don't have enough to fill another packet, wait
+	if ((1 <= state.BuffersQueued) && (m_packet_bytes > available_bytes))
 		return;
 
-	// We do however want to achieve some kind of minimal latency, so if the queued buffers
-	// are greater than 2, flush them to re-sync the audio
-	if (2 < state.BuffersQueued)
-	{
-		voice->FlushSourceBuffers();
-		m_host.m_overflows.fetch_add(1, std::memory_order_relaxed);
-	}
+	// don't keep more than two packets queued in the engine
+	if (2 <= state.BuffersQueued)
+		return;
 
-	if (m_buffer_queue.empty())
-		roll_buffer();
-
-	if (!m_buffer_queue.empty())
+	if (available_bytes)
 	{
 		auto buffers = state.BuffersQueued;
 		do
 		{
-			auto &buf = m_buffer_queue.front();
-			assert(0 < buf.AudioSize);
-			submit_buffer(std::move(buf.AudioData), buf.AudioSize);
-			m_buffer_queue.pop();
+			std::unique_ptr<BYTE []> packet;
+			try
+			{
+				packet = m_buffer_pool.next();
+			}
+			catch (...)
+			{
+				return;
+			}
+			auto const packet_size = std::min(available_bytes, m_packet_bytes);
+			m_buffer.get(reinterpret_cast<int16_t *>(packet.get()), packet_size / m_sample_bytes);
+			submit_buffer(std::move(packet), packet_size);
+			available_bytes -= packet_size;
 			buffers++;
 		}
-		while (!m_buffer_queue.empty() && (2 > buffers));
+		while ((2 > buffers) && (m_packet_bytes <= available_bytes));
 	}
 }
 
@@ -1044,10 +1033,8 @@ void sound_xaudio2::voice_info::submit_if_needed()
 
 void sound_xaudio2::voice_info::stop()
 {
-	while (!m_buffer_queue.empty())
-		m_buffer_queue.pop();
-	m_write_position = 0;
-	m_need_update = false;
+	m_buffer.clear();
+	m_need_update.store(false, std::memory_order_relaxed);
 	if (voice)
 	{
 		voice->Stop(0, XAUDIO2_COMMIT_NOW);
@@ -1056,43 +1043,10 @@ void sound_xaudio2::voice_info::stop()
 }
 
 //============================================================
-//  roll_buffer
-//============================================================
-
-void sound_xaudio2::voice_info::roll_buffer()
-{
-	// don't queue an empty buffer
-	if (!m_write_position)
-		return;
-
-	// queue the current buffer
-	xaudio2_buffer buf;
-	buf.AudioData = std::move(m_current_buffer);
-	buf.AudioSize = m_write_position;
-	m_buffer_queue.push(std::move(buf));
-
-	// get a fresh buffer
-	m_current_buffer = m_buffer_pool->next();
-	m_write_position = 0;
-
-	// remove excess buffers from queue
-	if (m_buffer_queue.size() > m_buffer_count)
-	{
-		m_host.m_overflows.fetch_add(1, std::memory_order_relaxed);
-		while (m_buffer_queue.size() > m_buffer_count)
-		{
-			// return the oldest buffer to the pool, and remove it from queue
-			m_buffer_pool->return_to_pool(std::move(m_buffer_queue.front().AudioData));
-			m_buffer_queue.pop();
-		}
-	}
-}
-
-//============================================================
 //  submit_buffer
 //============================================================
 
-void sound_xaudio2::voice_info::submit_buffer(std::unique_ptr<BYTE []> &&data, DWORD length) const
+inline void sound_xaudio2::voice_info::submit_buffer(std::unique_ptr<BYTE []> &&data, DWORD length)
 {
 	assert(length);
 
@@ -1101,20 +1055,21 @@ void sound_xaudio2::voice_info::submit_buffer(std::unique_ptr<BYTE []> &&data, D
 	buf.pAudioData = data.get();
 	buf.PlayBegin = 0;
 	buf.PlayLength = length / m_sample_bytes;
-	buf.Flags = XAUDIO2_END_OF_STREAM;
+	buf.Flags = XAUDIO2_END_OF_STREAM; // this flag just suppresses underrun warnings
 	buf.pContext = data.get();
 
-	HRESULT result;
-	if (FAILED(result = voice->SubmitSourceBuffer(&buf)))
+	HRESULT const result = voice->SubmitSourceBuffer(&buf);
+	if (SUCCEEDED(result))
+	{
+		// If we succeeded, relinquish the buffer allocation to the XAudio2 runtime
+		// The buffer will be freed on the OnBufferCompleted callback
+		data.release();
+	}
+	else
 	{
 		osd_printf_verbose("Sound: XAudio2 failed to submit source buffer (non-fatal). Error: 0x%X\n", result);
-		m_buffer_pool->return_to_pool(std::move(data));
-		return;
+		m_buffer_pool.return_to_pool(std::move(data));
 	}
-
-	// If we succeeded, relinquish the buffer allocation to the XAudio2 runtime
-	// The buffer will be freed on the OnBufferCompleted callback
-	data.release();
 }
 
 //============================================================
@@ -1141,13 +1096,11 @@ void sound_xaudio2::voice_info::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 void sound_xaudio2::voice_info::OnBufferEnd(void *pBufferContext) noexcept
 {
 	BYTE *const completed_buffer = static_cast<BYTE *>(pBufferContext);
-	std::lock_guard voice_lock(m_host.m_voice_mutex);
-
 	if (completed_buffer)
-		m_buffer_pool->return_to_pool(std::unique_ptr<BYTE []>(completed_buffer));
+		m_buffer_pool.return_to_pool(std::unique_ptr<BYTE []>(completed_buffer));
 
-	m_need_update = true;
-	SetEvent(m_host.m_hEventNeedUpdate);
+	m_need_update.store(true, std::memory_order_relaxed);
+	SetEvent(m_host.m_need_update_event.get());
 }
 
 //============================================================
@@ -1165,7 +1118,7 @@ void sound_xaudio2::voice_info::OnVoiceError(void *pBufferContext, HRESULT error
 		osd_printf_verbose("Sound: XAudio2 voice error for stream %u. Error: 0x%X\n", info.m_id, error);
 
 		if (completed_buffer)
-			m_buffer_pool->return_to_pool(std::unique_ptr<BYTE []>(completed_buffer));
+			m_buffer_pool.return_to_pool(std::unique_ptr<BYTE []>(completed_buffer));
 
 		auto const pos = std::find_if(
 				m_host.m_voice_info.begin(),
@@ -1184,6 +1137,15 @@ void sound_xaudio2::voice_info::OnVoiceError(void *pBufferContext, HRESULT error
 	std::lock_guard cleanup_lock(m_host.m_cleanup_mutex);
 	m_host.m_zombie_voices.emplace_back(std::move(our_pointer));
 	m_host.m_cleanup_condition.notify_one();
+}
+
+//============================================================
+//  calculate_packet_bytes
+//============================================================
+
+uint32_t sound_xaudio2::voice_info::calculate_packet_bytes(WAVEFORMATEX const &format)
+{
+	return format.nBlockAlign * uint32_t(format.nSamplesPerSec * SUBMIT_INTERVAL_TARGET * RESAMPLE_TOLERANCE);
 }
 
 //============================================================
@@ -1318,7 +1280,9 @@ HRESULT sound_xaudio2::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWST
 			{
 				// changing the app setting to "Default" in mixer controls gives a null string here
 				HRESULT const result = get_default_audio_device_id(*m_device_enum.Get(), flow, role, default_id_str);
-				if (FAILED(result))
+				if (HRESULT_FROM_WIN32(ERROR_NOT_FOUND) == result)
+					return S_OK;
+				else if (FAILED(result))
 					return result;
 				else if (!default_id_str)
 					return E_POINTER;
@@ -1332,9 +1296,30 @@ HRESULT sound_xaudio2::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWST
 				auto const pos = find_device(m_default_sink_id);
 				if ((m_device_info.end() != pos) && ((*pos)->device_id == m_default_sink_id) && ((*pos)->info.m_id != m_default_sink))
 				{
+					try
+					{
+						osd_printf_verbose(
+								"Sound: Default output device changed to %s.\n",
+								(*pos)->info.m_display_name);
+					}
+					catch (std::bad_alloc const &)
+					{
+					}
 					m_default_sink = (*pos)->info.m_id;
 
 					++m_generation;
+				}
+				else
+				{
+					try
+					{
+						osd_printf_verbose(
+								"Sound: Default output device changed ID changed to %s (not found).\n",
+								osd::text::from_wstring(m_default_sink_id));
+					}
+					catch (std::bad_alloc const &)
+					{
+					}
 				}
 			}
 		}
@@ -1370,7 +1355,7 @@ HRESULT sound_xaudio2::OnPropertyValueChanged(LPCWSTR pwstrDeviceId, PROPERTYKEY
 				{
 					osd_printf_error(
 							"Sound: Error opening property store for audio device %s. Error: 0x%X\n",
-							(*pos)->info.m_name,
+							(*pos)->info.m_display_name,
 							result);
 					return result;
 				}
@@ -1381,14 +1366,14 @@ HRESULT sound_xaudio2::OnPropertyValueChanged(LPCWSTR pwstrDeviceId, PROPERTYKEY
 				{
 					osd_printf_error(
 							"Sound: Error getting updated display name for audio device %s. Error: 0x%X\n",
-							(*pos)->info.m_name,
+							(*pos)->info.m_display_name,
 							result);
 					return result;
 				}
 
 				if (name)
 				{
-					(*pos)->info.m_name = std::move(*name);
+					(*pos)->info.m_display_name = std::move(*name);
 
 					++m_generation;
 				}
@@ -1581,7 +1566,7 @@ void sound_xaudio2::purge_voices(uint32_t node)
 void sound_xaudio2::audio_task()
 {
 	bool exiting = FALSE;
-	HANDLE hEvents[] = { m_hEventNeedUpdate, m_hEventEngineError, m_hEventExiting };
+	HANDLE hEvents[] = { m_need_update_event.get(), m_engine_error_event.get(), m_exiting_event.get() };
 	while (!exiting)
 	{
 		DWORD wait_result = WaitForMultipleObjects(std::size(hEvents), hEvents, FALSE, INFINITE);

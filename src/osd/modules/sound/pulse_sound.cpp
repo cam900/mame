@@ -389,6 +389,9 @@ int sound_pulse::init(osd_interface &osd, osd_options const &options)
 	if(m_generation >= 0x80000000)
 		return 1;
 
+	if(options.audio_latency() > 0.0f)
+		osd_printf_verbose("Sound: %s module does not support audio_latency option\n", name());
+
 	return 0;
 }
 
@@ -411,6 +414,7 @@ osd::audio_info sound_pulse::get_information()
 	uint32_t node = 0;
 	for(auto &inode : m_nodes) {
 		result.m_nodes[node].m_name = inode.second.m_desc;
+		result.m_nodes[node].m_display_name = inode.second.m_desc;
 		result.m_nodes[node].m_id = inode.second.m_osdid;
 		result.m_nodes[node].m_rate = inode.second.m_rate;
 		result.m_nodes[node].m_sinks = inode.second.m_sink_port_count;
@@ -524,6 +528,13 @@ void sound_pulse::exit()
 
 	pa_context_unref(m_context);
 	pa_threaded_mainloop_free(m_mainloop);
+
+	m_nodes.clear();
+	m_node_osdid_to_id.clear();
+	m_streams.clear();
+	m_stream_pulse_id_to_osdid.clear();
+	m_default_audio_sink = "";
+	m_default_audio_source = "";
 }
 
 #else

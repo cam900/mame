@@ -35,28 +35,32 @@ public:
 	virtual void stream_sink_update(uint32_t id, const int16_t *buffer, int samples_this_frame) {}
 	virtual void stream_source_update(uint32_t id, int16_t *buffer, int samples_this_frame) {}
 
+	virtual void begin_update() {}
+	virtual void end_update() {}
+
 protected:
 	class abuffer {
 	public:
-		abuffer(uint32_t channels);
-		void get(int16_t *data, uint32_t samples);
+		abuffer(uint32_t channels) noexcept;
+		void get(int16_t *data, uint32_t samples) noexcept;
 		void push(const int16_t *data, uint32_t samples);
-		uint32_t channels() const { return m_channels; }
-		uint32_t available() const;
+		void clear() noexcept { m_used_buffers = 0; }
+		uint32_t channels() const noexcept { return m_channels; }
+		uint32_t available() const noexcept;
 
 	private:
 		struct buffer {
 			uint32_t m_cpos;
 			std::vector<int16_t> m_data;
 
-			buffer() = default;
+			buffer() noexcept = default;
 			buffer(const buffer &) = default;
-			buffer(buffer &&) = default;
+			buffer(buffer &&) noexcept = default;
 			buffer &operator=(const buffer &) = default;
-			buffer &operator=(buffer &&) = default;
+			buffer &operator=(buffer &&) noexcept = default;
 		};
 
-		void pop_buffer();
+		void pop_buffer() noexcept;
 		buffer &push_buffer();
 
 		uint32_t m_channels;

@@ -27,7 +27,6 @@ TODO:
   per segment, adding pwm_display_device right now has no added value
 - add nstarfox sound effect chip emulation
 - naltair IPT_DIAL should be 1-way, it's not supposed to rotate left
-- add svg screen for nsmw
 - Currently there is no accurate way to dump the SM511/SM512 melody ROM
   electronically. For the ones that weren't decapped, they were read by
   playing back all melody data and reconstructing it to ROM. Visual(decap)
@@ -3209,6 +3208,11 @@ ROM_END
 
   The tabletop version was also licensed to Coleco.
 
+  Also cloned by Elektronika(USSR) as Винни-Пух (Vinni-Pukh, i.e. Winnie the
+  Pooh) (model ИМ-12), with different LCD graphics.
+  * КБ1515ХМ3-2 9009 (no decap); seems to be compatible with КБ1013ВК7-2
+    which in turn is compatible with Sharp SM511 (same ROM contents as CJ-93)
+
 *******************************************************************************/
 
 class gnw_dkjrp_state : public hh_sm510_state
@@ -3219,6 +3223,7 @@ public:
 	{ }
 
 	void gnw_dkjrp(machine_config &config);
+	void vinnpukh(machine_config &config);
 };
 
 // inputs
@@ -3261,6 +3266,11 @@ void gnw_dkjrp_state::gnw_dkjrp(machine_config &config)
 	sm511_common(config, 1920, 1049);
 }
 
+void gnw_dkjrp_state::vinnpukh(machine_config &config)
+{
+	sm511_common(config, 1890, 1080); // 1638 x 936
+}
+
 // roms
 
 ROM_START( gnw_dkjrp )
@@ -3268,10 +3278,21 @@ ROM_START( gnw_dkjrp )
 	ROM_LOAD( "cj-93.program", 0x0000, 0x1000, CRC(a2cd5a91) SHA1(33f6fd1530e5522491851f16d7c9f928b2dbdc3b) )
 
 	ROM_REGION( 0x100, "maincpu:melody", 0 )
-	ROM_LOAD( "cj-93.melody", 0x000, 0x100, BAD_DUMP CRC(99fbf76a) SHA1(15ba1af51bebc316146eb9a0a3d58d28f644d45f) ) // decap needed for verification
+	ROM_LOAD( "cj-93.melody", 0x000, 0x100, BAD_DUMP CRC(38946be7) SHA1(affdb8514d32dc9dbf2ccc1c4a0394e68ebc61cb) ) // decap needed for verification
 
 	ROM_REGION( 340751, "screen", 0)
 	ROM_LOAD( "gnw_dkjrp.svg", 0, 340751, CRC(eb3cb98b) SHA1(5b148557d3ade2e2050ddde879a6cc05e119b446) )
+ROM_END
+
+ROM_START( vinnpukh )
+	ROM_REGION( 0x1000, "maincpu", 0 )
+	ROM_LOAD( "vinnpukh.program", 0x0000, 0x1000, CRC(a2cd5a91) SHA1(33f6fd1530e5522491851f16d7c9f928b2dbdc3b) )
+
+	ROM_REGION( 0x100, "maincpu:melody", 0 )
+	ROM_LOAD( "vinnpukh.melody", 0x000, 0x100, BAD_DUMP CRC(38946be7) SHA1(affdb8514d32dc9dbf2ccc1c4a0394e68ebc61cb) ) // decap needed for verification
+
+	ROM_REGION( 193376, "screen", 0)
+	ROM_LOAD( "vinnpukh.svg", 0, 193376, CRC(69c4e5c5) SHA1(313f164706c3d24e2fc1363ff9730a21e5b1ca6c) )
 ROM_END
 
 
@@ -6624,7 +6645,7 @@ void gamewatch_state::nsmb3(machine_config &config)
 
 void gamewatch_state::nsmw(machine_config &config)
 {
-	sm530_common(config, 1000, 1000);
+	sm530_common(config, 1190, 1080);
 	config.set_default_layout(layout_hh_sm500_test);
 }
 
@@ -6648,8 +6669,8 @@ ROM_START( nsmw )
 	ROM_REGION( 0x100, "maincpu:melody", 0 )
 	ROM_LOAD( "636.melody", 0x000, 0x100, CRC(5df99e13) SHA1(98d5f78b5bcf59a232ccb5c61210568948c4501b) )
 
-	ROM_REGION( 100000, "screen", 0)
-	ROM_LOAD( "nsmw.svg", 0, 100000, NO_DUMP )
+	ROM_REGION( 401273, "screen", 0)
+	ROM_LOAD( "nsmw.svg", 0, 401273, CRC(72cb618d) SHA1(cecf9bb7ad21896c9a68ca606359f2b6f9c08d5d) )
 ROM_END
 
 
@@ -12372,6 +12393,7 @@ SYST( 1992, atakaast,     gnw_mmouse,  0,      atakaast,     gnw_mmouse,   nupog
 SYST( 19??, ecircus,      gnw_mmouse,  0,      ecircus,      gnw_mmouse,   nupogodi_state,     empty_init, "bootleg (Elektronika)", "Circus (Elektronika)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
 SYST( 1991, naltair,      gnw_mmouse,  0,      vfutbol,      naltair,      nupogodi_state,     empty_init, "bootleg (Nauchpribor)", "Altair (Nauchpribor)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK | MACHINE_IMPERFECT_CONTROLS )
 SYST( 1989, kosmicmt,     gnw_fire,    0,      kosmicmt,     gnw_fire,     gnw_fire_state,     empty_init, "bootleg (Elektronika)", "Kosmicheskiy most", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
+SYST( 199?, vinnpukh,     gnw_dkjrp,   0,      vinnpukh,     gnw_dkjrp,    gnw_dkjrp_state,    empty_init, "bootleg (Elektronika)", "Vinni-Pukh", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
 
 // Elektronika (original)
 SYST( 1990, auslalom,     0,           0,      auslalom,     auslalom,     auslalom_state,     empty_init, "Elektronika", "Autoslalom", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
@@ -12403,7 +12425,7 @@ SYST( 1991, kgarfld,      0,           0,      kgarfld,      kgarfld,      kgarf
 
 // Nelsonic Game Watch series
 SYST( 1990, nsmb3,        0,           0,      nsmb3,        gamewatch,    gamewatch_state,    empty_init, "Nelsonic", "Super Mario Bros. 3 (Nelsonic)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
-SYST( 1991, nsmw,         0,           0,      nsmw,         gamewatch,    gamewatch_state,    empty_init, "Nelsonic", "Super Mario World (Nelsonic)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK | MACHINE_NOT_WORKING )
+SYST( 1991, nsmw,         0,           0,      nsmw,         gamewatch,    gamewatch_state,    empty_init, "Nelsonic", "Super Mario World (Nelsonic)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
 SYST( 1993, nstarfox,     0,           0,      nstarfox,     nstarfox,     nstarfox_state,     empty_init, "Nelsonic", "Star Fox (Nelsonic)", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK | MACHINE_IMPERFECT_SOUND )
 
 // Tiger 7-xxx/78-xxx models
