@@ -70,9 +70,7 @@ private:
 
 	void bankswitch_w(uint8_t data);
 	template <uint8_t Which> void vram_w(offs_t offset, uint8_t data);
-
 	void flipscreen_w(int state) { machine().tilemap().set_flip_all(state ? (TILEMAP_FLIPY | TILEMAP_FLIPX) : 0); }
-	void dirtytiles() { machine().tilemap().mark_all_dirty(); }
 
 	void prg_map(address_map &map) ATTR_COLD;
 };
@@ -148,8 +146,6 @@ TILE_GET_INFO_MEMBER(labyrunr_state::get_tile_info)
 
 void labyrunr_state::video_start()
 {
-	m_k007121->set_spriteram(m_spriteram);
-
 	m_tilemap[0] = &machine().tilemap().create(*m_k007121, tilemap_get_info_delegate(*this, FUNC(labyrunr_state::get_tile_info<0>)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 	m_tilemap[1] = &machine().tilemap().create(*m_k007121, tilemap_get_info_delegate(*this, FUNC(labyrunr_state::get_tile_info<1>)), TILEMAP_SCAN_ROWS, 8, 8, 32, 32);
 
@@ -157,6 +153,10 @@ void labyrunr_state::video_start()
 	m_tilemap[1]->set_transparent_pen(0);
 
 	m_tilemap[0]->set_scroll_cols(32);
+
+	m_k007121->register_tilemap(m_tilemap[0]);
+	m_k007121->register_tilemap(m_tilemap[1]);
+	m_k007121->set_spriteram(m_spriteram);
 }
 
 
@@ -432,7 +432,7 @@ void labyrunr_state::labyrunr(machine_config &config)
 
 	// video hardware
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
-	screen.set_raw(24_MHz_XTAL / 3, 512, 0, 280, 264, 16, 240);
+	screen.set_raw(24_MHz_XTAL / 4, 384, 0, 280, 264, 16, 240);
 	screen.set_screen_update(FUNC(labyrunr_state::screen_update));
 	screen.set_palette(m_palette);
 
@@ -443,9 +443,8 @@ void labyrunr_state::labyrunr(machine_config &config)
 	m_k007121->set_irq_cb().set_inputline(m_maincpu, HD6309_IRQ_LINE);
 	m_k007121->set_nmi_cb().set_inputline(m_maincpu, INPUT_LINE_NMI);
 	m_k007121->set_flipscreen_cb().set(FUNC(labyrunr_state::flipscreen_w));
-	m_k007121->set_dirtytiles_cb(FUNC(labyrunr_state::dirtytiles));
 
-	K051733(config, "k051733", 0);
+	K051733(config, "k051733", 24_MHz_XTAL / 2);
 
 	// sound hardware
 	SPEAKER(config, "mono").front_center();

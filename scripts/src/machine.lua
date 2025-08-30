@@ -907,6 +907,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/ay34592.h,MACHINES["AY34592"] = true
+---------------------------------------------------
+
+if (MACHINES["AY34592"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/ay34592.cpp",
+		MAME_DIR .. "src/devices/machine/ay34592.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/bankdev.h,MACHINES["BANKDEV"] = true
 ---------------------------------------------------
 
@@ -1512,6 +1524,17 @@ if (MACHINES["1MB5"]~=null) then
 end
 
 ---------------------------------------------------
+--@src/devices/machine/ds1307.h,MACHINES["I2C_DS1307"] = true
+---------------------------------------------------
+
+if (MACHINES["I2C_DS1307"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/ds1307.cpp",
+		MAME_DIR .. "src/devices/machine/ds1307.h",
+	}
+end
+
+---------------------------------------------------
 --@src/devices/machine/i2chle.h,MACHINES["I2CHLE"] = true
 ---------------------------------------------------
 
@@ -1705,6 +1728,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/icd2053b.h,MACHINES["ICD2053B"] = true
+---------------------------------------------------
+
+if (MACHINES["ICD2053B"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/icd2053b.cpp",
+		MAME_DIR .. "src/devices/machine/icd2053b.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/icd2061a.h,MACHINES["ICD2061A"] = true
 ---------------------------------------------------
 
@@ -1889,18 +1924,6 @@ end
 
 ---------------------------------------------------
 --
---@src/devices/machine/keytronic_l2207.h,MACHINES["KEYTRONIC_L2207"] = true
----------------------------------------------------
-
-if (MACHINES["KEYTRONIC_L2207"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/machine/keytronic_l2207.cpp",
-		MAME_DIR .. "src/devices/machine/keytronic_l2207.h",
-	}
-end
-
----------------------------------------------------
---
 --@src/devices/machine/kr1601rr1.h,MACHINES["KR1601RR1"] = true
 ---------------------------------------------------
 
@@ -1932,18 +1955,6 @@ if (MACHINES["LATCH8"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/machine/latch8.cpp",
 		MAME_DIR .. "src/devices/machine/latch8.h",
-	}
-end
-
----------------------------------------------------
---
---@src/devices/machine/lc89510.h,MACHINES["LC89510"] = true
----------------------------------------------------
-
-if (MACHINES["LC89510"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/machine/lc89510.cpp",
-		MAME_DIR .. "src/devices/machine/lc89510.h",
 	}
 end
 
@@ -2126,6 +2137,18 @@ if (MACHINES["M950X0"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/machine/m950x0.cpp",
 		MAME_DIR .. "src/devices/machine/m950x0.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/macseconds.h,MACHINES["MACSECONDS"] = true
+---------------------------------------------------
+
+if (MACHINES["MACSECONDS"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/macseconds.cpp",
+		MAME_DIR .. "src/devices/machine/macseconds.h",
 	}
 end
 
@@ -3884,6 +3907,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/votraxtnt.h,MACHINES["VOTRAXTNT"] = true
+---------------------------------------------------
+
+if (MACHINES["VOTRAXTNT"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/votraxtnt.cpp",
+		MAME_DIR .. "src/devices/machine/votraxtnt.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/wd_fdc.h,MACHINES["WD_FDC"] = true
 ---------------------------------------------------
 
@@ -5356,5 +5391,21 @@ if (MACHINES["SCI4"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/machine/sci4.cpp",
 		MAME_DIR .. "src/devices/machine/sci4.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/pl6_fpga.h,MACHINES["HEBER_PLUTO"] = true
+--@src/devices/machine/pl6_pic.h,MACHINES["HEBER_PLUTO"] = true
+---------------------------------------------------
+if (MACHINES["HEBER_PLUTO"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/pl6_fpga.cpp",
+		MAME_DIR .. "src/devices/machine/pl6_fpga.h",
+		MAME_DIR .. "src/devices/machine/pl6_pic.cpp",
+		MAME_DIR .. "src/devices/machine/pl6_pic.h",
+		MAME_DIR .. "src/devices/machine/pl6_exp.cpp",
+		MAME_DIR .. "src/devices/machine/pl6_exp.h",
 	}
 end

@@ -171,6 +171,9 @@ void via6522_device::map(address_map &map)
 
 via6522_device::via6522_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, type, tag, owner, clock),
+	m_in_cb1(0),
+	m_in_cb2(0),
+	m_acr(0),
 	m_in_a_handler(*this, 0xff),
 	m_in_b_handler(*this, 0xff),
 	m_out_a_handler(*this),
@@ -183,10 +186,7 @@ via6522_device::via6522_device(const machine_config &mconfig, device_type type, 
 	m_in_ca1(0),
 	m_in_ca2(0),
 	m_in_b(0xff),
-	m_in_cb1(0),
-	m_in_cb2(0),
-	m_pcr(0),
-	m_acr(0)
+	m_pcr(0)
 {
 }
 
@@ -263,10 +263,11 @@ void via6522_device::device_start()
 	m_ddr_b = 0;
 	m_latch_b = 0;
 
-	m_t1cl = 0;
-	m_t1ch = 0;
-	m_t2cl = 0;
-	m_t2ch = 0;
+	// TODO: initial counter state unknown, but definitely not zero.
+	m_t1cl = 0xff;
+	m_t1ch = 0xff;
+	m_t2cl = 0xff;
+	m_t2ch = 0xff;
 
 	m_sr = 0;
 	m_pcr = 0;
@@ -338,11 +339,6 @@ void via6522_device::device_reset()
 	m_ddr_b = 0;
 	m_latch_b = 0;
 
-	m_t1cl = 0;
-	m_t1ch = 0;
-	m_t2cl = 0;
-	m_t2ch = 0;
-
 	m_pcr = 0;
 	m_acr = 0;
 	m_ier = 0;
@@ -350,7 +346,6 @@ void via6522_device::device_reset()
 	m_t1_active = 0;
 	m_t1_pb7 = 1;
 	m_t2_active = 0;
-	m_shift_counter = 0;
 
 	output_pa();
 	output_pb();
