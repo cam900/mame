@@ -33,6 +33,9 @@ NOTES (MD side):
 - has discrete YM3438 in place of YM2612
 - Mega CD expansion port working with DIY extension cable, 32x needs at least a passive cart adapter
 - focus 3 in debugger is the current default for MD side
+- MAME inability of handling differing refresh rates causes visible tearing in MD screen
+  (cfr. koteteik intro). A partial workaround is to use Video mode = composite, so that
+  VGA will downclock to ~60 Hz instead.
 
 TODO:
 - RAM size always gets detected as 2560K even when it's not (from chipset?);
@@ -340,6 +343,7 @@ public:
 
 protected:
 	virtual const tiny_rom_entry *device_rom_region() const override ATTR_COLD;
+	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 };
 
 DEFINE_DEVICE_TYPE(ISA16_WD90C10_ROMLESS,  isa16_wd90c10_romless_device,  "wd90c10_romless",  "Western Digital WD90C10 ROM-less VGA")
@@ -354,10 +358,17 @@ const tiny_rom_entry *isa16_wd90c10_romless_device::device_rom_region() const
 	return ROM_NAME( wd90c10_romless );
 }
 
-
 isa16_wd90c10_romless_device::isa16_wd90c10_romless_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 	: isa16_wd90c11_lr_device(mconfig, ISA16_WD90C10_ROMLESS, tag, owner, clock)
 {
+}
+
+void isa16_wd90c10_romless_device::device_add_mconfig(machine_config &config)
+{
+	isa16_wd90c11_lr_device::device_add_mconfig(config);
+	// unknown source, assume standard NTSC (divided internally)
+	// tested in Video mode
+	m_vga->set_vclk2(14'318'181);
 }
 
 
@@ -541,8 +552,12 @@ void teradrive_state::md_68k_map(address_map &map)
 //  map(0xa11100, 0xa111ff) Z80 BUSREQ/BUSACK
 	map(0xa11100, 0xa11101).lrw16(
 		NAME([this] (offs_t offset, u16 mem_mask) {
+			address_space &space = m_md68kcpu->space(AS_PROGRAM);
+			// TODO: enough for all edge cases but timekill
+			u16 open_bus = space.read_word(m_md68kcpu->pc() - 2) & 0xfefe;
+			// printf("%06x -> %04x\n", m_md68kcpu->pc() - 2, open_bus);
 			u16 res = (!m_z80_busrq || m_z80_reset) ^ 1;
-			return (res << 8) | (res);
+			return (res << 8) | (res) | open_bus;
 		}),
 		NAME([this] (offs_t offset, u16 data, u16 mem_mask) {
 			//printf("%04x %04x\n", data, mem_mask);
@@ -814,7 +829,7 @@ static INPUT_PORTS_START( teradrive )
 	PORT_DIPSETTING(    0x00, "MD boot" )
 	PORT_DIPSETTING(    0x01, "PC boot" )
 	PORT_DIPNAME( 0x04, 0x04, "Video mode" )
-	PORT_DIPSETTING(    0x00, "Video" ) // composite?
+	PORT_DIPSETTING(    0x00, "Video" ) // composite
 	PORT_DIPSETTING(    0x04, "RGB" )
 INPUT_PORTS_END
 
@@ -955,6 +970,8 @@ void teradrive_state::teradrive(machine_config &config)
 	M68000(config, m_md68kcpu, md_master_xtal / 7);
 	m_md68kcpu->set_addrmap(AS_PROGRAM, &teradrive_state::md_68k_map);
 	m_md68kcpu->set_addrmap(m68000_base_device::AS_CPU_SPACE, &teradrive_state::md_cpu_space_map);
+	// disallow TAS (gargoyle)
+	m_md68kcpu->set_tas_write_callback(NAME([] (offs_t offset, u8 data) { }));
 
 	Z80(config, m_mdz80cpu, md_master_xtal / 15);
 	m_mdz80cpu->set_addrmap(AS_PROGRAM, &teradrive_state::md_z80_map);
@@ -986,7 +1003,7 @@ void teradrive_state::teradrive(machine_config &config)
 	m_md_vdp->add_route(ALL_OUTPUTS, "md_speaker", 0.50, 1);
 
 	auto &hl(INPUT_MERGER_ANY_HIGH(config, "hl"));
-	// TODO: to VDP
+	// TODO: gated thru VDP
 	hl.output_handler().set_inputline(m_md68kcpu, 2);
 
 	MEGADRIVE_IO_PORT(config, m_md_ioports[0], 0);

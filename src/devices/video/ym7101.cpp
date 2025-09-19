@@ -713,6 +713,7 @@ void ym7101_device::flush_screen_mode()
 
 	//this->set_unscaled_clock(target_clock);
 
+	// FIXME: really 427.5 for H40 mode
 	const int htotal = h40_mode ? 427 : 342;
 	const int vtotal = 262;
 
@@ -1193,6 +1194,7 @@ TIMER_CALLBACK_MEMBER(ym7101_device::dma_callback)
 		// TODO: rough estimation, should also take FIFO in consideration
 		// - galahad explicitly stops 68k by running DMAs during active scan
 		// - sailormn will hang during intro by side effect of checking sound busy without bus
+		// - zoom stage intros are timed against DMA (currently a bit too fast)
 		const bool in_active_display = !screen().vblank() && !in_hblank();
 
 		m_dma_timer->adjust(attotime::from_ticks(4 << (in_active_display + (code_dest == AS_VDP_VRAM)), clock()));
