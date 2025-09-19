@@ -20,6 +20,7 @@ public:
 		m_k054321(*this, "k054321"),
 		m_gx_workram(*this, "gx_workram"),
 		m_spriteram(*this, "spriteram"),
+		m_z80bank(*this, "z80bank"),
 		m_okibank(*this, "okibank")
 	{ }
 
@@ -35,21 +36,22 @@ private:
 	optional_device<k054321_device> m_k054321;
 	required_shared_ptr<uint16_t> m_gx_workram;
 	optional_shared_ptr<uint16_t> m_spriteram;
+	optional_memory_bank m_z80bank;
 	optional_memory_bank m_okibank; // for viostormabbl
 	std::unique_ptr<uint8_t[]> m_decoded;
 
 	uint8_t m_mw_irq_control = 0;
-	int m_cur_sound_region = 0;
-	int m_layer_colorbase[6]{};
-	int m_oinprion = 0;
-	int m_cbparam = 0;
-	int m_sprite_colorbase = 0;
-	int m_sub1_colorbase = 0;
-	int m_last_psac_colorbase = 0;
-	int m_gametype = 0;
-	int m_roz_enable = 0;
-	int m_roz_rombank = 0;
-	tilemap_t *m_ult_936_tilemap = nullptr;
+	int32_t m_cur_sound_region = 0;
+	int32_t m_layer_colorbase[6]{};
+	int32_t m_oinprion = 0;
+	int32_t m_cbparam = 0;
+	int32_t m_sprite_colorbase = 0;
+	int32_t m_sub1_colorbase = 0;
+	int32_t m_last_psac_colorbase = 0;
+	int32_t m_gametype = 0;
+	int32_t m_roz_enable = 0;
+	int32_t m_roz_rombank = 0;
+	tilemap_t *m_ddd_936_tilemap = nullptr;
 	uint16_t m_clip = 0;
 	uint8_t m_last_alpha_tile_mix_code = 0;
 
@@ -79,7 +81,7 @@ private:
 	uint16_t gai_053936_tilerom_2_r(offs_t offset);
 	uint16_t ddd_053936_tilerom_2_r(offs_t offset);
 	TILE_GET_INFO_MEMBER(get_gai_936_tile_info);
-	TILE_GET_INFO_MEMBER(get_ult_936_tile_info);
+	TILE_GET_INFO_MEMBER(get_ddd_936_tile_info);
 	DECLARE_MACHINE_START(mystwarr);
 	DECLARE_MACHINE_RESET(mystwarr);
 	DECLARE_VIDEO_START(mystwarr);

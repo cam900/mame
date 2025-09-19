@@ -98,6 +98,7 @@ public:
 		m_oki(*this, "oki"),
 		m_upd7759(*this, "upd"),
 		m_nvram(*this, "nvram"),
+		m_mainbank(*this, "mainbank"),
 		m_outport(*this, "OUT"),
 		m_lamps(*this, "lamp%u", 0U)
 	{ }
@@ -176,16 +177,17 @@ private:
 	optional_device<okim6295_device> m_oki;
 	optional_device<upd7759_device> m_upd7759;
 	required_device<nvram_device> m_nvram;
+	required_memory_bank m_mainbank;
 	required_ioport m_outport;
 	output_finder<8> m_lamps;
 
 	u8 m_control = 0;
 	u8 m_control2 = 0;
-	int m_ccu_int_time = 0;
-	int m_ccu_int_time_count = 0;
-	int m_avac = 0;
-	int m_layer_colorbase[4] = { };
-	int m_layer_order[4] = { };
+	s32 m_ccu_int_time = 0;
+	s32 m_ccu_int_time_count = 0;
+	u32 m_avac = 0;
+	u16 m_layer_colorbase[4] = { };
+	u8 m_layer_order[4] = { };
 };
 
 void konmedal_state::control2_w(uint8_t data)
@@ -202,12 +204,12 @@ void konmedal_state::control2_w(uint8_t data)
 */
 	m_control2 = data;
 	if (m_upd7759)  // note: this is needed because games clear reset line and assert start line at the same time, but MAME's outport can't handle right order
-		m_upd7759->reset_w((data & 2) ? 1 : 0);
+		m_upd7759->reset_w(BIT(data, 1));
 	m_outport->write(data);
-	machine().bookkeeping().coin_counter_w(0, data & 4);
-	machine().bookkeeping().coin_counter_w(1, data & 8);
-	machine().bookkeeping().coin_lockout_w(0, (data & 0x10) ? 0 : 1);
-	machine().bookkeeping().coin_lockout_w(1, (data & 0x20) ? 0 : 1);
+	machine().bookkeeping().coin_counter_w(0, BIT(data, 2));
+	machine().bookkeeping().coin_counter_w(1, BIT(data, 3));
+	machine().bookkeeping().coin_lockout_w(0, BIT(~data, 4));
+	machine().bookkeeping().coin_lockout_w(1, BIT(~data, 5));
 }
 
 void konmedal_state::medalcnt_w(uint8_t data)
@@ -217,8 +219,8 @@ void konmedal_state::medalcnt_w(uint8_t data)
     ---- --x- Medal counter -1 (hopper out)
     ---- -x-- Medal Lock
 */
-	machine().bookkeeping().coin_counter_w(2, data & 2);
-	machine().bookkeeping().coin_lockout_w(2, (data & 4) ? 0 : 1);
+	machine().bookkeeping().coin_counter_w(2, BIT(data, 1));
+	machine().bookkeeping().coin_lockout_w(2, BIT(~data, 2));
 }
 
 void konmedal_state::lamps_w(uint8_t data)
@@ -232,7 +234,7 @@ void konmedal_state::lamps_w(uint8_t data)
 
 uint8_t konmedal_state::vram_r(offs_t offset)
 {
-	if (!(m_control2 & 0x80))
+	if (BIT(~m_control2, 7))
 	{
 		if (offset & 1)
 		{
@@ -253,7 +255,7 @@ uint8_t konmedal_state::vram_r(offs_t offset)
 
 uint8_t konmedal_state::chusenoh_vram_r(offs_t offset)
 {
-	if (!(m_control & 0x80))
+	if (BIT(~m_control, 7))
 	{
 		if (offset & 1)
 		{
@@ -341,39 +343,39 @@ void konmedal_state::tsuka_init()
 
 K056832_CB_MEMBER(konmedal_state::tile_callback)
 {
-	u32 codebits = *code;
+	u32 codebits = code;
 
 	int mode, avac;
-	m_k056832->read_avac(&mode, &avac);
+	m_k056832->read_avac(mode, avac);
 	if (mode)
-		*code = (((avac >> ((codebits >> 8) & 0xc)) & 0xf) << 10) | (codebits & 0x3ff);
+		code = (((avac >> ((codebits >> 8) & 0xc)) & 0xf) << 10) | (codebits & 0x3ff);
 	else
-		*code = codebits & 0xfff;
+		code = codebits & 0xfff;
 
-	*code = bitswap<14>(*code, 8, 9, 13, 12, 11, 10, 7, 6, 5, 4, 3, 2, 1, 0);
-	*color = m_layer_colorbase[layer] + ((codebits >> 13) & 7);
-	*priority = BIT(codebits, 12);
+	code = bitswap<14>(code, 8, 9, 13, 12, 11, 10, 7, 6, 5, 4, 3, 2, 1, 0);
+	color = m_layer_colorbase[layer] + ((codebits >> 13) & 7);
+	priority = BIT(codebits, 12);
 }
 
 K056832_CB_MEMBER(konmedal_state::chusenoh_tile_callback)
 {
-	u32 codebits = *code;
+	u32 codebits = code;
 
 	int mode, avac;
-	m_k056832->read_avac(&mode, &avac);
+	m_k056832->read_avac(mode, avac);
 	if (mode)
-		*code = (((avac >> ((codebits >> 8) & 0xc)) & 0xf) << 10) | (codebits & 0x3ff);
+		code = (((avac >> ((codebits >> 8) & 0xc)) & 0xf) << 10) | (codebits & 0x3ff);
 	else
-		*code = codebits & 0x1fff;
+		code = codebits & 0x1fff;
 
-	*color = m_layer_colorbase[layer] + ((codebits >> 13) & 7);
-	*priority = BIT(codebits, 12);
+	color = m_layer_colorbase[layer] + ((codebits >> 13) & 7);
+	priority = BIT(codebits, 12);
 
 	if (layer == 3)
 	{
-		*code = 0;
-		*color = 0;
-		*priority = 0;
+		code = 0;
+		color = 0;
+		priority = 0;
 	}
 }
 
@@ -387,7 +389,7 @@ uint32_t konmedal_state::screen_update_konmedal(screen_device &screen, bitmap_in
 	screen.priority().fill(0, cliprect);
 
 	int mode, data;
-	m_k056832->read_avac(&mode, &data);
+	m_k056832->read_avac(mode, data);
 	data |= mode << 3;
 	if (m_avac != data)
 	{
@@ -454,13 +456,13 @@ TIMER_DEVICE_CALLBACK_MEMBER(konmedal_state::konmedal_scanline)
 
 void konmedal_state::bankswitch_w(uint8_t data)
 {
-	membank("bank1")->set_entry(data>>4);
+	m_mainbank->set_entry(data >> 4);
 	m_control = data & 0xf;
 }
 
 void konmedal_state::chusenoh_bankswitch_w(uint8_t data)
 {
-	membank("bank1")->set_entry(data & 0xf);
+	m_mainbank->set_entry(data & 0xf);
 	m_control = data;
 }
 
@@ -477,7 +479,7 @@ void konmedal_state::scc_enable_w(uint8_t data)
 void konmedal_state::medal_main(address_map &map)
 {
 	map(0x0000, 0x7fff).rom().region("maincpu", 0);
-	map(0x8000, 0x9fff).bankr("bank1");
+	map(0x8000, 0x9fff).bankr(m_mainbank);
 	map(0xa000, 0xbfff).ram().share("nvram"); // work RAM
 	map(0xc000, 0xc03f).w(FUNC(konmedal_state::k056832_w));
 	map(0xc100, 0xc100).w(FUNC(konmedal_state::control2_w));
@@ -498,7 +500,7 @@ void konmedal_state::medal_main(address_map &map)
 void konmedal_state::ddboy_main(address_map &map)
 {
 	map(0x0000, 0x7fff).rom().region("maincpu", 0);
-	map(0x8000, 0x9fff).bankr("bank1");
+	map(0x8000, 0x9fff).bankr(m_mainbank);
 	map(0xa000, 0xbfff).ram().share("nvram"); // work RAM
 	map(0xc000, 0xc03f).w(FUNC(konmedal_state::k056832_w));
 	map(0xc100, 0xc100).w(FUNC(konmedal_state::control2_w));
@@ -522,7 +524,7 @@ void konmedal_state::ddboy_main(address_map &map)
 void konmedal_state::chusenoh_main(address_map &map)
 {
 	map(0x0000, 0x7fff).rom().region("maincpu", 0);
-	map(0x8000, 0x9fff).bankr("bank1");
+	map(0x8000, 0x9fff).bankr(m_mainbank);
 	map(0xa000, 0xbfff).ram().share("nvram"); // work RAM
 	map(0xc000, 0xc03f).w(FUNC(konmedal_state::k056832_w));
 	map(0xc100, 0xc100).w(FUNC(konmedal_state::control2_w));
@@ -556,7 +558,7 @@ void konmedal_state::shuriboy_main(address_map &map)
 	map(0x9000, 0x9000).mirror(0x07ff).w(FUNC(konmedal_state::scc_enable_w));
 	map(0x9800, 0x9fff).view(m_scc_map);
 	m_scc_map[0](0x9800, 0x98ff).mirror(0x0700).m("k051649", FUNC(k051649_device::scc_map));
-	map(0xa000, 0xbfff).bankr("bank1");
+	map(0xa000, 0xbfff).bankr(m_mainbank);
 	map(0xc000, 0xffff).rw(m_k052109, FUNC(k052109_device::read), FUNC(k052109_device::write));
 }
 
@@ -862,15 +864,15 @@ void konmedal_state::machine_start_common()
 void konmedal_state::machine_start()
 {
 	machine_start_common();
-	membank("bank1")->configure_entries(0, 0x10, memregion("maincpu")->base(), 0x2000);
-	membank("bank1")->set_entry(4);
+	m_mainbank->configure_entries(0, 0x10, memregion("maincpu")->base(), 0x2000);
+	m_mainbank->set_entry(4);
 }
 
 MACHINE_START_MEMBER(konmedal_state, shuriboy)
 {
 	machine_start_common();
-	membank("bank1")->configure_entries(0, 0x8, memregion("maincpu")->base()+0x8000, 0x2000);
-	membank("bank1")->set_entry(0);
+	m_mainbank->configure_entries(0, 0x8, memregion("maincpu")->base() + 0x8000, 0x2000);
+	m_mainbank->set_entry(0);
 }
 
 void konmedal_state::machine_reset()
@@ -1045,8 +1047,8 @@ K052109_CB_MEMBER(konmedal_state::shuriboy_tile_callback)
 
 void konmedal_state::shuri_bank_w(uint8_t data)
 {
-	m_k052109->set_rmrd_line((data & 0x40) ? ASSERT_LINE : CLEAR_LINE);
-	membank("bank1")->set_entry(data & 0x3);
+	m_k052109->set_rmrd_line(BIT(data, 6) ? ASSERT_LINE : CLEAR_LINE);
+	m_mainbank->set_entry(data & 0x3);
 }
 
 void konmedal_state::shuriboy(machine_config &config)

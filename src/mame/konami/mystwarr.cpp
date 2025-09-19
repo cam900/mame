@@ -194,9 +194,9 @@ void mystwarr_state::mmeeprom_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 
 TIMER_DEVICE_CALLBACK_MEMBER(mystwarr_state::mystwarr_interrupt)
 {
-	int scanline = param;
+	const int scanline = param;
 
-	if (!(m_mw_irq_control & 0x01)) return;
+	if (BIT(~m_mw_irq_control, 0)) return;
 
 	if (scanline == 240)
 		m_maincpu->set_input_line(M68K_IRQ_2, HOLD_LINE);
@@ -210,7 +210,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(mystwarr_state::mystwarr_interrupt)
 
 TIMER_DEVICE_CALLBACK_MEMBER(mystwarr_state::metamrph_interrupt)
 {
-	int scanline = param;
+	const int scanline = param;
 
 	// irq 4 has an irq routine in metamrph, but it's not really called
 	//m_maincpu->set_input_line(M68K_IRQ_4, HOLD_LINE);
@@ -224,9 +224,9 @@ TIMER_DEVICE_CALLBACK_MEMBER(mystwarr_state::metamrph_interrupt)
 
 TIMER_DEVICE_CALLBACK_MEMBER(mystwarr_state::mchamp_interrupt)
 {
-	int scanline = param;
+	const int scanline = param;
 
-	if (!(m_mw_irq_control & 0x40)) return;
+	if (BIT(~m_mw_irq_control, 6)) return;
 
 	if (scanline == 247)
 	{
@@ -457,7 +457,7 @@ void mystwarr_state::mccontrol_w(offs_t offset, uint16_t data, uint16_t mem_mask
 		// bit 1 = MUTE
 		// bit 2 = OCHARA OBJCHA
 
-		m_k055673->k053246_set_objcha_line((data&0x04) ? ASSERT_LINE : CLEAR_LINE);
+		m_k055673->k053246_set_objcha_line(BIT(data, 2) ? ASSERT_LINE : CLEAR_LINE);
 	}
 	//else logerror("write %x to LSB of mccontrol\n", data);
 }
@@ -584,11 +584,11 @@ void mystwarr_state::gaiapols_map(address_map &map)
 
 void mystwarr_state::sound_ctrl_w(uint8_t data)
 {
-	if (!(data & 0x10))
+	if (BIT(~data, 4))
 		m_soundcpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
 
 	m_sound_ctrl = data;
-	membank("z80bank")->set_entry(m_sound_ctrl & 0xf);
+	m_z80bank->set_entry(m_sound_ctrl & 0xf);
 }
 
 /* sound memory maps
@@ -602,10 +602,10 @@ void mystwarr_state::sound_ctrl_w(uint8_t data)
 void mystwarr_state::martchmp_sound_map(address_map &map)
 {
 	map(0x0000, 0x7fff).rom();
-	map(0x8000, 0xbfff).bankr("z80bank");
+	map(0x8000, 0xbfff).bankr(m_z80bank);
 	map(0x0000, 0xbfff).nopw();
 	map(0xc000, 0xdfff).ram();
-	map(0xe000, 0xe22f).rw(m_k054539_1, FUNC(k054539_device::read), FUNC(k054539_device::write));
+	map(0xe000, 0xe22f).rw(m_k054539[0], FUNC(k054539_device::read), FUNC(k054539_device::write));
 	map(0xe230, 0xe3ff).ram();
 	map(0xe400, 0xe62f).noprw();
 	map(0xe630, 0xe7ff).ram();
@@ -618,13 +618,13 @@ void mystwarr_state::martchmp_sound_map(address_map &map)
 void mystwarr_state::mystwarr_sound_map(address_map &map)
 {
 	martchmp_sound_map(map);
-	map(0xe400, 0xe62f).rw(m_k054539_2, FUNC(k054539_device::read), FUNC(k054539_device::write));
+	map(0xe400, 0xe62f).rw(m_k054539[1], FUNC(k054539_device::read), FUNC(k054539_device::write));
 }
 
 
 void mystwarr_state::k054539_nmi_gen(int state)
 {
-	if (m_sound_ctrl & 0x10)
+	if (BIT(m_sound_ctrl, 4))
 	{
 		// Trigger an /NMI on the rising edge
 		if (!m_sound_nmi_clk && state)
@@ -868,8 +868,8 @@ GFXDECODE_END
 
 MACHINE_START_MEMBER(mystwarr_state,mystwarr)
 {
-	membank("z80bank")->configure_entries(0, 16, memregion("soundcpu")->base(), 0x4000);
-	membank("z80bank")->set_entry(2);
+	m_z80bank->configure_entries(0, 16, memregion("soundcpu")->base(), 0x4000);
+	m_z80bank->set_entry(2);
 	m_sound_ctrl = 2;
 
 	m_mw_irq_control = 0;
@@ -887,18 +887,18 @@ MACHINE_RESET_MEMBER(mystwarr_state,mystwarr)
 	// soften chorus(chip 0 channel 0-3), boost voice(chip 0 channel 4-7)
 	for (int i = 0; i <= 3; i++)
 	{
-		m_k054539_1->set_gain(i, 0.8);
-		m_k054539_1->set_gain(i+4, 2.0);
+		m_k054539[0]->set_gain(i, 0.8);
+		m_k054539[0]->set_gain(i + 4, 2.0);
 	}
 
 	// soften percussions(chip 1 channel 0-7)
-	for (int i = 0; i <= 7; i++) m_k054539_2->set_gain(i, 0.5);
+	for (int i = 0; i <= 7; i++) m_k054539[1]->set_gain(i, 0.5);
 }
 
 MACHINE_RESET_MEMBER(mystwarr_state,dadandrn)
 {
 	// boost voice(chip 0 channel 4-7)
-	for (int i = 4; i <= 7; i++) m_k054539_1->set_gain(i, 2.0);
+	for (int i = 4; i <= 7; i++) m_k054539[0]->set_gain(i, 2.0);
 }
 
 MACHINE_START_MEMBER(mystwarr_state,viostormbl)
@@ -915,8 +915,8 @@ MACHINE_START_MEMBER(mystwarr_state,viostormbl)
 
 MACHINE_RESET_MEMBER(mystwarr_state,viostorm)
 {
-	if (m_k054539_1.found())
-		for (int i = 4; i <= 7; i++) m_k054539_1->set_gain(i, 2.0); // boost voice(chip 0 channel 4-7)
+	if (m_k054539[0].found())
+		for (int i = 4; i <= 7; i++) m_k054539[0]->set_gain(i, 2.0); // boost voice(chip 0 channel 4-7)
 }
 
 MACHINE_RESET_MEMBER(mystwarr_state,metamrph)
@@ -924,23 +924,23 @@ MACHINE_RESET_MEMBER(mystwarr_state,metamrph)
 	// boost voice(chip 0 channel 4-7) and soften other channels
 	for (int i = 0; i <= 3; i++)
 	{
-		m_k054539_1->set_gain(i,   0.8);
-		m_k054539_1->set_gain(i+4, 1.8);
-		m_k054539_2->set_gain(i,   0.8);
-		m_k054539_2->set_gain(i+4, 0.8);
+		m_k054539[0]->set_gain(i,   0.8);
+		m_k054539[0]->set_gain(i+4, 1.8);
+		m_k054539[1]->set_gain(i,   0.8);
+		m_k054539[1]->set_gain(i+4, 0.8);
 	}
 }
 
 MACHINE_RESET_MEMBER(mystwarr_state,martchmp)
 {
 	// boost voice(chip 0 channel 4-7)
-	for (int i = 4; i <= 7; i++) m_k054539_1->set_gain(i, 1.4);
+	for (int i = 4; i <= 7; i++) m_k054539[0]->set_gain(i, 1.4);
 }
 
 MACHINE_RESET_MEMBER(mystwarr_state,gaiapols)
 {
 	// boost voice(chip 0 channel 5-7)
-	for (int i = 5; i <= 7; i++) m_k054539_1->set_gain(i, 2.0);
+	for (int i = 5; i <= 7; i++) m_k054539[0]->set_gain(i, 2.0);
 }
 
 
@@ -1000,16 +1000,16 @@ void mystwarr_state::mystwarr(machine_config &config)
 
 	K054321(config, m_k054321, "speaker");
 
-	K054539(config, m_k054539_1, XTAL(18'432'000));
-	m_k054539_1->set_device_rom_tag("k054539");
-	m_k054539_1->timer_handler().set(FUNC(mystwarr_state::k054539_nmi_gen));
-	m_k054539_1->add_route(0, "speaker", 1.0, 1);    // stereo channels are inverted
-	m_k054539_1->add_route(1, "speaker", 1.0, 0);
+	K054539(config, m_k054539[0], XTAL(18'432'000));
+	m_k054539[0]->set_device_rom_tag("k054539");
+	m_k054539[0]->timer_handler().set(FUNC(mystwarr_state::k054539_nmi_gen));
+	m_k054539[0]->add_route(0, "speaker", 1.0, 1);    // stereo channels are inverted
+	m_k054539[0]->add_route(1, "speaker", 1.0, 0);
 
-	K054539(config, m_k054539_2, XTAL(18'432'000));
-	m_k054539_2->set_device_rom_tag("k054539");
-	m_k054539_2->add_route(0, "speaker", 1.0, 1);    // stereo channels are inverted
-	m_k054539_2->add_route(1, "speaker", 1.0, 0);
+	K054539(config, m_k054539[1], XTAL(18'432'000));
+	m_k054539[1]->set_device_rom_tag("k054539");
+	m_k054539[1]->add_route(0, "speaker", 1.0, 1);    // stereo channels are inverted
+	m_k054539[1]->add_route(1, "speaker", 1.0, 0);
 }
 
 void mystwarr_state::viostorm(machine_config &config)
@@ -1072,7 +1072,7 @@ void mystwarr_state::metamrph(machine_config &config)
 
 	m_k053252->set_offsets(24, 15);
 
-	K053250(config, m_k053250_1, 0, m_palette, m_screen, -7, 0);
+	K053250(config, m_k053250[0], 0, m_palette, m_screen, -7, 0);
 
 	// video hardware
 	MCFG_VIDEO_START_OVERRIDE(mystwarr_state, metamrph)

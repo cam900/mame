@@ -133,12 +133,12 @@ private:
 	required_shared_ptr<uint16_t> m_workram;
 
 	/* video-related */
-	int         m_avac_bits[4]{};
-	int         m_avac_occupancy[4]{};
-	int         m_layer_colorbase[4]{};
-	int         m_layer_pri[4]{};
-	int         m_avac_vrc = 0;
-	int         m_sprite_colorbase = 0;
+	uint32_t    m_avac_bits[4]{};
+	uint16_t    m_avac_occupancy[4]{};
+	uint16_t    m_layer_colorbase[4]{};
+	uint8_t     m_layer_pri[4]{};
+	uint16_t    m_avac_vrc = 0;
+	uint16_t    m_sprite_colorbase = 0;
 
 	/* misc */
 	uint16_t    m_cur_control2 = 0U;
@@ -157,20 +157,20 @@ private:
 	uint16_t control2_r();
 	void control2_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	void sound_irq_w(uint16_t data);
-	uint32_t screen_update_gijoe(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
-	INTERRUPT_GEN_MEMBER(gijoe_interrupt);
+	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	INTERRUPT_GEN_MEMBER(interrupt);
 	TIMER_CALLBACK_MEMBER(dmaend_callback);
-	void gijoe_objdma();
+	void objdma();
 	K056832_CB_MEMBER(tile_callback);
 	K053246_CB_MEMBER(sprite_callback);
-	void gijoe_map(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
 	void sound_map(address_map &map) ATTR_COLD;
 };
 
 
 K053246_CB_MEMBER(gijoe_state::sprite_callback)
 {
-	int pri = (*color & 0x03e0) >> 4;
+	const int pri = (*color & 0x03e0) >> 4;
 
 	if (pri <= m_layer_pri[3])
 		*priority_mask = 0;
@@ -188,7 +188,7 @@ K053246_CB_MEMBER(gijoe_state::sprite_callback)
 
 K056832_CB_MEMBER(gijoe_state::tile_callback)
 {
-	int tile = *code;
+	int tile = code;
 
 	if (tile >= 0xf000 && tile <= 0xf4ff)
 	{
@@ -208,10 +208,10 @@ K056832_CB_MEMBER(gijoe_state::tile_callback)
 			m_avac_occupancy[layer] |= 0x00f0;
 			tile |= m_avac_bits[2];
 		}
-		*code = tile;
+		code = tile;
 	}
 
-	*color = (*color >> 2 & 0x0f) | m_layer_colorbase[layer];
+	color = (color >> 2 & 0x0f) | m_layer_colorbase[layer];
 }
 
 void gijoe_state::video_start()
@@ -234,15 +234,15 @@ void gijoe_state::video_start()
 	save_item(NAME(m_layer_pri));
 }
 
-uint32_t gijoe_state::screen_update_gijoe(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
+uint32_t gijoe_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	static const int K053251_CI[4] = { k053251_device::CI1, k053251_device::CI2, k053251_device::CI3, k053251_device::CI4 };
 	int layer[4];
-	int vrc_mode, vrc_new, colorbase_new, /*primode,*/ dirty;
+	int vrc_mode, vrc_new, /*primode,*/ dirty;
 	int mask = 0;
 
 	// update tile offsets
-	m_k056832->read_avac(&vrc_mode, &vrc_new);
+	m_k056832->read_avac(vrc_mode, vrc_new);
 
 	if (vrc_mode)
 	{
@@ -265,7 +265,7 @@ uint32_t gijoe_state::screen_update_gijoe(screen_device &screen, bitmap_ind16 &b
 	for (int i = 0; i < 4; i++)
 	{
 		dirty = 0;
-		colorbase_new = m_k053251->get_palette_index(K053251_CI[i]);
+		const int colorbase_new = m_k053251->get_palette_index(K053251_CI[i]);
 		if (m_layer_colorbase[i] != colorbase_new)
 		{
 			m_layer_colorbase[i] = colorbase_new;
@@ -349,11 +349,11 @@ void gijoe_state::control2_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 		m_cur_control2 = data;
 
 		// bit 6 = enable sprite ROM reading
-		m_k053246->k053246_set_objcha_line((data & 0x0040) ? ASSERT_LINE : CLEAR_LINE);
+		m_k053246->k053246_set_objcha_line(BIT(data, 6) ? ASSERT_LINE : CLEAR_LINE);
 	}
 }
 
-void gijoe_state::gijoe_objdma()
+void gijoe_state::objdma()
 {
 	// TODO: implement sprite dma in k053246_k053247_k055673.cpp
 	uint16_t *src_head, *src_tail, *dst_head, *dst_tail;
@@ -380,11 +380,11 @@ void gijoe_state::gijoe_objdma()
 
 TIMER_CALLBACK_MEMBER(gijoe_state::dmaend_callback)
 {
-	if (m_cur_control2 & 0x0020)
+	if (BIT(m_cur_control2, 5))
 		m_maincpu->set_input_line(6, HOLD_LINE);
 }
 
-INTERRUPT_GEN_MEMBER(gijoe_state::gijoe_interrupt)
+INTERRUPT_GEN_MEMBER(gijoe_state::interrupt)
 {
 	// global interrupt masking (*this game only)
 	if (!m_k056832->is_irq_enabled(0))
@@ -392,14 +392,14 @@ INTERRUPT_GEN_MEMBER(gijoe_state::gijoe_interrupt)
 
 	if (m_k053246->k053246_is_irq_enabled())
 	{
-		gijoe_objdma();
+		objdma();
 
 		// 42.7us(clr) + 341.3us(xfer) delay at 6Mhz dotclock
 		m_dmadelay_timer->adjust(JOE_DMADELAY);
 	}
 
 	// trigger V-blank interrupt
-	if (m_cur_control2 & 0x0080)
+	if (BIT(m_cur_control2, 7))
 		device.execute().set_input_line(5, HOLD_LINE);
 }
 
@@ -408,17 +408,17 @@ void gijoe_state::sound_irq_w(uint16_t data)
 	m_audiocpu->set_input_line(0, HOLD_LINE);
 }
 
-void gijoe_state::gijoe_map(address_map &map)
+void gijoe_state::main_map(address_map &map)
 {
 	map(0x000000, 0x0fffff).rom();
-	map(0x100000, 0x100fff).ram().share("spriteram");                               // Sprites
+	map(0x100000, 0x100fff).ram().share(m_spriteram);                               // Sprites
 	map(0x110000, 0x110007).w(m_k053246, FUNC(k053247_device::k053246_w));
 	map(0x120000, 0x121fff).rw(m_k056832, FUNC(k056832_device::ram_word_r), FUNC(k056832_device::ram_word_w));      // Graphic planes
 	map(0x122000, 0x123fff).rw(m_k056832, FUNC(k056832_device::ram_word_r), FUNC(k056832_device::ram_word_w));      // Graphic planes mirror read
 	map(0x130000, 0x131fff).r(m_k056832, FUNC(k056832_device::rom_word_r));                               // Passthrough to tile roms
 	map(0x160000, 0x160007).w(m_k056832, FUNC(k056832_device::b_word_w));                                    // VSCCS (board dependent)
 	map(0x170000, 0x170001).nopw();                                                // Watchdog
-	map(0x180000, 0x18ffff).ram().share("workram");                 // Main RAM.  Spec. 180000-1803ff, 180400-187fff
+	map(0x180000, 0x18ffff).ram().share(m_workram);                 // Main RAM.  Spec. 180000-1803ff, 180400-187fff
 	map(0x190000, 0x190fff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
 	map(0x1a0000, 0x1a001f).w(m_k053251, FUNC(k053251_device::write)).umask16(0x00ff);
 	map(0x1b0000, 0x1b003f).w(m_k056832, FUNC(k056832_device::word_w));
@@ -440,10 +440,10 @@ void gijoe_state::gijoe_map(address_map &map)
 
 void gijoe_state::sound_map(address_map &map)
 {
+	map(0x0000, 0xefff).rom();
 	map(0xf000, 0xf7ff).ram();
 	map(0xf800, 0xfa2f).rw(m_k054539, FUNC(k054539_device::read), FUNC(k054539_device::write));
 	map(0xfc00, 0xfc03).m(m_k054321, FUNC(k054321_device::sound_map));
-	map(0x0000, 0xefff).rom();
 }
 
 static INPUT_PORTS_START( gijoe )
@@ -506,8 +506,8 @@ void gijoe_state::gijoe(machine_config &config)
 {
 	/* basic machine hardware */
 	M68000(config, m_maincpu, 32_MHz_XTAL / 2); // 16MHz Confirmed
-	m_maincpu->set_addrmap(AS_PROGRAM, &gijoe_state::gijoe_map);
-	m_maincpu->set_vblank_int("screen", FUNC(gijoe_state::gijoe_interrupt));
+	m_maincpu->set_addrmap(AS_PROGRAM, &gijoe_state::main_map);
+	m_maincpu->set_vblank_int("screen", FUNC(gijoe_state::interrupt));
 
 	Z80(config, m_audiocpu, 32_MHz_XTAL / 4); // Amuse & confirmed. Z80E at 8MHz
 	m_audiocpu->set_addrmap(AS_PROGRAM, &gijoe_state::sound_map);
@@ -517,7 +517,7 @@ void gijoe_state::gijoe(machine_config &config)
 	/* video hardware */
 	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
 	screen.set_raw(24_MHz_XTAL / 4, 384, 24, 312, 262, 16, 240); // measured 59.637Hz
-	screen.set_screen_update(FUNC(gijoe_state::screen_update_gijoe));
+	screen.set_screen_update(FUNC(gijoe_state::screen_update));
 	screen.set_palette("palette");
 
 	PALETTE(config, "palette").set_format(palette_device::xBGR_555, 2048).enable_shadows();

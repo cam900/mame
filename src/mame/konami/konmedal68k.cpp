@@ -89,7 +89,7 @@ protected:
 	int m_vbl_scanline;
 
 private:
-	uint32_t screen_update_konmedal68k(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	void fill_backcolor(bitmap_rgb32 &bitmap, const rectangle &cliprect, int pen_idx, int mode);
 
 	K056832_CB_MEMBER(tile_callback);
@@ -99,12 +99,12 @@ private:
 	{
 		m_control = data & 0xff;
 
-		if (!(data & 0x8))
+		if (BIT(~data, 3))
 		{
 			m_maincpu->set_input_line(M68K_IRQ_3, CLEAR_LINE);
 		}
 
-		if (!(data & 0x10))
+		if (BIT(~data, 4))
 		{
 			m_maincpu->set_input_line(M68K_IRQ_4, CLEAR_LINE);
 		}
@@ -114,7 +114,7 @@ private:
 
 	uint16_t vrom_spcpokan_r(offs_t offset)
 	{
-		if (m_control2 & 0x10)
+		if (BIT(m_control2, 4))
 		{
 			offset |= 0x1000;
 		}
@@ -130,7 +130,7 @@ private:
 
 	uint16_t vrom_koropens_r(offs_t offset)
 	{
-		if (m_control2 & 0x10)
+		if (BIT(m_control2, 4))
 		{
 			return 0;
 		}
@@ -191,13 +191,13 @@ TIMER_DEVICE_CALLBACK_MEMBER(konmedal68k_state::scanline)
 {
 	int scanline = param;
 
-	if ((scanline == m_vbl_scanline) && (m_control & 0x8))
+	if ((scanline == m_vbl_scanline) && BIT(m_control, 2))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_3, ASSERT_LINE);
 
 	}
 
-	if ((scanline == m_vbl_scanline+15) && (m_control & 0x10))
+	if ((scanline == m_vbl_scanline + 15) && BIT(m_control, 3))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_4, ASSERT_LINE);
 	}
@@ -261,7 +261,7 @@ void konmedal68k_slot_state::tilemap_draw(screen_device &screen, bitmap_rgb32 &b
 }
 
 
-uint32_t konmedal68k_state::screen_update_konmedal68k(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+uint32_t konmedal68k_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	static const int order[4] = { 3, 2, 0, 1 };
 	int enables = m_k055555->K055555_read_register(K55_INPUT_ENABLES);
@@ -650,7 +650,7 @@ void konmedal68k_state::kzaurus(machine_config &config)
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	m_screen->set_size(64*8, 32*8);
 	m_screen->set_visarea(40, 400-1, 16, 240-1);
-	m_screen->set_screen_update(FUNC(konmedal68k_state::screen_update_konmedal68k));
+	m_screen->set_screen_update(FUNC(konmedal68k_state::screen_update));
 
 	PALETTE(config, "palette").set_format(palette_device::xBGR_888, 8192).enable_shadows();
 
@@ -705,7 +705,7 @@ void konmedal68k_state::gs662(machine_config &config)
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64 * 8, 32 * 8);
 	screen.set_visarea(0, 360 - 1, 16, 240 - 1);
-	screen.set_screen_update(FUNC(konmedal68k_state::screen_update_konmedal68k));
+	screen.set_screen_update(FUNC(konmedal68k_state::screen_update));
 
 	PALETTE(config.replace(), "palette").set_format(palette_device::xBGR_888, 32768).enable_shadows();
 }

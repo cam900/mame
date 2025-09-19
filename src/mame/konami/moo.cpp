@@ -159,7 +159,8 @@ public:
 		m_k054338(*this, "k054338"),
 		m_palette(*this, "palette"),
 		m_screen(*this, "screen"),
-		m_k054321(*this, "k054321")
+		m_k054321(*this, "k054321"),
+		m_soundbank(*this, "soundbank")
 	{ }
 
 	void bucky(machine_config &config) ATTR_COLD;
@@ -176,10 +177,10 @@ private:
 	required_shared_ptr<uint16_t> m_spriteram;
 
 	/* video-related */
-	int         m_sprite_colorbase = 0;
-	int         m_layer_colorbase[4];
-	int         m_layerpri[3];
-	int         m_alpha_enabled = 0;
+	uint16_t    m_sprite_colorbase = 0;
+	uint16_t    m_layer_colorbase[4];
+	uint8_t     m_layerpri[3];
+	int32_t     m_alpha_enabled = 0;
 	uint16_t    m_zmask = 0;
 
 	/* misc */
@@ -199,6 +200,7 @@ private:
 	required_device<palette_device> m_palette;
 	required_device<screen_device> m_screen;
 	optional_device<k054321_device> m_k054321;
+	optional_memory_bank m_soundbank;
 
 	emu_timer *m_dmaend_timer = nullptr;
 	uint16_t control2_r();
@@ -209,11 +211,11 @@ private:
 	void moobl_oki_bank_w(uint16_t data);
 	DECLARE_VIDEO_START(moo);
 	DECLARE_VIDEO_START(bucky);
-	uint32_t screen_update_moo(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(moo_interrupt);
 	INTERRUPT_GEN_MEMBER(moobl_interrupt);
 	TIMER_CALLBACK_MEMBER(dmaend_callback);
-	void moo_objdma();
+	void objdma();
 	K056832_CB_MEMBER(tile_callback);
 	K053246_CB_MEMBER(sprite_callback);
 	void bucky_map(address_map &map) ATTR_COLD;
@@ -241,7 +243,7 @@ K053246_CB_MEMBER(moo_state::sprite_callback)
 
 K056832_CB_MEMBER(moo_state::tile_callback)
 {
-	*color = m_layer_colorbase[layer] | (*color >> 2 & 0x0f);
+	color = m_layer_colorbase[layer] | (color >> 2 & 0x0f);
 }
 
 VIDEO_START_MEMBER(moo_state,moo)
@@ -274,11 +276,11 @@ VIDEO_START_MEMBER(moo_state,bucky)
 	m_k056832->set_layer_offs(3,  6, 0);
 }
 
-uint32_t moo_state::screen_update_moo(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+uint32_t moo_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	static const int K053251_CI[4] = { k053251_device::CI1, k053251_device::CI2, k053251_device::CI3, k053251_device::CI4 };
 	int layers[3];
-	int new_colorbase, plane, dirty, alpha;
+	int plane, dirty;
 
 	m_sprite_colorbase = m_k053251->get_palette_index(k053251_device::CI0);
 	m_layer_colorbase[0] = 0x70;
@@ -287,7 +289,7 @@ uint32_t moo_state::screen_update_moo(screen_device &screen, bitmap_rgb32 &bitma
 	{
 		for (plane = 1; plane < 4; plane++)
 		{
-			new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
+			const int new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
 			if (m_layer_colorbase[plane] != new_colorbase)
 			{
 				m_layer_colorbase[plane] = new_colorbase;
@@ -299,7 +301,7 @@ uint32_t moo_state::screen_update_moo(screen_device &screen, bitmap_rgb32 &bitma
 	{
 		for (dirty = 0, plane = 1; plane < 4; plane++)
 		{
-			new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
+			const int new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
 			if (m_layer_colorbase[plane] != new_colorbase)
 			{
 				m_layer_colorbase[plane] = new_colorbase;
@@ -333,7 +335,7 @@ uint32_t moo_state::screen_update_moo(screen_device &screen, bitmap_rgb32 &bitma
 	// There is probably a control bit somewhere to turn off alpha blending.
 	m_alpha_enabled = m_k054338->register_r(K338_REG_CONTROL) & K338_CTL_MIXPRI; // DUMMY
 
-	alpha = (m_alpha_enabled) ? m_k054338->set_alpha_level(1) & 0xff : 255;
+	const int alpha = (m_alpha_enabled) ? m_k054338->set_alpha_level(1) & 0xff : 255;
 
 	if (alpha > 0)
 		m_k056832->tilemap_draw(screen, bitmap, cliprect, layers[2], TILEMAP_DRAW_ALPHA(alpha), 4);
@@ -364,14 +366,11 @@ void moo_state::control2_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 
 	ioport("EEPROMOUT")->write(m_cur_control2, 0xff);
 
-	if (m_cur_control2 & 0x100)
-		m_k053246->k053246_set_objcha_line(ASSERT_LINE);
-	else
-		m_k053246->k053246_set_objcha_line(CLEAR_LINE);
+	m_k053246->k053246_set_objcha_line(BIT(m_cur_control2, 8) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
-void moo_state::moo_objdma()
+void moo_state::objdma()
 {
 	// TODO: implement sprite dma in k053246_k053247_k055673.cpp
 	int num_inactive;
@@ -407,7 +406,7 @@ void moo_state::moo_objdma()
 
 TIMER_CALLBACK_MEMBER(moo_state::dmaend_callback)
 {
-	if (m_cur_control2 & 0x800)
+	if (BIT(m_cur_control2, 11))
 		m_maincpu->set_input_line(4, HOLD_LINE);
 }
 
@@ -415,20 +414,20 @@ INTERRUPT_GEN_MEMBER(moo_state::moo_interrupt)
 {
 	if (m_k053246->k053246_is_irq_enabled())
 	{
-		moo_objdma();
+		objdma();
 
 		// schedule DMA end interrupt (delay shortened to catch up with V-blank)
 		m_dmaend_timer->adjust(attotime::from_usec(MOO_DMADELAY));
 	}
 
 	// trigger V-blank interrupt
-	if (m_cur_control2 & 0x20)
+	if (BIT(m_cur_control2, 5))
 		device.execute().set_input_line(5, HOLD_LINE);
 }
 
 INTERRUPT_GEN_MEMBER(moo_state::moobl_interrupt)
 {
-	moo_objdma();
+	objdma();
 
 	// schedule DMA end interrupt (delay shortened to catch up with V-blank)
 	m_dmaend_timer->adjust(attotime::from_usec(MOO_DMADELAY));
@@ -444,7 +443,7 @@ void moo_state::sound_irq_w(uint16_t data)
 
 void moo_state::sound_bankswitch_w(uint8_t data)
 {
-	membank("bank1")->set_base(memregion("soundcpu")->base() + 0x10000 + (data&0xf)*0x4000);
+	m_soundbank->set_entry(data & 0xf);
 }
 
 
@@ -617,7 +616,7 @@ void moo_state::bucky_map(address_map &map)
 void moo_state::sound_map(address_map &map)
 {
 	map(0x0000, 0x7fff).rom();
-	map(0x8000, 0xbfff).bankr("bank1");
+	map(0x8000, 0xbfff).bankr("soundbank");
 	map(0xc000, 0xdfff).ram();
 	map(0xe000, 0xe22f).rw(m_k054539, FUNC(k054539_device::read), FUNC(k054539_device::write));
 	map(0xec00, 0xec01).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
@@ -682,6 +681,11 @@ INPUT_PORTS_END
 
 void moo_state::machine_start()
 {
+	if (m_soundcpu && m_soundbank)
+	{
+		m_soundbank->configure_entries(0, 16, memregion("soundcpu")->base(), 0x4000);
+		m_soundbank->set_entry(0);
+	}
 	save_item(NAME(m_cur_control2));
 	save_item(NAME(m_alpha_enabled));
 	save_item(NAME(m_sprite_colorbase));
@@ -732,7 +736,7 @@ void moo_state::moo(machine_config &config)
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(1200)); // should give IRQ4 sufficient time to update scroll registers
 	m_screen->set_size(64*8, 32*8);
 	m_screen->set_visarea(40, 40+384-1, 16, 16+224-1);
-	m_screen->set_screen_update(FUNC(moo_state::screen_update_moo));
+	m_screen->set_screen_update(FUNC(moo_state::screen_update));
 
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 2048);
 	m_palette->enable_shadows();
@@ -784,7 +788,7 @@ void moo_state::moobl(machine_config &config)
 	m_screen->set_vblank_time(ATTOSECONDS_IN_USEC(1200)); // should give IRQ4 sufficient time to update scroll registers
 	m_screen->set_size(64*8, 32*8);
 	m_screen->set_visarea(40, 40+384-1, 16, 16+224-1);
-	m_screen->set_screen_update(FUNC(moo_state::screen_update_moo));
+	m_screen->set_screen_update(FUNC(moo_state::screen_update));
 
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 2048);
 	m_palette->enable_shadows();
@@ -840,10 +844,9 @@ ROM_START( moomesa ) /* Version EA */
 	ROM_LOAD16_BYTE( "151a03.t5", 0x100000, 0x40000, CRC(c896d3ea) SHA1(ea83c63e2c3dbc4f1e1d49f1852a78ffc1f0ea4b) )
 	ROM_LOAD16_BYTE( "151a04.t6", 0x100001, 0x40000, CRC(3b24706a) SHA1(c2a77944284e35ff57f0774fa7b67e53d3b63e1f) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "151a07.f5",  0x000000, 0x040000, CRC(cde247fc) SHA1(cdee0228db55d53ae43d7cd2d9001dadd20c2c61) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -875,10 +878,9 @@ ROM_START( moomesauac ) /* Version UA */
 	ROM_LOAD16_BYTE( "151a03.t5", 0x100000, 0x40000, CRC(c896d3ea) SHA1(ea83c63e2c3dbc4f1e1d49f1852a78ffc1f0ea4b) )
 	ROM_LOAD16_BYTE( "151a04.t6", 0x100001, 0x40000, CRC(3b24706a) SHA1(c2a77944284e35ff57f0774fa7b67e53d3b63e1f) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "151a07.f5",  0x000000, 0x040000, CRC(cde247fc) SHA1(cdee0228db55d53ae43d7cd2d9001dadd20c2c61) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -910,10 +912,9 @@ ROM_START( moomesauab ) /* Version UA */
 	ROM_LOAD16_BYTE( "151a03.t5", 0x100000, 0x40000, CRC(c896d3ea) SHA1(ea83c63e2c3dbc4f1e1d49f1852a78ffc1f0ea4b) )
 	ROM_LOAD16_BYTE( "151a04.t6", 0x100001, 0x40000, CRC(3b24706a) SHA1(c2a77944284e35ff57f0774fa7b67e53d3b63e1f) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "151a07.f5",  0x000000, 0x040000, CRC(cde247fc) SHA1(cdee0228db55d53ae43d7cd2d9001dadd20c2c61) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -945,10 +946,9 @@ ROM_START( moomesaaab ) /* Version AA */
 	ROM_LOAD16_BYTE( "151a03.t5", 0x100000, 0x40000, CRC(c896d3ea) SHA1(ea83c63e2c3dbc4f1e1d49f1852a78ffc1f0ea4b) )
 	ROM_LOAD16_BYTE( "151a04.t6", 0x100001, 0x40000, CRC(3b24706a) SHA1(c2a77944284e35ff57f0774fa7b67e53d3b63e1f) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "151a07.f5",  0x000000, 0x040000, CRC(cde247fc) SHA1(cdee0228db55d53ae43d7cd2d9001dadd20c2c61) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -980,10 +980,9 @@ ROM_START( bucky ) /* Version EA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -1016,10 +1015,9 @@ ROM_START( buckyea ) /* Version EA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -1052,10 +1050,9 @@ ROM_START( buckyjaa ) /* Version JA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -1088,10 +1085,9 @@ ROM_START( buckyuab ) /* Version UA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -1124,10 +1120,9 @@ ROM_START( buckyaab ) /* Version AA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */
@@ -1160,10 +1155,9 @@ ROM_START( buckyaa ) /* Version AA */
 	ROM_LOAD16_BYTE( "173a03.t5", 0x200000, 0x20000, CRC(cd724026) SHA1(525445499604b713da4d8bc0a88e428654ceab95) )
 	ROM_LOAD16_BYTE( "173a04.t6", 0x200001, 0x20000, CRC(7dd54d6f) SHA1(b0ee8ec445b92254bca881eefd4449972fed506a) )
 
-	ROM_REGION( 0x050000, "soundcpu", 0 )
+	ROM_REGION( 0x040000, "soundcpu", 0 )
 	/* Z80 sound program */
 	ROM_LOAD( "173a07.f5",  0x000000, 0x040000, CRC(4cdaee71) SHA1(bdc05d4475415f6fac65d7cdbc48df398e57845e) )
-	ROM_RELOAD(             0x010000, 0x040000 )
 
 	ROM_REGION( 0x200000, "k056832", 0 )
 	/* tilemaps */

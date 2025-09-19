@@ -284,7 +284,8 @@ public:
 		m_k053244(*this, "k053244"),
 		m_k054321(*this, "k054321"),
 		m_screen(*this, "screen"),
-		m_palette(*this, "palette")
+		m_palette(*this, "palette"),
+		m_mainbank(*this, "mainbank")
 	{ }
 
 	void lethalen(machine_config &config);
@@ -296,9 +297,9 @@ protected:
 
 private:
 	/* video-related */
-	int m_layer_colorbase[4]{};
-	int m_sprite_colorbase = 0;
-	int m_back_colorbase = 0;
+	uint16_t m_layer_colorbase[4]{};
+	uint16_t m_sprite_colorbase = 0;
+	uint16_t m_back_colorbase = 0;
 
 	/* misc */
 	uint8_t m_cur_control2 = 0U;
@@ -312,6 +313,7 @@ private:
 	required_device<k054321_device> m_k054321;
 	required_device<screen_device> m_screen;
 	required_device<palette_device> m_palette;
+	required_memory_bank m_mainbank;
 
 	void control2_w(uint8_t data);
 	uint8_t sound_irq_r();
@@ -326,8 +328,8 @@ private:
 	K053244_CB_MEMBER(sprite_callback);
 	K056832_CB_MEMBER(tile_callback);
 	void bank4000_map(address_map &map) ATTR_COLD;
-	void le_main(address_map &map) ATTR_COLD;
-	void le_sound(address_map &map) ATTR_COLD;
+	void main_map(address_map &map) ATTR_COLD;
+	void sound_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -372,7 +374,7 @@ K053244_CB_MEMBER(lethal_state::sprite_callback)
 
 K056832_CB_MEMBER(lethal_state::tile_callback)
 {
-	*color = m_layer_colorbase[layer] + ((*color & 0x3c) << 2);
+	color = m_layer_colorbase[layer] + ((color & 0x3c) << 2);
 }
 
 void lethal_state::palette_control_w(offs_t offset, uint8_t data)
@@ -492,7 +494,7 @@ void lethal_state::sound_irq_w(uint8_t data)
 
 void lethal_state::bankswitch_w(uint8_t data)
 {
-	membank("bank1")->set_entry(data);
+	m_mainbank->set_entry(data);
 }
 
 uint8_t lethal_state::guns_r(offs_t offset)
@@ -528,9 +530,9 @@ uint8_t lethal_state::gunsaux_r()
 	return res;
 }
 
-void lethal_state::le_main(address_map &map)
+void lethal_state::main_map(address_map &map)
 {
-	map(0x0000, 0x1fff).bankr("bank1");
+	map(0x0000, 0x1fff).bankr(m_mainbank);
 	map(0x2000, 0x3fff).ram();             // work RAM
 	map(0x4000, 0x7fff).m(m_bank4000, FUNC(address_map_bank_device::amap8));
 	map(0x4000, 0x43ff).unmaprw(); // first 0x400 bytes of palette RAM are inaccessible
@@ -570,7 +572,7 @@ void lethal_state::bank4000_map(address_map &map)
 	map(0x4000, 0x7fff).mirror(0x8000).ram().w(FUNC(lethal_state::palette_w)).share("palette");
 }
 
-void lethal_state::le_sound(address_map &map)
+void lethal_state::sound_map(address_map &map)
 {
 	map(0x0000, 0xefff).rom();
 	map(0xf000, 0xf7ff).ram();
@@ -657,8 +659,8 @@ INPUT_PORTS_END
 
 void lethal_state::machine_start()
 {
-	membank("bank1")->configure_entries(0, 0x20, memregion("maincpu")->base(), 0x2000);
-	membank("bank1")->set_entry(0);
+	m_mainbank->configure_entries(0, 0x20, memregion("maincpu")->base(), 0x2000);
+	m_mainbank->set_entry(0);
 
 	save_item(NAME(m_cur_control2));
 	save_item(NAME(m_layer_colorbase));
@@ -681,10 +683,10 @@ void lethal_state::lethalen(machine_config &config)
 {
 	// basic machine hardware
 	HD6309E(config, m_maincpu, 24_MHz_XTAL / 8); // verified on pcb
-	m_maincpu->set_addrmap(AS_PROGRAM, &lethal_state::le_main);
+	m_maincpu->set_addrmap(AS_PROGRAM, &lethal_state::main_map);
 
 	Z80(config, m_soundcpu, 24_MHz_XTAL / 4); // verified on pcb
-	m_soundcpu->set_addrmap(AS_PROGRAM, &lethal_state::le_sound);
+	m_soundcpu->set_addrmap(AS_PROGRAM, &lethal_state::sound_map);
 
 	ADDRESS_MAP_BANK(config, m_bank4000).set_map(&lethal_state::bank4000_map).set_options(ENDIANNESS_BIG, 8, 16, 0x4000);
 

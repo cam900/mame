@@ -16,15 +16,14 @@
 // reading the original raw data
 void mystwarr_state::decode_tiles()
 {
-	uint8_t *s = memregion("k056832")->base();
-	int len = memregion("k056832")->bytes();
-	uint8_t *pFinish = s + len - 3;
-	uint8_t *d;
+	const uint8_t *s = memregion("k056832")->base();
+	const int len = memregion("k056832")->bytes();
+	const uint8_t *pFinish = s + len - 3;
 
-	int gfxnum = m_k056832->get_gfx_num();
+	const int gfxnum = m_k056832->get_gfx_num();
 
 	m_decoded = std::make_unique<uint8_t[]>(len);
-	d = m_decoded.get();
+	uint8_t *d = m_decoded.get();
 
 	// now convert the data into a drawable format so we can decode it
 	while (s < pFinish)
@@ -33,13 +32,13 @@ void mystwarr_state::decode_tiles()
 		       (p3 p1 p2 p0 p5)
 		       (the original ROMs are stored as chunky for the first 4 bits
 		       and the 5th bit is planar, which is undecodable as-is) */
-		int d0 = ((s[0]&0x80)   )|((s[0]&0x08)<<3)|((s[1]&0x80)>>2)|((s[1]&0x08)<<1)|
+		const int d0 = ((s[0]&0x80)   )|((s[0]&0x08)<<3)|((s[1]&0x80)>>2)|((s[1]&0x08)<<1)|
 					((s[2]&0x80)>>4)|((s[2]&0x08)>>1)|((s[3]&0x80)>>6)|((s[3]&0x08)>>3);
-		int d1 = ((s[0]&0x40)<<1)|((s[0]&0x04)<<4)|((s[1]&0x40)>>1)|((s[1]&0x04)<<2)|
+		const int d1 = ((s[0]&0x40)<<1)|((s[0]&0x04)<<4)|((s[1]&0x40)>>1)|((s[1]&0x04)<<2)|
 					((s[2]&0x40)>>3)|((s[2]&0x04)   )|((s[3]&0x40)>>5)|((s[3]&0x04)>>2);
-		int d2 = ((s[0]&0x20)<<2)|((s[0]&0x02)<<5)|((s[1]&0x20)   )|((s[1]&0x02)<<3)|
+		const int d2 = ((s[0]&0x20)<<2)|((s[0]&0x02)<<5)|((s[1]&0x20)   )|((s[1]&0x02)<<3)|
 					((s[2]&0x20)>>2)|((s[2]&0x02)<<1)|((s[3]&0x20)>>4)|((s[3]&0x02)>>1);
-		int d3 = ((s[0]&0x10)<<3)|((s[0]&0x01)<<6)|((s[1]&0x10)<<1)|((s[1]&0x01)<<4)|
+		const int d3 = ((s[0]&0x10)<<3)|((s[0]&0x01)<<6)|((s[1]&0x10)<<1)|((s[1]&0x01)<<4)|
 					((s[2]&0x10)>>1)|((s[2]&0x01)<<2)|((s[3]&0x10)>>3)|((s[3]&0x01)   );
 
 		d[0] = d3;
@@ -62,11 +61,11 @@ K056832_CB_MEMBER(mystwarr_state::mystwarr_tile_callback)
 	const uint8_t mix_code = attr >> 2 & 0b11;
 	if (mix_code)
 	{
-		*priority = 1;
+		priority = 1;
 		m_last_alpha_tile_mix_code = mix_code;
 	}
 
-	*color = m_layer_colorbase[layer] | (*color >> 1 & 0x0f);
+	color = m_layer_colorbase[layer] | (color >> 1 & 0x0f);
 }
 
 K056832_CB_MEMBER(mystwarr_state::viostorm_tile_callback)
@@ -75,23 +74,23 @@ K056832_CB_MEMBER(mystwarr_state::viostorm_tile_callback)
 	const uint8_t mix_code = attr & 0b11;
 	if (mix_code)
 	{
-		*priority = 1;
+		priority = 1;
 		m_last_alpha_tile_mix_code = mix_code;
 	}
 
-	*color = m_layer_colorbase[layer] | (*color >> 2 & 0x0f);
+	color = m_layer_colorbase[layer] | (color >> 2 & 0x0f);
 }
 
 // for games with 5bpp tile data
 K056832_CB_MEMBER(mystwarr_state::game5bpp_tile_callback)
 {
-	*color = m_layer_colorbase[layer] | (*color >> 1 & 0x1e);
+	color = m_layer_colorbase[layer] | (color >> 1 & 0x1e);
 }
 
 // for games with 4bpp tile data
 K056832_CB_MEMBER(mystwarr_state::game4bpp_tile_callback)
 {
-	*color = m_layer_colorbase[layer] | (*color >> 2 & 0x0f);
+	color = m_layer_colorbase[layer] | (color >> 2 & 0x0f);
 }
 
 K055673_CB_MEMBER(mystwarr_state::mystwarr_sprite_callback)
@@ -138,8 +137,8 @@ K055673_CB_MEMBER(mystwarr_state::martchmp_sprite_callback)
 TILE_GET_INFO_MEMBER(mystwarr_state::get_gai_936_tile_info)
 {
 	int tileno, colour;
-	uint8_t *ROM = memregion("gfx4")->base();
-	uint8_t *dat1 = ROM, *dat2 = ROM + 0x20000, *dat3 = ROM + 0x60000;
+	const uint8_t *const ROM = memregion("gfx4")->base();
+	const uint8_t *const dat1 = ROM, *dat2 = ROM + 0x20000, *dat3 = ROM + 0x60000;
 
 	tileno = dat3[tile_index] | ((dat2[tile_index] & 0x3f) << 8);
 
@@ -148,7 +147,7 @@ TILE_GET_INFO_MEMBER(mystwarr_state::get_gai_936_tile_info)
 	else
 		colour = ((dat1[tile_index >> 1] >> 4) & 0xf);
 
-	if (dat2[tile_index] & 0x80) colour |= 0x10;
+	if (BIT(dat2[tile_index], 7)) colour |= 0x10;
 
 	colour |= m_sub1_colorbase << 4;
 
@@ -171,19 +170,19 @@ VIDEO_START_MEMBER(mystwarr_state, gaiapols)
 	K053936_wraparound_enable(0, 1);
 	K053936GP_set_offset(0, -10,  0); // floor tiles in demo loop2 (Elaine vs. boss)
 
-	m_ult_936_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(mystwarr_state::get_gai_936_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
-	m_ult_936_tilemap->set_transparent_pen(0);
+	m_ddd_936_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(mystwarr_state::get_gai_936_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
+	m_ddd_936_tilemap->set_transparent_pen(0);
 }
 
-TILE_GET_INFO_MEMBER(mystwarr_state::get_ult_936_tile_info)
+TILE_GET_INFO_MEMBER(mystwarr_state::get_ddd_936_tile_info)
 {
-	uint8_t *ROM = memregion("gfx4")->base();
-	uint8_t *dat1 = ROM, *dat2 = ROM + 0x40000;
+	const uint8_t *const ROM = memregion("gfx4")->base();
+	const uint8_t *const dat1 = ROM, *dat2 = ROM + 0x40000;
 
 	int tileno = dat2[tile_index] | ((dat1[tile_index] & 0x1f) << 8);
 	int colour = m_sub1_colorbase;
 
-	tileinfo.set(0, tileno, colour, (dat1[tile_index] & 0x40) ? TILE_FLIPX : 0);
+	tileinfo.set(0, tileno, colour, BIT(dat1[tile_index], 6) ? TILE_FLIPX : 0);
 }
 
 VIDEO_START_MEMBER(mystwarr_state, dadandrn)
@@ -204,8 +203,8 @@ VIDEO_START_MEMBER(mystwarr_state, dadandrn)
 	K053936_wraparound_enable(0, 1);
 	K053936GP_set_offset(0, -8, 0); // Brainy's laser
 
-	m_ult_936_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(mystwarr_state::get_ult_936_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
-	m_ult_936_tilemap->set_transparent_pen(0);
+	m_ddd_936_tilemap = &machine().tilemap().create(*m_gfxdecode, tilemap_get_info_delegate(*this, FUNC(mystwarr_state::get_ddd_936_tile_info)), TILEMAP_SCAN_ROWS, 16, 16, 512, 512);
+	m_ddd_936_tilemap->set_transparent_pen(0);
 }
 
 VIDEO_START_MEMBER(mystwarr_state, mystwarr)
@@ -273,14 +272,14 @@ uint32_t mystwarr_state::screen_update_mystwarr(screen_device &screen, bitmap_rg
 {
 	for (int i = 0; i < 4; i++)
 	{
-		int old = m_layer_colorbase[i];
+		const int old = m_layer_colorbase[i];
 		m_layer_colorbase[i] = m_k055555->K055555_get_palette_index(i) << 4;
 		if (old != m_layer_colorbase[i]) m_k056832->mark_plane_dirty(i);
 	}
 
 	m_sprite_colorbase = m_k055555->K055555_get_palette_index(4) << 5;
 
-	int mixerflags = m_last_alpha_tile_mix_code << 30;
+	const int mixerflags = m_last_alpha_tile_mix_code << 30;
 	konamigx_mixer(screen, bitmap, cliprect, nullptr, 0, nullptr, 0, mixerflags, nullptr, 0);
 	return 0;
 }
@@ -289,14 +288,14 @@ uint32_t mystwarr_state::screen_update_metamrph(screen_device &screen, bitmap_rg
 {
 	for (int i = 0; i < 4; i++)
 	{
-		int old = m_layer_colorbase[i];
+		const int old = m_layer_colorbase[i];
 		m_layer_colorbase[i] = m_k055555->K055555_get_palette_index(i) << 4;
 		if (old != m_layer_colorbase[i]) m_k056832->mark_plane_dirty(i);
 	}
 
 	m_sprite_colorbase = m_k055555->K055555_get_palette_index(4) << 4;
 
-	int mixerflags = m_last_alpha_tile_mix_code << 30;
+	const int mixerflags = m_last_alpha_tile_mix_code << 30;
 	konamigx_mixer(screen, bitmap, cliprect, nullptr, GXSUB_K053250 | GXSUB_4BPP, nullptr, 0, mixerflags, nullptr, 0);
 	return 0;
 }
@@ -305,18 +304,18 @@ uint32_t mystwarr_state::screen_update_martchmp(screen_device &screen, bitmap_rg
 {
 	for (int i = 0; i < 4; i++)
 	{
-		int old = m_layer_colorbase[i];
+		const int old = m_layer_colorbase[i];
 		m_layer_colorbase[i] = m_k055555->K055555_get_palette_index(i) << 4;
 		if (old != m_layer_colorbase[i]) m_k056832->mark_plane_dirty(i);
 	}
 
-	m_sprite_colorbase = m_k055555->K055555_get_palette_index(4)<<5;
+	m_sprite_colorbase = m_k055555->K055555_get_palette_index(4) << 5;
 
 	m_cbparam = m_k055555->K055555_read_register(K55_PRIINP_8);
 	m_oinprion = m_k055555->K055555_read_register(K55_OINPRI_ON);
 
 	// not quite right
-	int blendmode = (m_oinprion == 0xef && m_k054338->register_r(K338_REG_PBLEND)) ? ((1 << 16 | GXMIX_BLEND_FORCE) << 2) : 0;
+	const int blendmode = (m_oinprion == 0xef && m_k054338->register_r(K338_REG_PBLEND)) ? ((1 << 16 | GXMIX_BLEND_FORCE) << 2) : 0;
 
 	konamigx_mixer(screen, bitmap, cliprect, nullptr, 0, nullptr, 0, blendmode, nullptr, 0);
 	return 0;
@@ -328,7 +327,7 @@ void mystwarr_state::ddd_053936_enable_w(offs_t offset, uint16_t data, uint16_t 
 {
 	if (ACCESSING_BITS_8_15)
 	{
-		m_roz_enable = data & 0x0100;
+		m_roz_enable = BIT(data, 8);
 		m_roz_rombank = (data & 0xc000) >> 14;
 	}
 }
@@ -380,8 +379,8 @@ void mystwarr_state::ddd_053936_clip_w(offs_t offset, uint16_t data, uint16_t me
 // reference: 223e5c in gaiapolis (ROMs 34j and 36m)
 uint16_t mystwarr_state::gai_053936_tilerom_0_r(offs_t offset)
 {
-	uint8_t *ROM1 = (uint8_t *)memregion("gfx4")->base();
-	uint8_t *ROM2 = (uint8_t *)memregion("gfx4")->base();
+	const uint8_t *ROM1 = (uint8_t *)memregion("gfx4")->base();
+	const uint8_t *ROM2 = (uint8_t *)memregion("gfx4")->base();
 
 	ROM1 += 0x20000;
 	ROM2 += 0x20000 + 0x40000;
@@ -391,8 +390,8 @@ uint16_t mystwarr_state::gai_053936_tilerom_0_r(offs_t offset)
 
 uint16_t mystwarr_state::ddd_053936_tilerom_0_r(offs_t offset)
 {
-	uint8_t *ROM1 = (uint8_t *)memregion("gfx4")->base();
-	uint8_t *ROM2 = (uint8_t *)memregion("gfx4")->base();
+	const uint8_t *ROM1 = (uint8_t *)memregion("gfx4")->base();
+	const uint8_t *ROM2 = (uint8_t *)memregion("gfx4")->base();
 
 	ROM2 += 0x40000;
 
@@ -402,7 +401,7 @@ uint16_t mystwarr_state::ddd_053936_tilerom_0_r(offs_t offset)
 // reference: 223e1a in gaiapolis (ROM 36j)
 uint16_t mystwarr_state::ddd_053936_tilerom_1_r(offs_t offset)
 {
-	uint8_t *ROM = (uint8_t *)memregion("gfx4")->base();
+	const uint8_t *ROM = (uint8_t *)memregion("gfx4")->base();
 
 	return ROM[offset/2];
 }
@@ -410,7 +409,7 @@ uint16_t mystwarr_state::ddd_053936_tilerom_1_r(offs_t offset)
 // reference: 223db0 in gaiapolis (ROMs 32n, 29n, 26n)
 uint16_t mystwarr_state::gai_053936_tilerom_2_r(offs_t offset)
 {
-	uint8_t *ROM = (uint8_t *)memregion("gfx3")->base();
+	const uint8_t *ROM = (uint8_t *)memregion("gfx3")->base();
 
 	offset += (m_roz_rombank * 0x100000);
 
@@ -419,7 +418,7 @@ uint16_t mystwarr_state::gai_053936_tilerom_2_r(offs_t offset)
 
 uint16_t mystwarr_state::ddd_053936_tilerom_2_r(offs_t offset)
 {
-	uint8_t *ROM = (uint8_t *)memregion("gfx3")->base();
+	const uint8_t *ROM = (uint8_t *)memregion("gfx3")->base();
 
 	offset += (m_roz_rombank * 0x100000);
 
@@ -473,12 +472,12 @@ uint32_t mystwarr_state::screen_update_dadandrn(screen_device &screen, bitmap_rg
 
 	if (m_last_psac_colorbase != m_sub1_colorbase)
 	{
-		m_ult_936_tilemap->mark_all_dirty();
+		m_ddd_936_tilemap->mark_all_dirty();
 
 		if (MW_VERBOSE)
 			popmessage("K053936: PSAC colorbase changed");
 	}
 
-	konamigx_mixer(screen, bitmap, cliprect, (m_roz_enable) ? m_ult_936_tilemap : nullptr, rozmode, nullptr, 0, 0, nullptr, 0);
+	konamigx_mixer(screen, bitmap, cliprect, (m_roz_enable) ? m_ddd_936_tilemap : nullptr, rozmode, nullptr, 0, 0, nullptr, 0);
 	return 0;
 }

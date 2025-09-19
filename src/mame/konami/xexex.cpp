@@ -212,17 +212,17 @@ private:
 	required_memory_bank m_z80bank;
 
 	/* video-related */
-	int        m_layer_colorbase[4]{};
-	int        m_sprite_colorbase = 0;
-	int        m_layerpri[4]{};
-	int        m_cur_alpha = 0;
+	uint16_t   m_layer_colorbase[4]{};
+	uint16_t   m_sprite_colorbase = 0;
+	uint8_t    m_layerpri[4]{};
+	int32_t    m_cur_alpha = 0;
 
 	/* misc */
 	uint16_t   m_cur_control2 = 0;
-	int        m_suspension_active = 0;
-	int        m_resume_trigger = 0;
+	int32_t    m_suspension_active = 0;
+	int32_t    m_resume_trigger = 0;
 	emu_timer  *m_dmadelay_timer = nullptr;
-	int        m_frame = 0;
+	int32_t    m_frame = 0;
 
 	/* devices */
 	required_device<cpu_device> m_maincpu;
@@ -243,16 +243,16 @@ private:
 
 	uint16_t spriteram_mirror_r(offs_t offset);
 	void spriteram_mirror_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
-	uint16_t xexex_waitskip_r();
+	uint16_t waitskip_r();
 	uint16_t control2_r();
 	void control2_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	void sound_irq_w(uint16_t data);
 	void sound_bankswitch_w(uint8_t data);
 
-	uint32_t screen_update_xexex(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 	TIMER_CALLBACK_MEMBER(dmaend_callback);
-	TIMER_DEVICE_CALLBACK_MEMBER(xexex_interrupt);
-	void xexex_objdma(int limiter);
+	TIMER_DEVICE_CALLBACK_MEMBER(interrupt);
+	void objdma(int limiter);
 	void parse_control2();
 	K056832_CB_MEMBER(tile_callback);
 	K053246_CB_MEMBER(sprite_callback);
@@ -267,7 +267,7 @@ K053246_CB_MEMBER(xexex_state::sprite_callback)
 {
 	// Xexex doesn't seem to use bit8 and 9 as effect selectors so this should be safe.
 	// (pdrawgfx() still needs change to fix Elaine's end-game graphics)
-	int pri = (*color & 0x3e0) >> 4;
+	const int pri = (*color & 0x3e0) >> 4;
 
 	if (pri <= m_layerpri[3])
 		*priority_mask = 0;
@@ -292,8 +292,8 @@ K056832_CB_MEMBER(xexex_state::tile_callback)
 	    ---- --x- Used, Unknown
 	    Everything else : unknown
 	*/
-	*priority = *color & 1; // alpha flag
-	*color = m_layer_colorbase[layer] | (*color >> 2 & 0x0f);
+	priority = BIT(color, 0); // alpha flag
+	color = m_layer_colorbase[layer] | (color >> 2 & 0x0f);
 }
 
 void xexex_state::video_start()
@@ -309,19 +309,18 @@ void xexex_state::video_start()
 	m_k056832->set_layer_offs(3,  6, 16);
 }
 
-uint32_t xexex_state::screen_update_xexex(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+uint32_t xexex_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	static const int K053251_CI[4] = { k053251_device::CI1, k053251_device::CI2, k053251_device::CI3, k053251_device::CI4 };
 	int layer[4];
-	int bg_colorbase, new_colorbase, plane, alpha;
 
 	m_sprite_colorbase = m_k053251->get_palette_index(k053251_device::CI0);
-	bg_colorbase = m_k053251->get_palette_index(k053251_device::CI1);
+	const int bg_colorbase = m_k053251->get_palette_index(k053251_device::CI1);
 	m_layer_colorbase[0] = 0x70;
 
-	for (plane = 1; plane < 4; plane++)
+	for (int plane = 1; plane < 4; plane++)
 	{
-		new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
+		const int new_colorbase = m_k053251->get_palette_index(K053251_CI[plane]);
 		if (m_layer_colorbase[plane] != new_colorbase)
 		{
 			m_layer_colorbase[plane] = new_colorbase;
@@ -345,7 +344,7 @@ uint32_t xexex_state::screen_update_xexex(screen_device &screen, bitmap_rgb32 &b
 
 	screen.priority().fill(0, cliprect);
 
-	for (plane = 0; plane < 4; plane++)
+	for (int plane = 0; plane < 4; plane++)
 	{
 		if (layer[plane] < 0)
 		{
@@ -365,7 +364,7 @@ uint32_t xexex_state::screen_update_xexex(screen_device &screen, bitmap_rgb32 &b
 
 	if (m_cur_alpha)
 	{
-		alpha = m_k054338->set_alpha_level(1) & 0xff;
+		const int alpha = m_k054338->set_alpha_level(1) & 0xff;
 
 		if (alpha > 0)
 		{
@@ -407,7 +406,7 @@ void xexex_state::k053247_scattered_word_w(offs_t offset, uint16_t data, uint16_
 #endif
 
 
-void xexex_state::xexex_objdma(int limiter)
+void xexex_state::objdma(int limiter)
 {
 	// TODO: implement sprite dma in k053246_k053247_k055673.cpp
 	int counter, num_inactive;
@@ -450,7 +449,7 @@ void xexex_state::spriteram_mirror_w(offs_t offset, uint16_t data, uint16_t mem_
 	COMBINE_DATA(m_spriteram + offset);
 }
 
-uint16_t xexex_state::xexex_waitskip_r()
+uint16_t xexex_state::waitskip_r()
 {
 	if (m_maincpu->pc() == 0x1158)
 	{
@@ -473,10 +472,10 @@ void xexex_state::parse_control2()
 	ioport("EEPROMOUT")->write(m_cur_control2, 0xff);
 
 	/* bit 8 = enable sprite ROM reading */
-	m_k053246->k053246_set_objcha_line((m_cur_control2 & 0x0100) ? ASSERT_LINE : CLEAR_LINE);
+	m_k053246->k053246_set_objcha_line(BIT(m_cur_control2, 8) ? ASSERT_LINE : CLEAR_LINE);
 
 	/* bit 9 = disable alpha channel on K054157 plane 0 (under investigation) */
-	m_cur_alpha = !(m_cur_control2 & 0x200);
+	m_cur_alpha = BIT(~m_cur_control2, 9);
 }
 
 uint16_t xexex_state::control2_r()
@@ -511,7 +510,7 @@ K054539_CB_MEMBER(xexex_state::ym_set_mixing)
 
 TIMER_CALLBACK_MEMBER(xexex_state::dmaend_callback)
 {
-	if (m_cur_control2 & 0x0040)
+	if (BIT(m_cur_control2, 6))
 	{
 		// foul-proof (CPU0 could be deactivated while we wait)
 		if (m_suspension_active)
@@ -526,9 +525,9 @@ TIMER_CALLBACK_MEMBER(xexex_state::dmaend_callback)
 	}
 }
 
-TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::xexex_interrupt)
+TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::interrupt)
 {
-	int scanline = param;
+	const int scanline = param;
 
 	if (m_suspension_active)
 	{
@@ -539,7 +538,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::xexex_interrupt)
 	if (scanline == 0)
 	{
 		// IRQ 6 is for test mode only
-		if (m_cur_control2 & 0x0020)
+		if (BIT(m_cur_control2, 5))
 			m_maincpu->set_input_line(6, HOLD_LINE);
 	}
 
@@ -548,7 +547,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::xexex_interrupt)
 		if (m_k053246->k053246_is_irq_enabled())
 		{
 			// OBJDMA starts at the beginning of V-blank
-			xexex_objdma(0);
+			objdma(0);
 
 			// schedule DMA end interrupt
 			m_dmadelay_timer->adjust(XE_DMADELAY);
@@ -556,7 +555,7 @@ TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::xexex_interrupt)
 
 		// IRQ 4 is the V-blank interrupt. It controls color, sound and
 		// vital game logics that shouldn't be interfered by frame-drop.
-		if (m_cur_control2 & 0x0800)
+		if (BIT(m_cur_control2, 11))
 			m_maincpu->set_input_line(4, HOLD_LINE);
 	}
 }
@@ -565,13 +564,13 @@ TIMER_DEVICE_CALLBACK_MEMBER(xexex_state::xexex_interrupt)
 void xexex_state::main_map(address_map &map)
 {
 	map(0x000000, 0x07ffff).rom();
-	map(0x080000, 0x08ffff).ram().share("workram");         // work RAM
+	map(0x080000, 0x08ffff).ram().share(m_workram);         // work RAM
 
 #if XE_SKIPIDLE
-	map(0x080014, 0x080015).r(FUNC(xexex_state::xexex_waitskip_r));              // helps sound CPU by giving back control as early as possible
+	map(0x080014, 0x080015).r(FUNC(xexex_state::waitskip_r));              // helps sound CPU by giving back control as early as possible
 #endif
 
-	map(0x090000, 0x097fff).ram().share("spriteram");           // K053247 sprite RAM
+	map(0x090000, 0x097fff).ram().share(m_spriteram);           // K053247 sprite RAM
 	map(0x098000, 0x09ffff).rw(FUNC(xexex_state::spriteram_mirror_r), FUNC(xexex_state::spriteram_mirror_w));   // K053247 sprite RAM mirror read
 	map(0x0c0000, 0x0c003f).w(m_k056832, FUNC(k056832_device::word_w));              // VACSET (K054157)
 	map(0x0c2000, 0x0c2007).w(m_k053246, FUNC(k053247_device::k053246_w));              // OBJSET1
@@ -610,7 +609,7 @@ void xexex_state::main_map(address_map &map)
 void xexex_state::sound_map(address_map &map)
 {
 	map(0x0000, 0x7fff).rom();
-	map(0x8000, 0xbfff).bankr("z80bank");
+	map(0x8000, 0xbfff).bankr(m_z80bank);
 	map(0xc000, 0xdfff).ram();
 	map(0xe000, 0xe22f).rw(m_k054539, FUNC(k054539_device::read), FUNC(k054539_device::write));
 	map(0xec00, 0xec01).rw("ymsnd", FUNC(ym2151_device::read), FUNC(ym2151_device::write));
@@ -691,7 +690,7 @@ void xexex_state::xexex(machine_config &config)
 	// basic machine hardware
 	M68000(config, m_maincpu, 32_MHz_XTAL / 2); // 16MHz
 	m_maincpu->set_addrmap(AS_PROGRAM, &xexex_state::main_map);
-	TIMER(config, "scantimer").configure_scanline(FUNC(xexex_state::xexex_interrupt), "screen", 0, 1);
+	TIMER(config, "scantimer").configure_scanline(FUNC(xexex_state::interrupt), "screen", 0, 1);
 
 	Z80(config, m_audiocpu, 32_MHz_XTAL / 4); // Z80E 8Mhz
 	m_audiocpu->set_addrmap(AS_PROGRAM, &xexex_state::sound_map);
@@ -703,7 +702,7 @@ void xexex_state::xexex(machine_config &config)
 	// video hardware
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(32_MHz_XTAL / 4, 512, 0+40, 384+40, 289, 0, 256); // from CCU
-	m_screen->set_screen_update(FUNC(xexex_state::screen_update_xexex));
+	m_screen->set_screen_update(FUNC(xexex_state::screen_update));
 
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 2048);
 	m_palette->enable_shadows();

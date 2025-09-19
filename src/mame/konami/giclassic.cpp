@@ -101,7 +101,7 @@ private:
 
 K056832_CB_MEMBER(giclassic_state::tile_callback)
 {
-	*color = (*color & 0xf);
+	color = (color & 0xf);
 }
 
 void giclassic_state::video_start()
@@ -123,7 +123,7 @@ uint32_t giclassic_state::screen_update_giclassic(screen_device &screen, bitmap_
 
 INTERRUPT_GEN_MEMBER(giclassic_state::giclassic_interrupt)
 {
-	if (m_control & 2)
+	if (BIT(m_control, 1))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_1, HOLD_LINE);
 		m_maincpu->set_input_line(M68K_IRQ_3, HOLD_LINE);
@@ -144,7 +144,7 @@ void giclassic_state::control_w(uint16_t data)
 
 uint16_t giclassic_state::vrom_r(offs_t offset)
 {
-	if (m_control & 8)
+	if (BIT(m_control, 3))
 	{
 		return m_k056832->piratesh_rom_r(offset + 0x1000);
 	}
@@ -171,6 +171,7 @@ INPUT_PORTS_END
 
 void giclassic_state::machine_start()
 {
+	save_item(NAME(m_control));
 }
 
 void giclassic_state::machine_reset()
@@ -230,7 +231,7 @@ uint16_t giclassicsvr_state::control_r()
 
 INTERRUPT_GEN_MEMBER(giclassicsvr_state::giclassicsvr_interrupt)
 {
-	//if (m_control & 2)
+	//if (BIT(m_control, 1))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_4, HOLD_LINE);
 		m_maincpu->set_input_line(M68K_IRQ_5, HOLD_LINE);
@@ -301,6 +302,7 @@ INPUT_PORTS_END
 
 void giclassicsvr_state::machine_start()
 {
+	save_item(NAME(m_control));
 }
 
 void giclassicsvr_state::machine_reset()

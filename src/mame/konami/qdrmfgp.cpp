@@ -97,7 +97,7 @@ private:
 	DECLARE_MACHINE_START(qdrmfgp2);
 	DECLARE_VIDEO_START(qdrmfgp2);
 
-	uint32_t screen_update_qdrmfgp(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(qdrmfgp2_interrupt);
 	TIMER_CALLBACK_MEMBER(gp2_timer_callback);
 	TIMER_DEVICE_CALLBACK_MEMBER(qdrmfgp_interrupt);
@@ -107,20 +107,20 @@ private:
 	K056832_CB_MEMBER(qdrmfgp_tile_callback);
 	K056832_CB_MEMBER(qdrmfgp2_tile_callback);
 
+	void k054539_map(address_map &map) ATTR_COLD;
 	void qdrmfgp2_map(address_map &map) ATTR_COLD;
-	void qdrmfgp_k054539_map(address_map &map) ATTR_COLD;
 	void qdrmfgp_map(address_map &map) ATTR_COLD;
 };
 
 
 K056832_CB_MEMBER(qdrmfgp_state::qdrmfgp_tile_callback)
 {
-	*color = ((*color>>2) & 0x0f) | m_pal;
+	color = ((color >> 2) & 0x0f) | m_pal;
 }
 
 K056832_CB_MEMBER(qdrmfgp_state::qdrmfgp2_tile_callback)
 {
-	*color = (*color>>1) & 0x7f;
+	color = (color >> 1) & 0x7f;
 }
 
 /***************************************************************************
@@ -155,7 +155,7 @@ VIDEO_START_MEMBER(qdrmfgp_state,qdrmfgp2)
 
 ***************************************************************************/
 
-uint32_t qdrmfgp_state::screen_update_qdrmfgp(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
+uint32_t qdrmfgp_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	bitmap.fill(m_palette->black_pen(), cliprect);
 
@@ -175,7 +175,7 @@ uint32_t qdrmfgp_state::screen_update_qdrmfgp(screen_device &screen, bitmap_ind1
 
 uint16_t qdrmfgp_state::inputs_r()
 {
-	return m_control & 0x0080 ? m_inputs_port->read() : m_dsw_port->read();
+	return BIT(m_control, 7) ? m_inputs_port->read() : m_dsw_port->read();
 }
 
 ioport_value qdrmfgp_state::battery_sensor_r()
@@ -202,27 +202,26 @@ void qdrmfgp_state::gp_control_w(offs_t offset, uint16_t data, uint16_t mem_mask
 	COMBINE_DATA(&m_control);
 	m_pal = m_control & 0x70;
 
-	if (!(m_control & 1))
+	if (BIT(~m_control, 0))
 		m_maincpu->set_input_line(M68K_IRQ_1, CLEAR_LINE);
 
-	if (!(m_control & 2))
+	if (BIT(~m_control, 1))
 		m_maincpu->set_input_line(M68K_IRQ_2, CLEAR_LINE);
 
-	if (!(m_control & 4))
+	if (BIT(~m_control, 2))
 		m_maincpu->set_input_line(M68K_IRQ_3, CLEAR_LINE);
 
-	if (!(m_control & 8))
+	if (BIT(~m_control, 3))
 		m_maincpu->set_input_line(M68K_IRQ_4, CLEAR_LINE);
 
-	if (m_control & 0x0100)
+	if (BIT(m_control, 8))
 	{
-		int vol = m_nvram[0x10] & 0xff;
+		const int vol = m_nvram[0x10] & 0xff;
 		if (vol)
 		{
-			int i;
-			double gain = vol / 90.0;
+			const double gain = vol / 90.0;
 
-			for (i=0; i<8; i++)
+			for (int i = 0; i < 8; i++)
 				m_k054539->set_gain(i, gain);
 		}
 	}
@@ -243,24 +242,23 @@ void qdrmfgp_state::gp2_control_w(offs_t offset, uint16_t data, uint16_t mem_mas
 	COMBINE_DATA(&m_control);
 	m_pal = 0;
 
-	if (!(m_control & 4))
+	if (BIT(~m_control, 2))
 		m_maincpu->set_input_line(M68K_IRQ_3, CLEAR_LINE);
 
-	if (!(m_control & 8))
+	if (BIT(~m_control, 3))
 		m_maincpu->set_input_line(M68K_IRQ_4, CLEAR_LINE);
 
-	if (!(m_control & 0x10))
+	if (BIT(~m_control, 4))
 		m_maincpu->set_input_line(M68K_IRQ_5, CLEAR_LINE);
 
-	if (m_control & 0x0100)
+	if (BIT(m_control, 8))
 	{
-		int vol = m_nvram[0x8] & 0xff;
+		const int vol = m_nvram[0x8] & 0xff;
 		if (vol)
 		{
-			int i;
-			double gain = vol / 90.0;
+			const double gain = vol / 90.0;
 
-			for (i=0; i<8; i++)
+			for (int i = 0; i < 8; i++)
 				m_k054539->set_gain(i, gain);
 		}
 	}
@@ -269,12 +267,12 @@ void qdrmfgp_state::gp2_control_w(offs_t offset, uint16_t data, uint16_t mem_mas
 
 uint16_t qdrmfgp_state::v_rom_r(offs_t offset)
 {
-	uint8_t *mem8 = memregion("k056832")->base();
-	int bank = m_k056832->word_r(0x34/2);
+	const uint8_t *const mem8 = memregion("k056832")->base();
+	const int bank = m_k056832->word_r(0x34/2);
 
 	offset += bank * 0x800 * 4;
 
-	if (m_control & 0x8000)
+	if (BIT(m_control, 7))
 		offset += 0x800 * 2;
 
 	return (mem8[offset + 1] << 8) + mem8[offset];
@@ -344,14 +342,14 @@ TIMER_DEVICE_CALLBACK_MEMBER(qdrmfgp_state::qdrmfgp_interrupt)
 	int scanline = param;
 
 	/* trigger V-blank interrupt */
-	if(scanline == 240)
-		if (m_control & 0x0004)
+	if (scanline == 240)
+		if (BIT(m_control, 2))
 			m_maincpu->set_input_line(M68K_IRQ_3, ASSERT_LINE);
 }
 
 void qdrmfgp_state::ide_interrupt(int state)
 {
-	if (m_control & 0x0008)
+	if (BIT(m_control, 3))
 		if (state != CLEAR_LINE)
 			m_maincpu->set_input_line(M68K_IRQ_4, ASSERT_LINE);
 }
@@ -360,20 +358,20 @@ void qdrmfgp_state::ide_interrupt(int state)
 
 TIMER_CALLBACK_MEMBER(qdrmfgp_state::gp2_timer_callback)
 {
-	if (m_control & 0x0004)
+	if (BIT(m_control, 2))
 		m_maincpu->set_input_line(M68K_IRQ_3, ASSERT_LINE);
 }
 
 INTERRUPT_GEN_MEMBER(qdrmfgp_state::qdrmfgp2_interrupt)
 {
 	/* trigger V-blank interrupt */
-	if (m_control & 0x0008)
+	if (BIT(m_control, 3))
 		device.execute().set_input_line(M68K_IRQ_4, ASSERT_LINE);
 }
 
 void qdrmfgp_state::gp2_ide_interrupt(int state)
 {
-	if (m_control & 0x0010)
+	if (BIT(m_control, 4))
 		if (state != CLEAR_LINE)
 			m_maincpu->set_input_line(M68K_IRQ_5, ASSERT_LINE);
 }
@@ -433,7 +431,7 @@ void qdrmfgp_state::qdrmfgp2_map(address_map &map)
 }
 
 
-void qdrmfgp_state::qdrmfgp_k054539_map(address_map &map)
+void qdrmfgp_state::k054539_map(address_map &map)
 {
 	map(0x000000, 0x0fffff).rom().region("k054539", 0);
 	map(0x100000, 0x45ffff).ram().share("sndram");
@@ -616,7 +614,7 @@ int m_sound_intck;
 
 void qdrmfgp_state::k054539_irq1_gen(int state)
 {
-	if (m_control & 1)
+	if (BIT(m_control, 0))
 	{
 		// Trigger an interrupt on the rising edge
 		if (!m_sound_intck && state)
@@ -645,7 +643,7 @@ MACHINE_START_MEMBER(qdrmfgp_state,qdrmfgp2)
 	m_gp2_timer = timer_alloc(FUNC(qdrmfgp_state::gp2_timer_callback), this);
 	m_gp2_timer->adjust(attotime::from_hz(XTAL(18'432'000)/76800), 0, attotime::from_hz(XTAL(18'432'000)/76800));
 
-	MACHINE_START_CALL_MEMBER( qdrmfgp );
+	MACHINE_START_CALL_MEMBER(qdrmfgp);
 }
 
 void qdrmfgp_state::machine_reset()
@@ -681,7 +679,7 @@ void qdrmfgp_state::qdrmfgp(machine_config &config)
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 32*8);
 	screen.set_visarea(40, 40+384-1, 16, 16+224-1);
-	screen.set_screen_update(FUNC(qdrmfgp_state::screen_update_qdrmfgp));
+	screen.set_screen_update(FUNC(qdrmfgp_state::screen_update));
 	screen.set_palette(m_palette);
 
 	PALETTE(config, m_palette).set_format(palette_device::xBGR_555, 2048);
@@ -700,7 +698,7 @@ void qdrmfgp_state::qdrmfgp(machine_config &config)
 	SPEAKER(config, "speaker", 2).front();
 
 	k054539_device &k054539(K054539(config, m_k054539, XTAL(18'432'000)));
-	k054539.set_addrmap(0, &qdrmfgp_state::qdrmfgp_k054539_map);
+	k054539.set_addrmap(0, &qdrmfgp_state::k054539_map);
 	k054539.timer_handler().set(FUNC(qdrmfgp_state::k054539_irq1_gen));
 	k054539.add_route(0, "speaker", 1.0, 0);
 	k054539.add_route(1, "speaker", 1.0, 1);
@@ -725,7 +723,7 @@ void qdrmfgp_state::qdrmfgp2(machine_config &config)
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 32*8);
 	screen.set_visarea(40, 40+384-1, 16, 16+224-1);
-	screen.set_screen_update(FUNC(qdrmfgp_state::screen_update_qdrmfgp));
+	screen.set_screen_update(FUNC(qdrmfgp_state::screen_update));
 	screen.set_palette(m_palette);
 
 	PALETTE(config, m_palette).set_format(palette_device::xBGR_555, 2048);
@@ -744,7 +742,7 @@ void qdrmfgp_state::qdrmfgp2(machine_config &config)
 	SPEAKER(config, "speaker", 2).front();
 
 	k054539_device &k054539(K054539(config, "k054539", XTAL(18'432'000)));
-	k054539.set_addrmap(0, &qdrmfgp_state::qdrmfgp_k054539_map);
+	k054539.set_addrmap(0, &qdrmfgp_state::k054539_map);
 	k054539.add_route(0, "speaker", 1.0, 0);
 	k054539.add_route(1, "speaker", 1.0, 1);
 }

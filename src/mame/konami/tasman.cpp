@@ -82,16 +82,16 @@ private:
 	optional_shared_ptr<uint32_t> m_vram;
 	uint32_t eeprom_r(offs_t offset, uint32_t mem_mask = ~0);
 	void eeprom_w(offs_t offset, uint8_t data);
-	void kongambl_ff_w(uint8_t data);
+	void ff_w(uint8_t data);
 	uint32_t test_r();
 	// uint32_t rng_r();
 
 	uint8_t m_irq_mask = 0;
 
-	uint32_t screen_update_kongambl(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
+	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	void vblank_irq_ack_w(int state);
 	void hblank_irq_ack_w(int state);
-	TIMER_DEVICE_CALLBACK_MEMBER(kongambl_vblank);
+	TIMER_DEVICE_CALLBACK_MEMBER(interrupt);
 	K056832_CB_MEMBER(tile_callback);
 	K053246_CB_MEMBER(sprite_callback);
 
@@ -113,7 +113,7 @@ void kongambl_state::video_start()
 	#endif
 }
 
-uint32_t kongambl_state::screen_update_kongambl(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
+uint32_t kongambl_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	#if CUSTOM_DRAW
 	gfx_element *gfx = m_gfxdecode->gfx(0);
@@ -121,14 +121,14 @@ uint32_t kongambl_state::screen_update_kongambl(screen_device &screen, bitmap_in
 
 	count = 0;
 
-	for (int y=0;y<64;y++)
+	for (int y = 0; y < 64; y++)
 	{
-		for (int x=0;x<128;x++)
+		for (int x = 0; x < 128; x++)
 		{
-			uint32_t tile = m_vram[count] & 0xffff;
+			const uint32_t tile = m_vram[count] & 0xffff;
 
-			if(m_screen->visible_area().contains(x*8, y*8))
-				gfx->opaque(bitmap,cliprect,tile,0,0,0,x*8,y*8);
+			if (m_screen->visible_area().contains(x * 8, y * 8))
+				gfx->opaque(bitmap, cliprect, tile, 0, 0, 0, x * 8, y * 8);
 
 			count++;
 		}
@@ -136,14 +136,14 @@ uint32_t kongambl_state::screen_update_kongambl(screen_device &screen, bitmap_in
 
 	count = 0x8000/4;
 
-	for (int y=0;y<64;y++)
+	for (int y = 0; y < 64; y++)
 	{
-		for (int x=0;x<128;x++)
+		for (int x = 0; x < 128; x++)
 		{
-			uint32_t tile = m_vram[count] & 0xffff;
+			const uint32_t tile = m_vram[count] & 0xffff;
 
-			if(m_screen->visible_area().contains(x*8, y*8))
-				gfx->transpen(bitmap,cliprect,tile,0,0,0,x*8,y*8,0);
+			if (m_screen->visible_area().contains(x * 8, y * 8))
+				gfx->transpen(bitmap, cliprect, tile, 0, 0, 0, x * 8, y * 8, 0);
 
 			count++;
 		}
@@ -190,14 +190,14 @@ void kongambl_state::eeprom_w(offs_t offset, uint8_t data)
 
 	if (offset == 2)
 	{
-		ioport("EEPROMOUT")->write(data&0x7, 0xff);
-		if(data & 0xf8)
+		ioport("EEPROMOUT")->write(data & 0x7, 0xff);
+		if (data & 0xf8)
 			printf("Unused EEPROM bits %02x %02x\n",offset,data);
 	}
 	else
 		printf("%02x %02x\n",offset,data);
 
-	if(offset == 0)
+	if (offset == 0)
 		m_irq_mask = data;
 }
 
@@ -213,7 +213,7 @@ uint32_t kongambl_state::test_r()
 }
 */
 
-void kongambl_state::kongambl_ff_w(uint8_t data)
+void kongambl_state::ff_w(uint8_t data)
 {
 	/* enables thru 0->1 */
 	/* ---- x--- (related to OBJ ROM) */
@@ -257,7 +257,7 @@ void kongambl_state::kongambl_map(address_map &map)
 
 	map(0x4cc000, 0x4cc00f).r(m_k055673, FUNC(k055673_device::k055673_rom_word_r));
 
-	map(0x4d0000, 0x4d0000).w(FUNC(kongambl_state::kongambl_ff_w));
+	map(0x4d0000, 0x4d0000).w(FUNC(kongambl_state::ff_w));
 
 	map(0x500000, 0x5007ff).ram();
 	map(0x500380, 0x500383).r(FUNC(kongambl_state::test_r));
@@ -619,7 +619,7 @@ static const gfx_layout charlayout8_tasman =
 };
 
 static GFXDECODE_START( gfx_tasman )
-	GFXDECODE_ENTRY( "k056832", 0, charlayout8_tasman, 0, 0x8000/(1 << 8) )
+	GFXDECODE_ENTRY( "k056832", 0, charlayout8_tasman, 0, 0x8000 / (1 << 8) )
 GFXDECODE_END
 
 
@@ -633,21 +633,21 @@ void kongambl_state::hblank_irq_ack_w(int state)
 	m_maincpu->set_input_line(2, CLEAR_LINE);
 }
 
-TIMER_DEVICE_CALLBACK_MEMBER(kongambl_state::kongambl_vblank)
+TIMER_DEVICE_CALLBACK_MEMBER(kongambl_state::interrupt)
 {
-	int scanline = param;
+	const int scanline = param;
 
 	// disabled for now since it interferes with the ROM tests
-	if(scanline == 384 && m_irq_mask & 1)
+	if (scanline == 384 && BIT(m_irq_mask, 0))
 		m_maincpu->set_input_line(1, HOLD_LINE); // vblank?
 
-	//if(scanline == 256 && m_irq_mask & 2)
+	//if (scanline == 256 && BIT(m_irq_mask, 1))
 	//  m_maincpu->set_input_line(2, HOLD_LINE); // unknown (jumps to work RAM via a branch or returns lv 2 exception error, extension board?)
 
-	if(scanline == 0 && m_irq_mask & 4)
+	if (scanline == 0 && BIT(m_irq_mask, 2))
 		m_maincpu->set_input_line(3, HOLD_LINE); // sprite irq?
 
-	if(scanline == 128 && m_irq_mask & 8)
+	if (scanline == 128 && BIT(m_irq_mask, 3))
 		m_maincpu->set_input_line(4, HOLD_LINE); // sound irq
 
 }
@@ -656,7 +656,7 @@ void kongambl_state::kongambl(machine_config &config)
 {
 	M68EC020(config, m_maincpu, 25000000);
 	m_maincpu->set_addrmap(AS_PROGRAM, &kongambl_state::kongambl_map);
-	TIMER(config, "scantimer").configure_scanline(FUNC(kongambl_state::kongambl_vblank), "screen", 0, 1);
+	TIMER(config, "scantimer").configure_scanline(FUNC(kongambl_state::interrupt), "screen", 0, 1);
 
 	m68000_device &sndcpu(M68000(config, "sndcpu", 16000000));
 	sndcpu.set_addrmap(AS_PROGRAM, &kongambl_state::kongamaud_map);
@@ -672,7 +672,7 @@ void kongambl_state::kongambl(machine_config &config)
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	m_screen->set_raw(25000000, 288+16+32+48, 0, 287, 224+16+8+16, 0, 223); // fake, they'll be changed by CCU anyway, TBD
-	m_screen->set_screen_update(FUNC(kongambl_state::screen_update_kongambl));
+	m_screen->set_screen_update(FUNC(kongambl_state::screen_update));
 	m_screen->set_palette(m_palette);
 
 	PALETTE(config, m_palette).set_format(palette_device::xRGB_888, 32768);

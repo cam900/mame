@@ -114,12 +114,12 @@ void gs761_state::video_start()
 
 void gs761_state::control_w(u8 data)
 {
-	if ((!(data & 4)) && (m_control & 4))
+	if (BIT(~data, 2) && BIT(m_control, 2))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_4, CLEAR_LINE);
 	}
 
-	if ((!(data & 2)) && (m_control & 2))
+	if (BIT(~data, 1) && BIT(m_control, 1))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_5, CLEAR_LINE);
 	}
@@ -141,8 +141,8 @@ void gs761_state::control2_w(u16 data)
 
 u16 gs761_state::K056832_rom_r(offs_t offset)
 {
-	uint16_t addr = offset<<1;
-	if (m_control2 & 0x1000)
+	uint16_t addr = offset << 1;
+	if (BIT(m_control2, 12))
 	{
 		addr += 2;
 	}
@@ -152,15 +152,15 @@ u16 gs761_state::K056832_rom_r(offs_t offset)
 
 TIMER_DEVICE_CALLBACK_MEMBER(gs761_state::scanline)
 {
-	int scanline = param;
+	int const scanline = param;
 
-	if ((scanline == m_vbl_scanline) && (m_control & 0x4))
+	if ((scanline == m_vbl_scanline) && BIT(m_control, 2))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_4, ASSERT_LINE);
 
 	}
 
-	if ((scanline == m_vbl_scanline+15) && (m_control & 0x2))
+	if ((scanline == m_vbl_scanline+15) && BIT(m_control, 1))
 	{
 		m_maincpu->set_input_line(M68K_IRQ_5, ASSERT_LINE);
 	}
