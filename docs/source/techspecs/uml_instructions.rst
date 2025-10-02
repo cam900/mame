@@ -14,16 +14,90 @@ Introduction
 ------------
 
 UML is the instruction set used by MAME’s recompiler framework.
-Front-ends translate code running on the guest CPUs to UML instructions,
+Code running on emulated guest CPUs is translated to UML instructions,
 and back-ends convert the UML instructions to a form that can be
 executed or interpreted on the host system.
 
-Many UML instruction have multiple instruction sizes.  Integer instructions
-default to 32-bit size.  Adding a ``D`` or ``d`` prefix to the mnemonic changes
-to 64-bit size (double word).  Floating point instructions use the mnemonic
-prefix/suffix ``FS`` or ``fs`` for IEEE 754 32-bit format (single precision) or
-or the prefix/suffix ``FD`` or ``fd`` for IEEE 754 64-bit format (double
-precision).
+Many UML instruction have multiple instruction sizes.  Integer
+instructions default to 32-bit size.  Adding a ``D`` or ``d`` prefix to
+the mnemonic changes to 64-bit size (double word).  Floating point
+instructions use the mnemonic prefix/suffix ``FS`` or ``fs`` for
+IEEE 754 32-bit format (single precision) or or the prefix/suffix ``FD``
+or ``fd`` for IEEE 754 64-bit format (double precision).
+
+
+.. _umlinst-special:
+
+Special value types
+-------------------
+
+.. _umlinst-conditions:
+
+Conditions
+~~~~~~~~~~
+
++-------------+--------------------------------+-------------+--------------------+
+| Disassembly | Mnemonic                       | Usage       | Flags tested       |
++=============+================================+=============+====================+
+| ``z``       | zero                           | ``COND_Z``  | ``Z``              |
+|             +--------------------------------+-------------+                    |
+|             | equal                          | ``COND_E``  |                    |
++-------------+--------------------------------+-------------+--------------------+
+| ``nz``      | not zero                       | ``COND_NZ`` | ``!Z``             |
+|             +--------------------------------+-------------+                    |
+|             | not equal                      | ``COND_NE`` |                    |
++-------------+--------------------------------+-------------+--------------------+
+| ``s``       | sign set                       | ``COND_S``  | ``S``              |
++-------------+--------------------------------+-------------+--------------------+
+| ``ns``      | sign not set                   | ``COND_NS`` | ``!S``             |
++-------------+--------------------------------+-------------+--------------------+
+| ``c``       | carry                          | ``COND_C``  | ``C``              |
+|             +--------------------------------+-------------+                    |
+|             | below (unsigned)               | ``COND_B``  |                    |
++-------------+--------------------------------+-------------+--------------------+
+| ``nc``      | no carry                       | ``COND_NC`` | ``!C``             |
+|             +--------------------------------+-------------+                    |
+|             | above or equal (unsigned)      | ``COND_AE`` |                    |
++-------------+--------------------------------+-------------+--------------------+
+| ``v``       | overflow (signed)              | ``COND_V``  | ``V``              |
++-------------+--------------------------------+-------------+--------------------+
+| ``nv``      | no overflow (signed)           | ``COND_NV`` | ``!V``             |
++-------------+--------------------------------+-------------+--------------------+
+| ``u``       | unordered                      | ``COND_U``  | ``U``              |
++-------------+--------------------------------+-------------+--------------------+
+| ``nu``      | not unordered                  | ``COND_NU`` | ``!U``             |
++-------------+--------------------------------+-------------+--------------------+
+| ``a``       | above (unsigned)               | ``COND_A``  | ``!Z && !C``       |
++-------------+--------------------------------+-------------+--------------------+
+| ``be``      | below or equal (unsigned)      | ``COND_BE`` | ``Z || C``         |
++-------------+--------------------------------+-------------+--------------------+
+| ``g``       | greater than (signed)          | ``COND_G``  | ``!Z && (S == V)`` |
++-------------+--------------------------------+-------------+--------------------+
+| ``le``      | less than or equal (signed)    | ``COND_LE`` | ``Z || (S != V)``  |
++-------------+--------------------------------+-------------+--------------------+
+| ``l``       | less than (signed)             | ``COND_L``  | ``S != V``         |
++-------------+--------------------------------+-------------+--------------------+
+| ``ge``      | greater than or equal (signed) | ``COND_GE`` | ``S == V``         |
++-------------+--------------------------------+-------------+--------------------+
+
+.. _umlinst-roundmode:
+
+Floating point rounding modes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
++-------+-------------+----------+-------------------+---------------------------------------+
+| Value | Disassembly | Mnemonic | Usage             | Mode                                  |
++=======+=============+==========+===================+=======================================+
+| 0     | ``trunc``   | truncate | ``ROUND_TRUNC``   | Round toward zero                     |
++-------+-------------+----------+-------------------+---------------------------------------+
+| 1     | ``round``   | round    | ``ROUND_ROUND``   | Round to nearest, round half to even  |
++-------+-------------+----------+-------------------+---------------------------------------+
+| 2     | ``ceil``    | ceiling  | ``ROUND_CEIL``    | Round toward positive infinity        |
++-------+-------------+----------+-------------------+---------------------------------------+
+| 3     | ``floor``   | floor    | ``ROUND_FLOOR``   | Round toward negative infinity        |
++-------+-------------+----------+-------------------+---------------------------------------+
+|       | ``default`` | default  | ``ROUND_DEFAULT`` | Use the current default rounding mode |
++-------+-------------+----------+-------------------+---------------------------------------+
 
 
 .. _umlinst-flow:
@@ -633,6 +707,205 @@ sign (S)
     Undefined.
 unordered (U)
     Undefined.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+No simplifications are applied to this instruction.
+
+
+.. _umlinst-control:
+
+Status and control
+------------------
+
+.. _umlinst-set:
+
+SET
+~~~
+
+Conditionally set integer to zero or one depending on flags.
+
++----------------------+----------------------------------+
+| Disassembly          | Usage                            |
++======================+==================================+
+| .. code-block::      | .. code-block:: C++              |
+|                      |                                  |
+|     set     dst,cond |     UML_SETc(block, dst);        |
+|     dset    dst,cond |     UML_DSETc(block, cond, dst); |
++----------------------+----------------------------------+
+
+Operands
+^^^^^^^^
+
+dst (32-bit or 64-bit – memory, integer register)
+    The destination that will be set to zero (0) if the condition is not
+    met or one (1) if the condition is met.
+cond (condition)
+    A condition to test.  The destination will be set to zero (0) if the
+    condition is not met or one (1) if the condition is met.
+
+Flags
+^^^^^
+
+carry (C)
+    Unchanged.
+overflow (V)
+    Unchanged.
+zero (Z)
+    Unchanged.
+sign (S)
+    Unchanged.
+unordered (U)
+    Unchanged.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+No simplifications are applied to this instruction.
+
+.. _umlinst-carry:
+
+CARRY
+~~~~~
+
+Set the carry flag.
+
++---------------------+----------------------------------+
+| Disassembly         | Usage                            |
++=====================+==================================+
+| .. code-block::     | .. code-block::                  |
+|                     |                                  |
+|     carry   src,bit |     UML_CARRY(block, src, bit);  |
+|     dcarry  src,bit |     UML_DCARRY(block, src, bit); |
++---------------------+----------------------------------+
+
+src (32-bit or 64-bit – memory, integer register, immediate, map variable)
+    An integer value containing a bit to be copied to the carry flag.
+bit (32-bit or 64-bit – memory, integer register, immediate, map variable)
+    The index of the bit to copy to the carry flag.  Bits are numbered
+    starting at zero for the least significant bit position, ascending
+    toward the most significant bit position.  Only the least
+    significant five bits or six bits of this operand are used,
+    depending on the instruction size.
+
+Flags
+^^^^^
+
+carry (C)
+    Set to the value of the selected bit of the ``src`` operand.
+overflow (V)
+    Undefined.
+zero (Z)
+    Undefined.
+sign (S)
+    Undefined.
+unordered (U)
+    Undefined.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+* Immediate values for the ``src`` operand are truncated to the
+  instruction size.
+* Immediate values for the ``bit`` operand are truncated to five or six
+  bits for 32-bit or 64-bit operands, respectively.
+
+.. _umlinst-setfmod:
+
+SETFMOD
+~~~~~~~
+
+Set the default floating point rounding mode.  The default rounding mode
+is used for floating point arithmetic and for floating point to integer
+conversion when ``ROUND_DEFAULT`` is specified.
+
++-------------------+--------------------------------+
+| Disassembly       | Usage                          |
++===================+================================+
+| .. code-block::   | .. code-block:: C++            |
+|                   |                                |
+|     setfmod round |     UML_SETFMOD(block, round); |
++-------------------+--------------------------------+
+
+Operands
+^^^^^^^^
+
+round (32-bit – memory, integer register, immediate, map variable)
+    The rounding mode to set as the default.  Only the two least
+    significant bits of the value are used.  Must be 0 (``ROUND_TRUNC``)
+    to round toward zero, 1 (``ROUND_ROUND``) to round to nearest, 2
+    (``ROUND_CEIL``) to round toward positive infinity, or 3
+    (``ROUND_FLOOR``) to round toward negative infinity.
+
+Flags
+^^^^^
+
+carry (C)
+    Undefined.
+overflow (V)
+    Undefined.
+zero (Z)
+    Undefined.
+sign (S)
+    Undefined.
+unordered (U)
+    Undefined.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+No simplifications are applied to this instruction.
+
+.. _umlinst-getfmod:
+
+GETFMOD
+~~~~~~~
+
+Get the current default floating point rounding mode set by the most
+recent :ref:`SETFMOD <umlinst-setfmod>` instruction.
+
++-----------------+------------------------------+
+| Disassembly     | Usage                        |
++=================+==============================+
+| .. code-block:: | .. code-block:: C++          |
+|                 |                              |
+|     getfmod dst |     UML_GETFMOD(block, dst); |
++-----------------+------------------------------+
+
+Note that the result of this instruction may not correspond to the
+actual effective default rounding mode between entering the generated
+code and executing the first :ref:`SETFMOD <umlinst-setfmod>`
+instruction.
+
+Operands
+^^^^^^^^
+
+dst (32-bit – memory, integer register)
+    The destination where the current default rounding mode will be
+    stored.  Will be set to 0 (``ROUND_TRUNC``) for round toward zero, 1
+    (``ROUND_ROUND``) for round to nearest, 2 (``ROUND_CEIL``) for round
+    toward positive infinity, or 3 (``ROUND_FLOOR``) for round toward
+    negative infinity.
+
+Flags
+^^^^^
+
+carry (C)
+    Undefined.
+overflow (V)
+    Undefined.
+zero (Z)
+    Undefined.
+sign (S)
+    Undefined.
+unordered (U)
+    Undefined.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+No simplifications are applied to this instruction.
 
 
 .. _umlinst-datamove:
@@ -2850,7 +3123,7 @@ Simplification rules
 .. _umlinst-rolc:
 
 ROLC
-^^^^
+~~~~
 
 Rotate an integer value concatenated with the carry flag to the left
 (toward the most significant bit position).  For each step, the carry
@@ -2921,7 +3194,7 @@ Simplification rules
 .. _umlinst-rorc:
 
 RORC
-^^^^
+~~~~
 
 Rotate an integer value concatenated with the carry flag to the right
 (toward the least significant bit position).  For each step, the carry
@@ -2988,6 +3261,85 @@ Simplification rules
   sign flags are not required.
 * Immediate values for the ``src`` operand are truncated to the
   instruction size.
+* Immediate values for the ``count`` operand are truncated to five or
+  six bits for 32-bit or 64-bit operands, respectively.
+
+.. _umlinst-roland:
+
+ROLAND
+~~~~~~
+
+Rotate and mask an integer value.  The value is rotated to the left
+(toward the most significant bit position).  Bits shifted out of the
+most significant bit position are shifted into the least significant bit
+position.  The logical conjunction of the rotated value and the mask is
+then calculated.
+
++--------------------------------+------------------------------------------------+
+| Disassembly                    | Usage                                          |
++================================+================================================+
+| .. code-block::                | .. code-block:: C++                            |
+|                                |                                                |
+|     roland  dst,src,count,mask |     UML_ROLAND(block, dst, src, count, mask);  |
+|     droland dst,src,count,mask |     UML_DROLAND(block, dst, src, count, mask); |
++--------------------------------+------------------------------------------------+
+
+Sets ``dst`` to the logical conjunction of the value of ``src`` rotated
+left by ``count`` bit positions and the value of ``mask``.
+
+Back-ends may be able to optimise some forms of this instruction, for
+example when the ``count`` and ``mask`` operands are both immediate
+values.
+
+Operands
+^^^^^^^^
+
+dst (32-bit or 64-bit – memory, integer register)
+    The destination where the rotated and masked value will be stored.
+src (32-bit or 64-bit – memory, integer register, immediate, map variable)
+    The value to be rotated and masked.
+count (32-bit or 64-bit – memory, integer register, immediate, map variable)
+    The number of bit positions to rotate by.  Only the least
+    significant five bits or six bits of this operand are used,
+    depending on the instruction size.
+mask (32-bit or 64-bit – memory, integer register, immediate, map variable)
+    The mask to calculate the logical conjunction with.
+
+Flags
+^^^^^
+
+carry (C)
+    Undefined.
+overflow (V)
+    Undefined.
+zero (Z)
+    Set if the result is zero, or cleared otherwise.
+sign (S)
+    Set to the value of the most significant bit of the result (set if
+    the result is a negative signed integer value, or cleared
+    otherwise).
+unordered (U)
+    Undefined.
+
+Simplification rules
+^^^^^^^^^^^^^^^^^^^^
+
+* Converted to :ref:`MOV <umlinst-mov>`, :ref:`AND <umlinst-and>` or
+  :ref:`OR <umlinst-or>` if the ``src`` and ``count`` operands are both
+  immediate values, or if either the ``count`` or ``mask`` operand is
+  the immediate value zero.
+* Converted to :ref:`ROL <umlinst-rol>` if the ``mask`` operand is an
+  immediate value with all bits set.
+* Converted to :ref:`SHL <umlinst-shl>` if the ``count`` operand is an
+  immediate value and the ``mask`` operand is an immediate value
+  containing a single contiguous left-aligned sequence of set bits of
+  the appropriate length for the value of the ``count`` operand.
+* Converted to :ref:`SHR <umlinst-shr>` if the ``count`` operand is an
+  immediate value and the ``mask`` operand is an immediate value
+  containing a single contiguous right-aligned sequence of set bits of
+  the appropriate length for the value of the ``count`` operand.
+* Immediate values for the ``src`` and ``mask`` operands are truncated
+  to the instruction size.
 * Immediate values for the ``count`` operand are truncated to five or
   six bits for 32-bit or 64-bit operands, respectively.
 

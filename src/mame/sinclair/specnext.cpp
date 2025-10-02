@@ -295,6 +295,9 @@ private:
 	bool port_eff7_io_en() const { return BIT(internal_port_enable(), 26); }
 	bool port_ctc_io_en() const { return BIT(internal_port_enable(), 27); }
 
+	u16 vpos_to_cvc(u16 vpos) const { return (vpos - m_video_timings.min_vactive + m_nr_64_copper_offset + (m_video_timings.max_vc + 1)) % (m_video_timings.max_vc + 1); }
+	u16 cvc_to_vpos(u16 cvc) const { return (cvc + m_video_timings.min_vactive - m_nr_64_copper_offset + m_screen->height()) % m_screen->height(); }
+
 	u8 port_7ffd_bank() const { return (((nr_8f_mapping_mode_pentagon() || nr_8f_mapping_mode_profi()) ? 0 : BIT(m_port_dffd_data, 3)) << 6) | ((!nr_8f_mapping_mode_pentagon() ? BIT(m_port_dffd_data, 2) : (nr_8f_mapping_mode_pentagon_1024_en() && BIT(m_port_7ffd_data, 5))) << 5) | ((nr_8f_mapping_mode_pentagon() ? BIT(m_port_7ffd_data, 6, 2) : (m_port_dffd_data & 3)) << 3) | (m_port_7ffd_data & 7); }
 	bool port_7ffd_shadow() const { return BIT(m_port_7ffd_data, 3); }
 	bool port_7ffd_locked() const { return (nr_8f_mapping_mode_pentagon_1024_en() || (nr_8f_mapping_mode_profi() && BIT(m_port_dffd_data, 4))) ? 0 : BIT(m_port_7ffd_data, 5); }
@@ -351,7 +354,6 @@ private:
 	u8 m_nr_register;
 	u8 m_port_e3_reg;
 	bool m_divmmc_delayed_check;
-	u16 m_global_transparent;
 
 	u8 m_sram_rom;
 	bool m_sram_rom3;
@@ -1036,6 +1038,7 @@ u8 specnext_state::port_ff_r()
 
 void specnext_state::port_ff_w(u8 data)
 {
+	m_screen->update_now();
 	m_port_ff_data = data; // ==port_ff_dat_tmx
 	m_ula_scr->port_ff_reg_w(m_port_ff_data);
 	nr_6a_lores_radastan_xor_w(m_nr_6a_lores_radastan_xor);
@@ -1206,10 +1209,29 @@ void specnext_state::mf_port_w(offs_t addr, u8 data)
 attotime specnext_state::copper_until_pos_r(u16 pos)
 {
 	const u16 vcount = BIT(pos, 0, 9);
-	const u16 hcount = ((BIT(pos, 9, 6) << 3) + (BIT(pos, 15) ? 12 : 0)) << 1;
-	return ((vcount < m_screen->height()) && (hcount < m_screen->width()))
-		? m_screen->time_until_pos(m_clip256x192.top() + vcount - m_nr_64_copper_offset, m_clip256x192.left() + hcount)
-		: attotime::never;
+	const u16 hcount = BIT(pos, 9, 6) << 3;
+	if (vcount > m_video_timings.max_vc || hcount > m_video_timings.max_hc)
+		return attotime::never;
+	else
+	{
+		if (BIT(pos, 15))  // MOVE
+		{
+			u16 vtarget = cvc_to_vpos(vcount);
+			u16 htarget = ((hcount/* + 12*/) + m_video_timings.min_hactive + m_screen->width()) % m_screen->width();
+			if (htarget < (m_video_timings.min_hactive))
+				vtarget = (vtarget + 1) % m_screen->height();
+			htarget <<= 1;
+			if (vtarget != m_screen->vpos() || htarget > m_screen->hpos())
+				return m_screen->time_until_pos(vtarget, htarget);
+			else
+				return attotime::zero;
+		}
+		else // FRAME or RESET
+		{
+			assert(!vcount && !hcount);
+			return m_screen->time_until_pos(cvc_to_vpos(0), m_video_timings.min_hactive << 1);
+		}
+	}
 }
 
 
@@ -1411,10 +1433,10 @@ u8 specnext_state::reg_r(offs_t nr_register)
 		port_253b_dat = (m_nr_1b_tm_clip_idx << 6) | (m_nr_1a_ula_clip_idx << 4) | (m_nr_19_sprite_clip_idx << 2) | m_nr_18_layer2_clip_idx;
 		break;
 	case 0x1e:
-		port_253b_dat = BIT((m_nr_64_copper_offset + m_screen->vpos() - m_clip256x192.top() + m_screen->height()) % m_screen->height(), 8);
+		port_253b_dat = BIT(vpos_to_cvc(m_screen->vpos()), 8);
 		break;
 	case 0x1f:
-		port_253b_dat = ((m_nr_64_copper_offset + m_screen->vpos() - m_clip256x192.top() + m_screen->height()) % m_screen->height())  & 0xff;
+		port_253b_dat = vpos_to_cvc(m_screen->vpos()) & 0xff;
 		break;
 	case 0x20:
 		port_253b_dat = 0;//(BIT(im2_int_status, 0) <<) | (BIT(im2_int_status, 11) <<) | (0b00 <<) | BIT(im2_int_status, 3, 4);
@@ -1951,7 +1973,7 @@ void specnext_state::reg_w(offs_t nr_wr_reg, u8 nr_wr_dat)
 		m_nr_22_line_interrupt_en = BIT(nr_wr_dat, 1);
 		m_nr_23_line_interrupt = (m_nr_23_line_interrupt & ~0x0100) | (BIT(nr_wr_dat, 0) << 8);
 		line_irq_adjust();
-		m_port_ff_data = (m_port_ff_data & 0xbf) | (BIT(nr_wr_dat, 1) << 6);
+		port_ff_w((m_port_ff_data & 0xbf) | (BIT(nr_wr_dat, 1) << 6));
 		break;
 	case 0x23:
 		m_nr_23_line_interrupt = (m_nr_23_line_interrupt & ~0x00ff) | nr_wr_dat;
@@ -2008,10 +2030,12 @@ void specnext_state::reg_w(offs_t nr_wr_reg, u8 nr_wr_dat)
 		nr_33_lores_scrolly_w(nr_wr_dat);
 		break;
 	case 0x34:
+		m_screen->update_now();
 		m_sprites->mirror_data_w(nr_wr_dat);
 		break;
 	case 0x35: case 0x36:  case 0x37: case 0x38: case 0x39:
 	case 0x75: case 0x76:  case 0x77: case 0x78: case 0x79:
+		m_screen->update_now();
 		m_sprites->mirror_inc_w(BIT(nr_wr_reg, 6));
 		m_sprites->mirror_index_w((nr_wr_reg & 0x3f) - 0x35);
 		m_sprites->mirror_data_w(nr_wr_dat);
@@ -2057,9 +2081,11 @@ void specnext_state::reg_w(offs_t nr_wr_reg, u8 nr_wr_dat)
 		}
 		break;
 	case 0x4b:
+		m_screen->update_now();
 		nr_4b_sprite_transparent_index_w(nr_wr_dat);
 		break;
 	case 0x4c:
+		m_screen->update_now();
 		nr_4c_tm_transparent_index_w(BIT(nr_wr_dat, 0, 4));
 		break;
 	case 0x50: case 0x51: case 0x52: case 0x53:
@@ -2107,7 +2133,7 @@ void specnext_state::reg_w(offs_t nr_wr_reg, u8 nr_wr_dat)
 		m_nr_68_ula_stencil_mode = BIT(nr_wr_dat, 0);
 		break;
 	case 0x69:
-		m_port_ff_data = (m_port_ff_data & 0xc0) | (nr_wr_dat & 0x3f);
+		port_ff_w((m_port_ff_data & 0xc0) | (nr_wr_dat & 0x3f));
 		port_7ffd_reg_w((m_port_7ffd_data & ~0x08) | (BIT(nr_wr_dat, 6) << 3));
 		port_123b_layer2_en_w(BIT(nr_wr_dat, 7));
 		break;
@@ -2269,7 +2295,8 @@ void specnext_state::reg_w(offs_t nr_wr_reg, u8 nr_wr_dat)
 	case 0xc4:
 		m_nr_c4_int_en_0_expbus = BIT(nr_wr_dat, 7);
 		m_nr_22_line_interrupt_en = BIT(nr_wr_dat, 1);
-		m_port_ff_data = (m_port_ff_data & 0xbf) | (BIT(~nr_wr_dat, 0) << 6);
+		line_irq_adjust();
+		port_ff_w((m_port_ff_data & 0xbf) | (BIT(~nr_wr_dat, 0) << 6));
 		break;
 	case 0xc5:
 		{
@@ -2355,7 +2382,6 @@ void specnext_state::nr_07_cpu_speed_w(u8 data)
 void specnext_state::nr_14_global_transparent_rgb_w(u8 data)
 {
 	m_nr_14_global_transparent_rgb = data;
-	m_global_transparent = (m_nr_14_global_transparent_rgb << 1) | BIT(m_nr_14_global_transparent_rgb, 1) | BIT(m_nr_14_global_transparent_rgb, 0);
 	m_ula_scr->set_global_transparent(data);
 	m_lores->set_global_transparent(data);
 	m_layer2->set_global_transparent(data);
@@ -2413,15 +2439,15 @@ INTERRUPT_GEN_MEMBER(specnext_state::specnext_interrupt)
 
 void specnext_state::line_irq_adjust()
 {
-	if (m_nr_22_line_interrupt_en) {
-		u16 line = m_nr_64_copper_offset + m_nr_23_line_interrupt;
-		if (line < m_screen->width())
-			m_irq_line_timer->adjust(m_screen->time_until_pos(
-				(m_clip256x192.top() - 1 + line) % m_screen->height(),
-				m_clip256x192.right() + 2));
-		else
-			m_irq_line_timer->reset();
+	if (m_nr_22_line_interrupt_en && (m_nr_23_line_interrupt <= m_video_timings.max_vc))
+	{
+		u16 vtarget = m_nr_23_line_interrupt
+			? cvc_to_vpos(m_nr_23_line_interrupt)
+			: m_video_timings.max_vc;
+		m_irq_line_timer->adjust(m_screen->time_until_pos(vtarget, m_video_timings.min_hactive << 1));
 	}
+	else
+		m_irq_line_timer->reset();
 }
 
 IRQ_CALLBACK_MEMBER(specnext_state::irq_callback)
@@ -2955,7 +2981,6 @@ void specnext_state::machine_start()
 	save_item(NAME(m_nr_register));
 	save_item(NAME(m_port_e3_reg));
 	save_item(NAME(m_divmmc_delayed_check));
-	save_item(NAME(m_global_transparent));
 	save_item(NAME(m_sram_rom));
 	save_item(NAME(m_sram_rom3));
 	save_item(NAME(m_sram_alt_128_n));
