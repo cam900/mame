@@ -349,6 +349,7 @@ public:
 	void init_ladylinrc() ATTR_COLD;
 	void init_ladylinrd() ATTR_COLD;
 	void init_ladylinre() ATTR_COLD;
+	void init_moonlghtb() ATTR_COLD;
 	void init_super9() ATTR_COLD;
 	void init_wcherry() ATTR_COLD;
 
@@ -477,6 +478,7 @@ public:
 	void init_cmtetriskr() ATTR_COLD;
 	void init_cmv4() ATTR_COLD;
 	void init_crazybonb() ATTR_COLD;
+	void init_cutya() ATTR_COLD;
 	void init_eldoraddoa() ATTR_COLD;
 	void init_fb2010() ATTR_COLD;
 	void init_hamhouse() ATTR_COLD;
@@ -637,7 +639,6 @@ public:
 	void wcat3(machine_config &config) ATTR_COLD;
 
 	void init_cb2() ATTR_COLD;
-	void init_feverch() ATTR_COLD;
 	void init_flam7_tw() ATTR_COLD;
 	void init_flaming7() ATTR_COLD;
 	void init_lucky8a() ATTR_COLD;
@@ -681,6 +682,21 @@ private:
 	void ay8910_outputb_w(uint8_t data);
 	void fever_outp_w(offs_t offset, uint8_t data);
 
+
+	// SM7831 Arithmetic Processor device emulation
+	uint8_t sm7831_mode = 0;
+	uint8_t sm7831_status = 0;
+	uint8_t sm7831_shift_dig = 0;
+	uint8_t sm7831_data_cmd = 0;
+	uint8_t m_dap_idx = 0;
+	uint8_t sm7831_X_reg[0x08] = {};
+	uint8_t sm7831_Y_reg[0x08] = {};
+	uint8_t sm7831_Z_reg[0x08] = {};
+	uint8_t sm7831_tmp_reg[0x08] = {};
+	uint8_t sm7831_read(offs_t offset);
+	void sm7831_write(offs_t offset, uint8_t data);
+
+
 	// handlers for lucky bar MCU ports
 	uint8_t mcu_portb_r();
 	void mcu_porta_w(uint8_t data);
@@ -701,8 +717,8 @@ private:
 
 	void z80_io_w(offs_t offset, uint8_t data);
 	uint8_t z80_io_r(offs_t offset);
-	void tmcu_io_w(offs_t offset, uint8_t data);
-	uint8_t tmcu_io_r(offs_t offset);
+	void tmcu_data_w(offs_t offset, uint8_t data);
+	uint8_t tmcu_data_r(offs_t offset);
 	void tmcu_p1_out(uint8_t data);
 	uint8_t m_z80_io_c0;
 	uint8_t tetin3_r();
@@ -741,7 +757,7 @@ private:
 	void superdrg_opcodes_map(address_map &map) ATTR_COLD;
 	void wcat3_map(address_map &map) ATTR_COLD;
 	void tmcu_program_map(address_map &map) ATTR_COLD;
-	void tmcu_io_map(address_map &map) ATTR_COLD;
+	void tmcu_data_map(address_map &map) ATTR_COLD;
 };
 
 
@@ -910,6 +926,9 @@ void wingco_state::machine_start()
 
 	save_item(NAME(m_nmi_enable));
 	save_item(NAME(m_vidreg));
+	save_item(NAME(sm7831_X_reg));
+	save_item(NAME(sm7831_Y_reg));
+
 }
 
 void unkch_state::machine_start()
@@ -2750,13 +2769,13 @@ void wingco_state::z80_io_w(offs_t offset, uint8_t data)
 	logerror("Z80_io_w(): offset:%02x - data: %02x\n", offset, data);  // investigate functionality port 0xc0
 }
 
-void wingco_state::tmcu_io_w(offs_t offset, uint8_t data)
+void wingco_state::tmcu_data_w(offs_t offset, uint8_t data)
 {
 	if ((offset != 0x122) & (offset != 0x123))
-	logerror("tmcu_io Write: Offs:%04x - Data:%02x\n", offset, data);
+	logerror("tmcu_data Write: Offs:%04x - Data:%02x\n", offset, data);
 }
 
-uint8_t wingco_state::tmcu_io_r(offs_t offset)
+uint8_t wingco_state::tmcu_data_r(offs_t offset)
 {
 	return 0x00;
 }
@@ -2828,6 +2847,7 @@ void unkch_state::bonch_0x40_w(uint8_t data)  // player 2 ??? wdog ??? video_reg
 	m_ticket_dispenser->motor_w(BIT(data, 5));
 }
 
+
 void wingco_state::fever_outp_w(offs_t offset, uint8_t data)
 {
 	switch(offset)
@@ -2876,6 +2896,216 @@ void wingco_state::fever_outp_w(offs_t offset, uint8_t data)
 			break;
 		}
 	}
+}
+
+
+/****************************************************
+    SM7831 Arithmetic Processor Device Emulation
+
+****************************************************/
+
+uint8_t wingco_state::sm7831_read(offs_t offset)
+{
+	uint8_t ret = 0;
+	switch(offset)
+	{
+		case 0: ret = sm7831_status; logerror("SM7831: Read Status - Offset:%02x - status:%02x\n", offset, ret); break;
+		case 1: ret = 0;  logerror("SM7831: Not Implemented - Offset:%02x\n", offset); break;
+		case 2: ret = sm7831_shift_dig;  logerror("SM7831: Read Shift Dig.- Offset:%02x\n", offset); break;
+		case 3: if(sm7831_data_cmd == 0x02)
+					ret = sm7831_X_reg[m_dap_idx];
+				if(sm7831_data_cmd == 0x03)
+					ret = sm7831_Y_reg[m_dap_idx];
+				logerror("SM7831: Read Data - m_dap_idx:%02x - data:%02x\n", m_dap_idx, ret);
+				m_dap_idx = m_dap_idx + 1;
+				break;
+	}
+	return ret;
+}
+
+void wingco_state::sm7831_write(offs_t offset, uint8_t data)
+{
+	switch(offset)
+	{
+		case 0: sm7831_mode = data; logerror("SM7831: Set mode - Offset:%02x - Data:%02x\n", offset, data); break;
+		case 1: {
+				if(data < 0x40)
+					switch(data & 0x3f)
+					{
+						case 0x00:  // Clear X register
+									for(int i = 0; i < 8; i++)
+										sm7831_X_reg[i] = 0;
+									logerror("SM7831: Clear X register - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x20:  // Clear Y register
+									for(int i = 0; i < 8 ; i++)
+										sm7831_Y_reg[i] = 0;
+									logerror("SM7831: Clear X register - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x01:	// Move Register X to Y
+									for(int i = 0; i < 8 ; i++)
+										sm7831_Y_reg[i] = sm7831_X_reg[i];
+									logerror("SM7831: Move Register X to Y - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x21:  // Move Register Y to X
+									for(int i = 0; i < 8 ; i++)
+										sm7831_X_reg[i] = sm7831_Y_reg[i];
+									logerror("SM7831: Move Register Y to X - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x02:  // Exchange Register X with Y
+									for(int i = 0; i < 8 ; i++)
+									{
+										sm7831_tmp_reg[i] = sm7831_X_reg[i];
+										sm7831_X_reg[i]   = sm7831_Y_reg[i];
+										sm7831_Y_reg[i]   = sm7831_tmp_reg[i];
+									}
+									logerror("SM7831: Exchange Register X with Y - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x22:  // Exchange Register X with Z
+									for(int i = 0; i < 8 ; i++)
+									{
+										sm7831_tmp_reg[i] = sm7831_X_reg[i];
+										sm7831_X_reg[i]   = sm7831_Z_reg[i];
+										sm7831_Z_reg[i]   = sm7831_tmp_reg[i];
+									}
+									logerror("SM7831: Exchange Register X with Z - Offset:%02x - Data:%02x\n", offset, data);
+									break;
+						case 0x03: logerror("SM7831: Zero sense Register X - Offset:%02x - Data:%02x\n", offset, data); break;								// Zero sense Register X  - Set Zero Flag if ...
+						case 0x23: logerror("SM7831: Zero sense Register Y - Offset:%02x - Data:%02x\n", offset, data); break;								// Zero sense Register y  - Set Zero Flag if ...
+						case 0x04: logerror("SM7831: Register X normalization - Offset:%02x - Data:%02x\n", offset, data); break;							// Register X normalization
+						case 0x24: logerror("SM7831: Register Y normalization - Offset:%02x - Data:%02x\n", offset, data); break;							// Register Y normalization
+
+						// Arithmetic Commands
+
+						case 0x08:  								// Add X + Y -> X
+								 {
+									uint8_t carry = 0;
+
+									for (int i = 0; i < 8; i++)
+									{
+										// Extract nibbles from X[i] and Y[i]
+										uint8_t x_low  = sm7831_X_reg[i] & 0x0f;
+										uint8_t x_high = (sm7831_X_reg[i] >> 4) & 0x0f;
+										uint8_t y_low  = sm7831_Y_reg[i] & 0x0f;
+										uint8_t y_high = (sm7831_Y_reg[i] >> 4) & 0x0f;
+
+										// Add low nibble + carry
+										uint8_t sum_low = x_low + y_low + carry;
+										carry = 0;
+
+										if (sum_low > 9)
+										{
+											sum_low += 6;
+											carry = sum_low > 0x0f ? 1 : 0;
+											sum_low &= 0x0f;
+										}
+
+										// Add high nibble + carry
+										uint8_t sum_high = x_high + y_high + carry;
+										carry = 0;
+
+										if (sum_high > 9)
+										{
+											sum_high += 6;
+											carry = sum_high > 0x0f ? 1 : 0;
+											sum_high &= 0x0f;
+										}
+
+										// Save result into X[i]
+										sm7831_X_reg[i] = (sum_high << 4) | sum_low;
+									}
+
+									if(carry == 1)
+										sm7831_status =  0x02;
+									else
+										sm7831_status =  0x00;
+									logerror("SM7831: Add X + Y -> X - Offset:%02x - Data:%02x\n", offset, data);
+								}
+								break;
+
+						case 0x09:	// Sub X - Y -> X
+								 {
+									uint8_t borrow = 0;
+
+									for (int i = 0; i < 8; i++)
+									{
+										// Extract low and high nibbles from current byte of X and Y
+										uint8_t x_low  = sm7831_X_reg[i] & 0x0f;
+										uint8_t x_high = (sm7831_X_reg[i] >> 4) & 0x0f;
+										uint8_t y_low  = sm7831_Y_reg[i] & 0x0f;
+										uint8_t y_high = (sm7831_Y_reg[i] >> 4) & 0x0f;
+
+										// Subtract low-order digit (within byte)
+										int16_t diff_low = x_low - y_low - borrow;
+										borrow = 0;
+										if (diff_low < 0)
+										{
+											diff_low += 10;
+											borrow = 1;
+										}
+
+										// Subtract high-order digit (within same byte)
+										int16_t diff_high = x_high - y_high - borrow;
+										borrow = 0;
+										if (diff_high < 0)
+										{
+											diff_high += 10;
+											borrow = 1;
+										}
+
+										sm7831_X_reg[i] = ((uint8_t)diff_high << 4) | (uint8_t)diff_low;
+									}
+									if(borrow == 1)
+										sm7831_status =  0x06;
+									else
+										sm7831_status =  0x00;
+									logerror("SM7831: Sub X - Y -> X - Offset:%02x - Data:%02x - borrow:%02x\n", offset, data, borrow);
+								}
+								break;
+						case 0x0a: logerror("SM7831: Mul X * Y -> X - Offset:%02x - Data:%02x\n", offset, data); break;										// Mul X * Y -> X
+						case 0x0c: logerror("SM7831: Div X / Y -> X - Offset:%02x - Data:%02x\n", offset, data); break;										// Div X / Y -> X
+						case 0x0e: logerror("SM7831: SQRTodd  X sqrt -> X - Offset:%02x - Data:%02x\n", offset, data); break;								// SQRTodd  X sqrt -> X
+						case 0x1e: logerror("SM7831: SQRTeven X sqrt -> X - Offset:%02x - Data:%02x\n", offset, data); break;								// SQRTeven X sqrt -> X
+						default: logerror("SM7831: Default - Offset:%02x - Data:%02x\n", offset, data); break;
+					}
+				else
+					switch((data & 0xc0) >> 4)
+					{
+						case 0x04:
+						case 0x05: logerror("SM7831: SL Register X - Offset:%02x - Data:%02x\n", offset, data); break;											// SR Register X
+						case 0x06:
+						case 0x07: logerror("SM7831: SL Register Y - Offset:%02x - Data:%02x\n", offset, data); break;											// SL Register Y
+						case 0x08:
+						case 0x09: logerror("SM7831: SR Register X - Offset:%02x - Data:%02x\n", offset, data); break;											// SR Register X
+						case 0x0a:
+						case 0x0b: logerror("SM7831: SR Register Y - Offset:%02x - Data:%02x\n", offset, data); break;											// SR Register Y
+
+						default: logerror("SM7831: Default - Offset:%02x - Data:%02x\n", offset, data); break;
+					}
+				}
+				break;
+
+		case 2: sm7831_data_cmd = data >> 5;
+				m_dap_idx = 0;
+				logerror("SM7831: Set DAP <-> MEM Mode - Data_Index:%02x - Data_cmd:%02x\n", m_dap_idx, data >> 5);
+				break;
+
+		case 3:
+				if(sm7831_data_cmd == 0x04)  // Mem to DAP reg X
+				{
+					sm7831_X_reg[m_dap_idx] = data;
+					logerror("SM7831: Write Data - m_dap_idx:%02x (X) - Data:%02x\n", m_dap_idx, sm7831_X_reg[m_dap_idx]);
+				}
+				if(sm7831_data_cmd == 0x05)  // Mem to DAP reg Y
+				{
+					sm7831_Y_reg[m_dap_idx] = data;
+					logerror("SM7831: Write Data - m_dap_idx:%02x (Y) - Data:%02x\n", m_dap_idx, sm7831_Y_reg[m_dap_idx]);
+				}
+				m_dap_idx = m_dap_idx + 1;
+				break;
+		default: break;
+	}
+
 }
 
 
@@ -4251,9 +4481,9 @@ void wingco_state::tmcu_program_map(address_map &map)
 	map(0x0000, 0x1fff).rom().region("tmcu",0);
 }
 
-void wingco_state::tmcu_io_map(address_map &map)
+void wingco_state::tmcu_data_map(address_map &map)
 {
-	map(0x0000, 0x01ff).rw(FUNC(wingco_state::tmcu_io_r), FUNC(wingco_state::tmcu_io_w));
+	map(0x0000, 0x01ff).rw(FUNC(wingco_state::tmcu_data_r), FUNC(wingco_state::tmcu_data_w));
 }
 
 
@@ -4271,7 +4501,7 @@ void wingco_state::feverch_map(address_map &map)
 	map(0xe400, 0xe5ff).ram().w(FUNC(wingco_state::reel_ram_w<2>)).share(m_reel_ram[2]);
 	map(0xe600, 0xe7ff).ram();
 
-	map(0xe800, 0xe83f).mirror(0x80).ram().w(FUNC(wingco_state::reel_scroll_w<0>)).share(m_reel_scroll[0]);  // different offsets for normal or dup reels 
+	map(0xe800, 0xe83f).mirror(0x80).ram().w(FUNC(wingco_state::reel_scroll_w<0>)).share(m_reel_scroll[0]);  // different offsets for normal or dup reels
 	map(0xea00, 0xea3f).ram().w(FUNC(wingco_state::reel_scroll_w<1>)).share(m_reel_scroll[1]);
 	map(0xec00, 0xec3f).ram().w(FUNC(wingco_state::reel_scroll_w<2>)).share(m_reel_scroll[2]);
 
@@ -4284,7 +4514,9 @@ void wingco_state::feverch_portmap(address_map &map)
 	map(0x00, 0x03).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));
 	map(0x08, 0x0b).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));
 	map(0x10, 0x13).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));
-	map(0x18, 0x1c).noprw(); // unknown protection device - under test
+	map(0x18, 0x1b).rw(FUNC(wingco_state::sm7831_read), FUNC(wingco_state::sm7831_write));
+	map(0x1c, 0x1c).noprw(); // unknown
+
 	map(0x20, 0x20).w("sn1", FUNC(sn76489_device::write));
 	map(0x28, 0x28).w("sn2", FUNC(sn76489_device::write));
 	map(0x30, 0x30).w("sn3", FUNC(sn76489_device::write));
@@ -5565,6 +5797,94 @@ static INPUT_PORTS_START( wcat3a )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
+INPUT_PORTS_END
+
+
+static INPUT_PORTS_START( cutylinea )
+
+	PORT_INCLUDE( cmv4_player )
+
+	PORT_INCLUDE( cmv4_coins )
+
+	PORT_INCLUDE( cmv4_service )
+
+	PORT_START("DSW1")
+	PORT_DIPNAME( 0x03, 0x03, "Min Bet" )             PORT_DIPLOCATION("DSW1:1,2")  // OK
+	PORT_DIPSETTING(    0x03, "1" )
+	PORT_DIPSETTING(    0x02, "16" )
+	PORT_DIPSETTING(    0x01, "32" )
+	PORT_DIPSETTING(    0x00, "40" )
+	PORT_DIPNAME( 0x04, 0x04, "Double Up Game" )      PORT_DIPLOCATION("DSW1:3")  // OK
+	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x04, DEF_STR( On ) )
+	PORT_DIPNAME( 0x18, 0x18, "Max Bet" )             PORT_DIPLOCATION("DSW1:4,5")  // OK
+	PORT_DIPSETTING(    0x10, "32" )
+	PORT_DIPSETTING(    0x00, "64" )
+	PORT_DIPSETTING(    0x18, "80" )
+	PORT_DIPSETTING(    0x08, "96" )
+	PORT_DIPNAME( 0x20, 0x20, "D-UP Card Type" )      PORT_DIPLOCATION("DSW1:6")  // OK
+	PORT_DIPSETTING(    0x20, "Poker" )
+	PORT_DIPSETTING(    0x00, "Fruits" )
+	PORT_DIPNAME( 0x40, 0x40, "Keyout" )              PORT_DIPLOCATION("DSW1:7")  // to verify
+	PORT_DIPSETTING(    0x40, "As Keyin" )
+	PORT_DIPSETTING(    0x00, "1 Point" )
+	PORT_DIPNAME( 0x80, 0x80, "Pool" )                PORT_DIPLOCATION("DSW1:8")  // to verify
+	PORT_DIPSETTING(    0x80, "880" )
+	PORT_DIPSETTING(    0x00, "520" )
+
+	PORT_START("DSW2")
+	PORT_DIPNAME( 0x07, 0x07, "Main Game Rate" )      PORT_DIPLOCATION("DSW2:1,2,3")
+	PORT_DIPSETTING(    0x00, "55%" )
+	PORT_DIPSETTING(    0x01, "60%" )
+	PORT_DIPSETTING(    0x02, "65%" )
+	PORT_DIPSETTING(    0x03, "70%" )
+	PORT_DIPSETTING(    0x04, "75%" )
+	PORT_DIPSETTING(    0x05, "80%" )
+	PORT_DIPSETTING(    0x06, "85%" )
+	PORT_DIPSETTING(    0x07, "90%" )
+	PORT_DIPNAME( 0x08, 0x08, "D-UP Game Rate" )      PORT_DIPLOCATION("DSW2:4")
+	PORT_DIPSETTING(    0x00, "60" )
+	PORT_DIPSETTING(    0x08, "70" )
+	PORT_DIPNAME( 0x30, 0x30, DEF_STR( Coinage ) )    PORT_DIPLOCATION("DSW2:5,6")
+	PORT_DIPSETTING(    0x30, "1" )
+	PORT_DIPSETTING(    0x20, "10" )
+	PORT_DIPSETTING(    0x10, "25" )
+	PORT_DIPSETTING(    0x00, "50" )
+	PORT_DIPNAME( 0xc0, 0xc0, "Key In" )              PORT_DIPLOCATION("DSW2:7,8")
+	PORT_DIPSETTING(    0xc0, "100" )
+	PORT_DIPSETTING(    0x80, "120" )
+	PORT_DIPSETTING(    0x40, "300" )
+	PORT_DIPSETTING(    0x00, "500" )
+
+	PORT_START("DSW3")
+	PORT_DIPUNKNOWN_DIPLOC(0x01, 0x01, "DSW3:1")
+	PORT_DIPUNKNOWN_DIPLOC(0x02, 0x02, "DSW3:2")
+	PORT_DIPUNKNOWN_DIPLOC(0x04, 0x04, "DSW3:3")
+	PORT_DIPUNKNOWN_DIPLOC(0x08, 0x08, "DSW3:4")
+	PORT_DIPUNKNOWN_DIPLOC(0x10, 0x10, "DSW3:5")
+	PORT_DIPUNKNOWN_DIPLOC(0x20, 0x20, "DSW3:6")
+	PORT_DIPUNKNOWN_DIPLOC(0x40, 0x40, "DSW3:7")
+	PORT_DIPUNKNOWN_DIPLOC(0x80, 0x80, "DSW3:8")
+
+	PORT_START("DSW4")
+	PORT_DIPUNKNOWN_DIPLOC(0x01, 0x01, "DSW4:1")
+	PORT_DIPUNKNOWN_DIPLOC(0x02, 0x02, "DSW4:2")
+	PORT_DIPUNKNOWN_DIPLOC(0x04, 0x04, "DSW4:3")
+	PORT_DIPUNKNOWN_DIPLOC(0x08, 0x08, "DSW4:4")
+	PORT_DIPUNKNOWN_DIPLOC(0x10, 0x10, "DSW4:5")
+	PORT_DIPUNKNOWN_DIPLOC(0x20, 0x20, "DSW4:6")
+	PORT_DIPUNKNOWN_DIPLOC(0x40, 0x40, "DSW4:7")
+	PORT_DIPUNKNOWN_DIPLOC(0x80, 0x80, "DSW4:8")
+
+	PORT_START("DSW5")
+	PORT_DIPUNKNOWN_DIPLOC(0x01, 0x01, "DSW5:1")
+	PORT_DIPUNKNOWN_DIPLOC(0x02, 0x02, "DSW5:2")
+	PORT_DIPUNKNOWN_DIPLOC(0x04, 0x04, "DSW5:3")
+	PORT_DIPUNKNOWN_DIPLOC(0x08, 0x08, "DSW5:4")
+	PORT_DIPUNKNOWN_DIPLOC(0x10, 0x10, "DSW5:5")
+	PORT_DIPUNKNOWN_DIPLOC(0x20, 0x20, "DSW5:6")
+	PORT_DIPUNKNOWN_DIPLOC(0x40, 0x40, "DSW5:7")
+	PORT_DIPUNKNOWN_DIPLOC(0x80, 0x80, "DSW5:8")
 INPUT_PORTS_END
 
 
@@ -14527,7 +14847,7 @@ void wingco_state::lucky8tet(machine_config &config)
 
 	I80C51(config, m_tmcu, 24'500'000);  // Internal Clock
 	m_tmcu->set_addrmap(AS_PROGRAM, &wingco_state::tmcu_program_map);
-	m_tmcu->set_addrmap(AS_IO, &wingco_state::tmcu_io_map);
+	m_tmcu->set_addrmap(AS_DATA, &wingco_state::tmcu_data_map);
 
 	m_tmcu->port_out_cb<1>().set(FUNC(wingco_state::tmcu_p1_out));
 
@@ -24703,6 +25023,36 @@ ROM_START( feverchtw )
 	ROM_LOAD( "82s123.10d", 0x100, 0x0020, CRC(71670863) SHA1(bd0d18c55774db7720413632d130cf3790fca1ad) )
 ROM_END
 
+// W-6 for W-4 hardware...
+ROM_START( feverchw4 )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "8.b14",  0x00000, 0x8000, CRC(3bdc197c) SHA1(6552d9343442e7bbbd713f299219b63e423a79b4) )
+
+	ROM_REGION( 0x18000, "gfx1", 0 )
+	ROM_LOAD( "5.h7",   0x00000, 0x8000, CRC(3f52c063) SHA1(a53042b1285ed1cd853aa54b5c58deccf7eb2693) )
+	ROM_LOAD( "6.h8",   0x08000, 0x8000, CRC(9dace485) SHA1(8b7f0ce84334252285db60c8d9e16d2b17d67cb6) )
+	ROM_LOAD( "7.h10",  0x10000, 0x8000, CRC(77a6ee8f) SHA1(46d437089729db004a54e35c79c3c95ef169695b) )
+
+	ROM_REGION( 0x8000, "gfx2", 0 )
+	ROM_LOAD( "1.h1",   0x0000, 0x2000, CRC(c2f72d5f) SHA1(3e4f37a60931a417929255e782d8f7f219d8ebd0) )
+	ROM_LOAD( "2.h3",   0x2000, 0x2000, CRC(b4a0f2ad) SHA1(f68d5134156b646c5eeadbab6bdc21507018eafa) )
+	ROM_LOAD( "3.h4",   0x4000, 0x2000, CRC(464997a3) SHA1(e56bc0f52dbb3689c38d357e24914e7688254534) )
+	ROM_LOAD( "4.h6",   0x6000, 0x2000, CRC(bc3a09c4) SHA1(952dcd4aace87fd7249fc2391c8b4832fa17b083) )
+
+	ROM_REGION( 0x200, "proms", 0 )
+	ROM_LOAD( "82s129.g13", 0x0000, 0x0100, CRC(23e81049) SHA1(78071dae70fad870e972d944642fb3a2374be5e4) )
+	ROM_LOAD( "82s129.g14", 0x0100, 0x0100, CRC(526cf9d3) SHA1(eb779d70f2507d0f26d225ac8f5de8f2243599ca) )
+
+	ROM_REGION( 0x20, "proms2", 0 )
+	ROM_LOAD( "82s123.d13", 0x0000, 0x0020, CRC(c6b41352) SHA1(d7c3b5aa32e4e456c9432a13bede1db6d62eb270) )
+
+	ROM_REGION( 0x100, "unkprom", 0 )
+	ROM_LOAD( "82s129.f3",  0x0000, 0x0100, CRC(1d668d4a) SHA1(459117f78323ea264d3a29f1da2889bbabe9e4be) )
+
+	ROM_REGION( 0x20, "unkprom2", 0 )
+	ROM_LOAD( "82s123.d12", 0x0000, 0x0020, CRC(6df3f972) SHA1(0096a7f7452b70cac6c0752cb62e24b643015b5c) )
+ROM_END
+
 /*
   Win Cherry (ver 0.16 - 19990219)
 
@@ -28521,27 +28871,50 @@ void unkch_state::init_boncha()
 	rom[0x5d04] = 0x77;
 }
 
-void wingco_state::init_feverch()
+void goldstar_state::init_moonlghtb()
 {
+	// masking the reels
 	uint8_t *rom = memregion("maincpu")->base();
 
-//	dipsw read protection skip
-	rom[0x06cf] = 0x0a;
-	rom[0x073c] = 0x11;
-	rom[0x07d2] = 0x12;
-	rom[0x0810] = 0x10;
-	
-//  battery check
-	rom[0x3382] = 0x18;
-	rom[0x3383] = 0x00;
+	rom[0xc780] = 0x00;   // black
 
-//	temp hack - divide by 0 endless loop
-	rom[0x4160] = 0x00;
-	rom[0x4161] = 0x00;
+}
 
-//	signature break (protection)
-//	rom[0x3387] = 0xd0;
-	rom[0x3350] = 0xc9;  // 02c1 call 0x3350 - signature break (protection)
+void cmaster_state::init_cutya()
+{
+	init_cmv4();
+
+	uint8_t *rom = memregion("maincpu")->base();
+
+	rom[0x02e6] = 0x83;  // jp 0301h -> jp 8301h  start
+	rom[0x2a6e] = 0x83;	 // ld hl, 0301h -> 8301h start
+	rom[0x8f51] = 0x84;  // jp 4423h -> jp 8423h  loop attract
+	rom[0x0821] = 0x93;  // 81fh jp 53CBh -> jp 93cbh
+	rom[0x0927] = 0x5a;	 // 0926h  call 0722h -> call 465ah - keep original program flow (as cutyline)	
+	rom[0x0928] = 0x46;
+	rom[0x9415] = 0xcd;  // 9415h  jp 8646h -> call 4d09h - keep original program flow (as cutyline)
+	rom[0x9416] = 0x09;
+	rom[0x9417] = 0x4d;
+	rom[0x8e3f] = 0x94;  // jp 541bh -> 941bh
+
+	// bet & start loop
+	rom[0x0480] = 0x13; // call 4358h -> call 1358h
+	rom[0x0486] = 0x13; // call 536dh -> call 136dh
+	rom[0x0489] = 0x14; // call 44a5h -> call 14a5h
+	rom[0x0bc5] = 0x14; // call 4475h -> call 1475h
+	rom[0x860f] = 0x94; // jp   5424h -> call 9424h
+
+	//start reels
+	rom[0x8645] = 0x94; // jp 542eh -> jp 942eh
+	rom[0x07f2] = 0x52; // jp 5462h -> jp 9452h (weird change in lower address)
+	rom[0x07f3] = 0x94;
+	rom[0x8860] = 0x94; // jp 548dh -> jp 948dh
+	rom[0x056e] = 0x94; // jp 5497h -> jp 9497h
+	rom[0x057d] = 0x93; // jp 53f0h -> jp 93f0h
+	rom[0x05b5] = 0x94; // jp 548ah -> jp 948ah
+	rom[0x0619] = 0x93; // jp 53d2h -> jp 93d2h
+	rom[0x82d8] = 0x93; // jp 53fch -> jp 93fch
+	rom[0x9493] = 0xa5;	// jp nz 0560h -> a560h 
 }
 
 
@@ -28560,8 +28933,8 @@ GAMEL( 199?, goldstar,   0,        goldstar, goldstar, goldstar_state, init_gold
 GAMEL( 199?, goldstbl,   goldstar, goldstbl, goldstar, goldstar_state, empty_init,     ROT0, "IGS",               "Golden Star (Blue version)",                  0,                 layout_goldstar )
 GAME(  199?, moonlght,   goldstar, moonlght, goldstar, goldstar_state, empty_init,     ROT0, "bootleg",           "Moon Light (v.0629, low program)",            0 )
 GAME(  199?, moonlghta,  goldstar, moonlght, goldstar, goldstar_state, empty_init,     ROT0, "bootleg",           "Moon Light (v.0629, high program)",           0 )
-GAME(  199?, moonlghtb,  goldstar, moonlght, goldstar, goldstar_state, empty_init,     ROT0, "bootleg",           "Moon Light (v.02L0A, low program)",           MACHINE_IMPERFECT_COLORS )  // need to check the odd palette value at 0xc780. should be black.
-GAME(  199?, moonlghtc,  goldstar, moonlght, goldstar, goldstar_state, empty_init,     ROT0, "bootleg",           "Moon Light (v.02L0A, high program, alt gfx)", MACHINE_IMPERFECT_COLORS )  // need to check the odd palette value at 0xc780. should be black.
+GAME(  199?, moonlghtb,  goldstar, moonlght, goldstar, goldstar_state, init_moonlghtb, ROT0, "bootleg",           "Moon Light (v.02L0A, low program)",           0 )
+GAME(  199?, moonlghtc,  goldstar, moonlght, goldstar, goldstar_state, init_moonlghtb, ROT0, "bootleg",           "Moon Light (v.02L0A, high program, alt gfx)", 0 )
 GAME(  199?, gregular,   goldstar, moonlght, gregular, goldstar_state, empty_init,     ROT0, "bootleg (Playmark)","Golden Regular (version 388/2000)",           0 )                         // hacked to only hand pay
 GAMEL( 199?, chrygld,    0,        chrygld,  chrygld,  cb3_state,      init_chrygld,   ROT0, "bootleg",           "Cherry Gold I (set 1)",                       0,                 layout_chrygld )
 GAMEL( 199?, chry10,     0,        chrygld,  chry10,   cb3_state,      init_chry10,    ROT0, "bootleg",           "Cherry 10 (bootleg with PIC16F84)",           0,                 layout_chrygld )
@@ -28632,9 +29005,9 @@ GAMEL( 1991, cmasterl,   cmaster,  cm,       cmasterb, cmaster_state,  init_cmv4
 GAMEL( 1991, skillmst,   cmaster,  cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Skill Master (ver.fst v5.0)",                 0,                 layout_cmasterb )
 GAMEL( 1991, skillmsta,  cmaster,  cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Skill Master (ver.fst v3.0)",                 0,                 layout_cmasterb )
 GAMEL( 1991, cutyline,   0,        cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "Dyna",              "Cuty Line (LC-88, ver.1.01)",                 0,                 layout_cmasterb )
-GAMEL( 1991, cutylinea,  cutyline, cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.8.05C)",        MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
-GAMEL( 1991, cutylineb,  cutyline, cutylineb,cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.7C.14)",        MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
-GAMEL( 1991, cutylinec,  cutyline, cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.7.07C)",        MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
+GAMEL( 1991, cutylinea,  cutyline, cm,       cutylinea, cmaster_state, init_cutya,     ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.8.05C)",        MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
+GAMEL( 1991, cutylineb,  cutyline, cutylineb,cutylinea, cmaster_state, init_cutya,     ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.7C.14)",        MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
+GAMEL( 1991, cutylinec,  cutyline, cm,       cutylinea, cmaster_state, init_cutya,     ROT0, "bootleg",           "Cuty Line (LC-88 bootleg, ver.7.07C)",        MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING, layout_cmasterb ) // needs correct memory map
 GAMEL( 1991, lonestar,   cmaster,  cm,       cmasterh, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Lonestar Roundup (set 1)",                    0,                 layout_cmasterb )
 GAMEL( 1991, lonestara,  cmaster,  cm,       cmasterh, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Lonestar Roundup (set 2)",                    0,                 layout_cmasterb )
 GAMEL( 1991, skdelux2k,  cmaster,  cm,       cmasterb, cmaster_state,  init_cmv4,      ROT0, "bootleg",           "Florida Skill Deluxe 2K (FBV2 ver.T)",        0,                 layout_cmasterb )
@@ -28767,9 +29140,10 @@ GAME(  199?, fl7_tw,     fl7_50,   flam7_tw, flaming7, wingco_state,   init_flam
 
 
 // --- Wing W-6 hardware ---
-GAMEL( 1986, feverch,    0,        feverch,  feverch,  wingco_state,   init_feverch,   ROT0, "Wing Co., Ltd.",    "Fever Chance (W-6, Japan, set 1)",                         MACHINE_NOT_WORKING,   layout_lucky8 )  // unimplemented arithmetic chip
-GAMEL( 1986, fevercha,   feverch,  feverch,  feverch,  wingco_state,   empty_init,     ROT0, "Wing Co., Ltd.",    "Fever Chance (W-6, Japan, set 2)",                         MACHINE_NOT_WORKING,   layout_lucky8 )  // unimplemented arithmetic chip
-GAMEL( 1986, feverchtw,  feverch,  feverch,  feverch,  wingco_state,   empty_init,     ROT0, "Yamate",            "Fever Chance (W-6, Taiwan)",                               0,                     layout_lucky8 )
+GAMEL( 1986, feverch,    0,        feverch,  feverch,  wingco_state,   empty_init,     ROT0, "Wing Co., Ltd.",    "Fever Chance (W-6, Japan, set 1)",                         0,          layout_lucky8 )
+GAMEL( 1986, fevercha,   feverch,  feverch,  feverch,  wingco_state,   empty_init,     ROT0, "Wing Co., Ltd.",    "Fever Chance (W-6, Japan, set 2)",                         0,          layout_lucky8 )
+GAMEL( 1986, feverchtw,  feverch,  feverch,  feverch,  wingco_state,   empty_init,     ROT0, "Yamate",            "Fever Chance (W-6, Taiwan)",                               0,          layout_lucky8 )
+GAME(  1986, feverchw4,  feverch,  lucky8t,  lucky8t,  wingco_state,   empty_init,     ROT0, "bootleg",           "Fever Chance (W-6, cross-system for W-4)",                 MACHINE_IMPERFECT_GRAPHICS | MACHINE_NOT_WORKING )
 
 // --- Wing W-7 hardware ---
 GAMEL( 1991, megaline,   0,        megaline, megaline, wingco_state,   init_mgln,      ROT0, "Fun World",         "Mega Lines (Wing W-7 System)",                             0,          layout_megaline )
