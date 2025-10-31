@@ -46,6 +46,11 @@ protected:
 	virtual space_config_vector memory_space_config() const override;
 	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 
+	virtual uint8_t dack_r(int line) override;
+	virtual void dack_w(int line, uint8_t data) override;
+	virtual void eop_w(int state) override;
+	void update_dreq_mapping(int dreq, int logical);
+
 private:
 	const address_space_config m_space_config;
 
@@ -73,11 +78,16 @@ private:
 	u8 m_index;
 	u8 m_logical_index;
 	bool m_activate[0xb];
+	int m_dreq_mapping[4];
+	int m_last_dma_line;
 
 	u8 m_hefras;
 	u8 m_lockreg;
 	u8 m_lock_sequence;
 
+	u8 m_fdc_irq_line;
+	u8 m_fdc_drq_line;
+	u8 m_fdd_mode, m_fdd_crf1, m_fdd_crf2, m_fdd_crf4;
 	u8 m_keyb_irq_line;
 	u8 m_mouse_irq_line;
 	u8 m_rtc_irq_line;
@@ -99,6 +109,9 @@ private:
 	void logical_device_select_w(offs_t offset, u8 data);
 	template <unsigned N> u8 activate_r(offs_t offset);
 	template <unsigned N> void activate_w(offs_t offset, u8 data);
+
+	void irq_floppy_w(int state);
+	void drq_floppy_w(int state);
 
 	u8 keyb_irq_r(offs_t offset);
 	void keyb_irq_w(offs_t offset, u8 data);
@@ -127,6 +140,7 @@ private:
 	void irq_parallel_w(int state);
 
 	void request_irq(int irq, int state);
+	void request_dma(int dreq, int state);
 };
 
 DECLARE_DEVICE_TYPE(W83977TF, w83977tf_device);
