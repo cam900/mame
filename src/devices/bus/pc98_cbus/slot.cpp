@@ -69,12 +69,15 @@ device_pc9801cbus_card_interface::~device_pc9801cbus_card_interface()
 //  pc98_cbus_slot_device - constructor
 //-------------------------------------------------
 
-pc98_cbus_slot_device::pc98_cbus_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
-	device_t(mconfig, PC98_CBUS_SLOT, tag, owner, clock),
-	device_slot_interface(mconfig, *this),
-	m_memspace(*this, finder_base::DUMMY_TAG, -1),
-	m_iospace(*this, finder_base::DUMMY_TAG, -1),
-	m_int_callback(*this)
+pc98_cbus_slot_device::pc98_cbus_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, PC98_CBUS_SLOT, tag, owner, clock)
+	, device_slot_interface(mconfig, *this)
+	, m_memspace(*this, finder_base::DUMMY_TAG, -1)
+	, m_iospace(*this, finder_base::DUMMY_TAG, -1)
+	, m_int_cb(*this)
+//	, m_drq_cb(*this)
+//	, m_dma_in_cb(*this, 0)
+//	, m_dma_out_cb(*this)
 {
 }
 
@@ -124,35 +127,3 @@ template void pc98_cbus_slot_device::install_io<read8s_delegate,   write8s_deleg
 template void pc98_cbus_slot_device::install_io<read8sm_delegate,  write8sm_delegate >(offs_t start, offs_t end, read8sm_delegate rhandler,  write8sm_delegate whandler);
 template void pc98_cbus_slot_device::install_io<read8smo_delegate, write8smo_delegate>(offs_t start, offs_t end, read8smo_delegate rhandler, write8smo_delegate whandler);
 
-// boilerplate code for boards that has configurable I/O with either Jumpers or Dip-Switches
-// NB: client must have a mechanism to remember what port has been used before and after calling this,
-// in order to avoid "last instantiated wins" issues with overlapping board full configs.
-// TODO: refactor to actually be useful for PCI archs
-void pc98_cbus_slot_device::flush_install_io(const char *client_tag, u16 old_io, u16 new_io, u16 size, read8sm_delegate rhandler, write8sm_delegate whandler)
-{
-	// initialize if client have this unmapped (such as first boot)
-	// device_start fns cannot read input ports ...
-	if (old_io == 0)
-		old_io = new_io;
-
-	logerror("%s: %s uninstall I/O at %04x-%04x\n",
-		this->tag(),
-		client_tag,
-		old_io,
-		old_io + size
-	);
-	this->io_space().unmap_readwrite(old_io, old_io + size);
-
-	logerror("%s: %s install I/O at %04x-%04x\n",
-		this->tag(),
-		client_tag,
-		new_io,
-		new_io + size
-	);
-	this->install_io(
-		new_io,
-		new_io + size,
-		rhandler,
-		whandler
-	);
-}
