@@ -16458,8 +16458,9 @@ cncchess2
 @source:chess/conic_cchess3.cpp
 cncchess3
 
-@source:chess/krypton_regency.cpp
-regency
+@source:chess/krypton_challenge.cpp
+kchal
+kchala
 
 @source:chess/regence.cpp
 regence
@@ -16936,6 +16937,7 @@ backfirea
 battlera
 bldwolf
 bldwolfj
+miade
 
 @source:dataeast/boogwing.cpp
 boogwing
@@ -20659,6 +20661,7 @@ cmfun
 cmpacman
 cmpacmana
 cmpacmanb
+cmpap
 cmtetris
 cmtetrisa
 cmtetrisb
@@ -20709,6 +20712,7 @@ hamhouse9
 jkrmast
 jkrmasta
 jkrmastb
+jkrmastc
 jpknight
 kkotnoli
 ladylinr
@@ -20962,6 +20966,7 @@ cjddzps
 cjddzs
 cjddzsa
 cjdh6th
+cjdh6tha
 cjsxp
 cjtljp
 extradrw
@@ -21061,6 +21066,7 @@ qhzb
 slqzsp
 super70s
 sydh
+xcjnh
 xyddz
 xydn
 zjddz
@@ -30044,6 +30050,7 @@ castfpt
 castrev
 
 @source:misc/cb2001.cpp
+bsbonanza
 cb2001
 cb4
 cb4a
@@ -39760,6 +39767,7 @@ wbeachvla
 @source:playmark/powerbal.cpp
 atombjt
 hotminda
+hotmindb
 magicstk
 powerbal
 
@@ -47052,6 +47060,7 @@ tvbg6b
 
 @source:tvgames/elan_eu3a05.cpp
 airblsjs
+bratzra
 buzztime
 carlecfg
 pvmil8
@@ -47156,6 +47165,7 @@ anpaneng
 anpanm15
 bk139in1
 bkrankp
+lxcymls
 lxcympp
 lxcymsm
 lxcyrace
@@ -47176,6 +47186,7 @@ bubltea
 dsgnpal
 pokebala
 pokeissh
+pokemech
 pokgoget
 punifrnd
 punij1m
