@@ -459,6 +459,9 @@ void VGMLogger::Stop(void)
 			case VGMC_OKIM5205:
 				vh.lngHzOKIM5205 &= clock_mask;
 				break;
+			case VGMC_MSM5232:
+				vh.lngHzMSM5232 &= clock_mask;
+				break;
 		//	case VGMC_OKIM6376:
 		//		vh.lngHzOKIM6376 &= clock_mask;
 		//		break;
@@ -792,6 +795,9 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		case VGMC_OKIM5205:
 			chip_val = vh.lngHzOKIM5205;
 			break;
+		case VGMC_MSM5232:
+			chip_val = vh.lngHzMSM5232;
+			break;
 	//	case VGMC_OKIM6376:
 	//		chip_val = vh.lngHzOKIM6376;
 	//		use_two = 0x00;
@@ -1003,6 +1009,9 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_OKIM5205:
 		vh.lngHzOKIM5205 = clock;
 		break;
+	case VGMC_MSM5232:
+		vh.lngHzMSM5232 = clock;
+		break;
 //	case VGMC_OKIM6376:
 //		vh.lngHzOKIM6376 = clock;
 //		break;
@@ -1069,6 +1078,7 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_K007232:
 	case VGMC_K005289:
 	case VGMC_OKIM5205:
+	case VGMC_MSM5232:
 		Header_SizeCheck(*vfPtr, 0x172, 0x100);
 		break;
 	}
@@ -1394,6 +1404,21 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 		case 0x02:	// ADPCM Type
 			vh.bytOKI5205Flags &= ~(0x01 << 2);
 			vh.bytOKI5205Flags |= (data & 0x01) << 2;
+			break;
+		}
+		break;
+	case VGMC_MSM5232:
+		switch(attr)
+		{
+		case 0x10:	// External Capacitors
+		case 0x11:
+		case 0x12:
+		case 0x13:
+		case 0x14:
+		case 0x15:
+		case 0x16:
+		case 0x17:
+			print_info("MSM5232: External Capacitor %hu = 0x%X (%g)\n", attr & 0x0F, data, data / (double)0x1000000);
 			break;
 		}
 		break;
@@ -1927,6 +1952,12 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.Data[0x01] = (_chipType & 0x80) | ((r & 0x07) << 4) | (v & 0x0F);
 		wrtCmd.CmdLen = 0x02;
 		break;
+	case VGMC_MSM5232:
+		wrtCmd.Data[0x00] = 0x43;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
 //	case VGMC_OKIM6376:
 //		wrtCmd.Data[0x00] = 0x31;
 //		wrtCmd.Data[0x01] = v;
@@ -2287,6 +2318,8 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 		}
 		break;
 	case VGMC_OKIM5205:
+		break;
+	case VGMC_MSM5232:
 		break;
 //	case VGMC_OKIM6376:
 //		switch(type)
