@@ -31,7 +31,7 @@ public:
 	//pc9801_55_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 	pc9801_55_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);
 
-	static constexpr feature_type unemulated_features() { return feature::DISK; }
+	static constexpr feature_type unemulated_features() { return feature::DISK | feature::PROTECTION; }
 
 	void scsi_irq_w(int state);
 	void scsi_drq_w(int state);
@@ -47,11 +47,14 @@ protected:
 	virtual ioport_constructor device_input_ports() const override ATTR_COLD;
 	virtual space_config_vector memory_space_config() const override;
 	virtual void remap(int space_id, offs_t start, offs_t end) override;
+	virtual uint8_t dack_r(int line) override;
+	virtual void dack_w(int line, uint8_t data) override;
 
 private:
 	required_device<nscsi_bus_device> m_scsi_bus;
 	required_device<wd33c9x_base_device> m_wdc;
 	address_space_config m_space_io_config;
+	required_memory_region m_bios;
 	required_ioport m_dsw1;
 	required_ioport m_dsw2;
 
