@@ -138,7 +138,9 @@ public:
 		uint32_t lngHzK005289;
 		uint32_t lngHzOKIM5205;
 		uint32_t lngHzMSM5232;
-		uint8_t bytReserved[0x08];
+		uint32_t lngHzBSMT2000;
+		uint32_t lngHzICS2115;
+		//uint8_t bytReserved[0x0C];
 	};	// -> 0x100 Bytes
 	struct GD3_TAG
 	{
@@ -248,8 +250,8 @@ enum ChipTypes : uint8_t
 	VGMC_NESAPU		= 0x14,
 	VGMC_MULTIPCM	= 0x15,
 	VGMC_UPD7759	= 0x16,
-	VGMC_OKIM6258	= 0x17,
-	VGMC_OKIM6295	= 0x18,
+	VGMC_MSM6258	= 0x17,
+	VGMC_MSM6295	= 0x18,
 	VGMC_K051649	= 0x19,
 	VGMC_K054539	= 0x1A,
 	VGMC_C6280		= 0x1B,
@@ -271,8 +273,10 @@ enum ChipTypes : uint8_t
 	VGMC_MIKEY		= 0x29,
 	VGMC_K007232	= 0x2A,
 	VGMC_K005289	= 0x2B,
-	VGMC_OKIM5205	= 0x2C,
+	VGMC_MSM5205	= 0x2C,
 	VGMC_MSM5232	= 0x2D,
+	VGMC_BSMT2000	= 0x2E,
+	VGMC_ICS2115	= 0x2F,
 };
 
 #endif // __VGMWRITE_HPP__

@@ -122,7 +122,7 @@ void okim6295_device::device_start()
 	int divisor = m_pin7_state ? 132 : 165;
 	m_stream = stream_alloc(0, 1, clock() / divisor);
 
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_OKIM6295, clock());
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM6295, clock());
 	m_vgm_log->SetProperty(0x00, m_pin7_state);
 	m_vgm_log->DumpSampleROM(0x01, m_region);
 

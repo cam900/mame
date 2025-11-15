@@ -101,7 +101,7 @@ void msm5205_device::device_start()
 	m_vck_timer = timer_alloc(FUNC(msm5205_device::toggle_vck), this);
 	m_capture_timer = timer_alloc(FUNC(msm5205_device::update_adpcm), this);
 
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_OKIM5205, clock());
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5205, clock());
 	if (type() == MSM6585)
 		m_vgm_log->SetProperty(0x00, 0x01);	// MSM6585
 	else
