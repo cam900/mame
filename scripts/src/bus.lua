@@ -4705,6 +4705,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/bus/qic02/qic02.h,BUSES["QIC02"] = true
+---------------------------------------------------
+
+if (BUSES["QIC02"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/bus/qic02/qic02.cpp",
+		MAME_DIR .. "src/devices/bus/qic02/qic02.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/bus/ql/exp.h,BUSES["QL"] = true
 ---------------------------------------------------
 
