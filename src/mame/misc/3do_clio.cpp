@@ -29,10 +29,13 @@ clio_device::clio_device(const machine_config &mconfig, const char *tag, device_
 	, m_firq_cb(*this)
 	, m_vsync_cb(*this)
 	, m_hsync_cb(*this)
+	, m_xbus_sel_cb(*this)
 	, m_xbus_read_cb(*this, 0xff)
 	, m_xbus_write_cb(*this)
 	, m_dac_l(*this)
 	, m_dac_r(*this)
+//  , m_adb_in_cb(*this)
+	, m_adb_out_cb(*this)
 {
 }
 
@@ -66,8 +69,8 @@ void clio_device::device_start()
 	save_item(NAME(m_audout));
 	save_item(NAME(m_cstatbits));
 	save_item(NAME(m_wdog));
-	save_item(NAME(m_hcnt));
-	save_item(NAME(m_vcnt));
+//  save_item(NAME(m_hcnt));
+//  save_item(NAME(m_vcnt));
 	save_item(NAME(m_seed));
 	save_item(NAME(m_random));
 	save_item(NAME(m_irq0));
@@ -105,6 +108,7 @@ void clio_device::device_reset()
 	m_timer_ctrl = 0;
 	m_vint0 = m_vint1 = 0xffff'ffff;
 	m_slack = 336;
+	m_adbio = 0x00;
 	m_system_timer->adjust(attotime::from_ticks(m_slack, this->clock()));
 	m_scan_timer->adjust(m_screen->time_until_pos(0), 0);
 }
@@ -117,18 +121,14 @@ void clio_device::dply_w(int state)
 
 void clio_device::xbus_int_w(int state)
 {
-	if (state && m_poll & 7)
+	if (state)
 	{
-		request_fiq(1 << 2, 0);
+		m_xbus_rdy[0] |= 0x10;
+		if (m_poll & 7)
+			request_fiq(1 << 2, 0);
 	}
-
-	//if ((m_sel & 0x0f) == 0)
-	//{
-	//  if (state)
-	//      m_poll |= 0x10;
-	//  else
-	//      m_poll &= ~0x10;
-	//}
+	else
+		m_xbus_rdy[0] &= ~0x10;
 }
 
 // $0340'0000 base
@@ -190,22 +190,17 @@ void clio_device::map(address_map &map)
 		NAME([this] () { return m_screen->hpos(); }),
 		NAME([this] (offs_t offset, u32 data, u32 mem_mask) {
 			LOG("hcnt (?): %08x & %08x\n", data, mem_mask);
-			COMBINE_DATA(&m_hcnt);
+			// COMBINE_DATA(&m_hcnt);
 		})
 	);
-	// TODO: needs to moved to a proper timer callback function
-	// (or use frame_number for fake interlace readback)
 	map(0x0034, 0x0037).lrw32(
 		NAME([this] () {
-			if ( m_screen->vpos() == 0 && !machine().side_effects_disabled() )
-			{
-				m_vcnt ^= 0x800;
-			}
-			return ( m_vcnt & 0x800 ) | m_screen->vpos();
+			// 0: even field
+			return ((m_screen->frame_number() & 1) << 11) | m_screen->vpos();
 		}),
 		NAME([this] (offs_t offset, u32 data, u32 mem_mask) {
 			LOG("vcnt (?): %08x & %08x\n", data, mem_mask);
-			COMBINE_DATA(&m_vcnt);
+			// COMBINE_DATA(&m_vcnt);
 		})
 	);
 	map(0x0038, 0x003b).lrw32(
@@ -305,10 +300,21 @@ void clio_device::map(address_map &map)
 	map(0x0084, 0x0087).lrw32(
 		NAME([this] () { return m_adbio; }),
 		NAME([this] (offs_t offset, u32 data, u32 mem_mask) {
-			if (data != 0x62)
+			if (ACCESSING_BITS_0_7 && data != m_adbio)
+			{
 				LOG("adbio %08x & %08x\n", data, mem_mask);
-			COMBINE_DATA(&m_adbio);
-			m_adbio &= 0xff;
+				if (BIT(data, 7))
+					m_adb_out_cb[3](BIT(data, 3));
+				if (BIT(data, 6))
+					m_adb_out_cb[2](BIT(data, 2));
+				if (BIT(data, 5))
+					m_adb_out_cb[1](BIT(data, 1));
+				if (BIT(data, 4))
+					m_adb_out_cb[0](BIT(data, 0));
+
+				COMBINE_DATA(&m_adbio);
+				m_adbio &= 0xff;
+			}
 		})
 	);
 	map(0x0088, 0x008b).lrw32(
@@ -432,6 +438,7 @@ void clio_device::map(address_map &map)
 			m_sel &= 0xff;
 			/* Start WRSEL cycle */
 
+			m_xbus_sel_cb(data);
 			LOGXBUS("xbus sel: %02x & %08x\n", data, mem_mask);
 			/* Detection of too many devices on the bus */
 			switch ( data & 0xff )
@@ -445,18 +452,30 @@ void clio_device::map(address_map &map)
 			}
 		})
 	);
+	/*
+	 * x--- ---- media access (read clear)
+	 * -x-- ---- write valid (r/o)
+	 * --x- ---- read valid (r/o)
+	 * ---x ---- status valid (r/o)
+	 * ---- x--- reset
+	 * ---- -x-- write irq enable
+	 * ---- --x- read irq enable
+	 * ---- ---x status irq enable
+	 */
 	map(0x0540, 0x057f).lrw32(
-		NAME([this] () {
-			// HACK: until I understand semantics
+		NAME([this] () -> u8 {
+			u8 res = m_poll;
+			//m_poll &= ~0x80;
 			if (m_sel == 0)
-				return (m_poll & 0xef) | (machine().rand() & 0x10);
-			return m_poll;
+				return (res & 0xef) | (m_xbus_rdy[0] & 0x10);
+			return (res);
 		}),
 		NAME([this] (offs_t offset, u32 data, u32 mem_mask) {
 			LOGXBUS("xbus poll: %02x & %08x\n", data, mem_mask);
-			COMBINE_DATA(&m_poll);
-			m_poll &= 0xf8;
-			m_poll |= data & 7;
+			//COMBINE_DATA(&m_poll);
+			//m_poll &= 0xf8;
+			if (ACCESSING_BITS_0_7)
+				m_poll = data & 0xff;
 		})
 	);
 	// 1--- 1111 external device
@@ -469,7 +488,7 @@ void clio_device::map(address_map &map)
 
 	// TODO: should really map these directly in DSPP core
 //  map(0x17d0, 0x17d3) Semaphore
-	// HACK: for 3do_gdo101
+	// HACK: temporary to allow 3do_gdo101 boot
 	map(0x17d0, 0x17d3).lr32(NAME([] () { return 0x0004'0000; }));
 //  map(0x17d4, 0x17d7) Semaphore ACK
 //  map(0x17e0, 0x17ff) DSPP DMA and state
