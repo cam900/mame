@@ -233,6 +233,16 @@ void _3do_state::green_config(machine_config &config)
 		address_space &space = m_maincpu->space();
 		space.write_dword(offset, data, 0xffff'ffff);
 	});
+	// TODO: disregard enable and cmd, those needs to be from xbus
+	m_madam->dma_exp_read_cb().set([this] () {
+		m_cdrom->enable_w(0);
+		m_cdrom->cmd_w(1);
+		u8 res = m_cdrom->read();
+		m_cdrom->cmd_w(0);
+		return res;
+	});
+	m_madam->arm_ctl_cb().set(m_clio, FUNC(clio_device::arm_ctl_w));
+	m_madam->irq_dexp_cb().set(m_clio, FUNC(clio_device::dexp_w));
 	m_madam->playerbus_read_cb().set([this] (offs_t offset) -> u32 {
 		if (offset == 0)
 			return (m_p1_r[0]->read() << 24) | (m_p1_r[1]->read() << 16);
@@ -268,6 +278,7 @@ void _3do_state::green_config(machine_config &config)
 		}
 		m_cdrom->cmd_w(1);
 	});
+	m_clio->exp_dma_enable_cb().set(m_madam, FUNC(madam_device::exp_dma_req_w));
 	m_clio->vsync_cb().set(m_madam, FUNC(madam_device::vdlp_start_w));
 	m_clio->hsync_cb().set(m_madam, FUNC(madam_device::vdlp_continue_w));
 	m_clio->adb_out_cb<2>().set([this] (int state) { m_bankdev->set_bank(state & 1); });
@@ -285,7 +296,7 @@ void _3do_state::green_config(machine_config &config)
 //  m_cdrom->stch_cb().set(m_clio, FUNC(clio_device::xbus...)).invert();
 //  m_cdrom->sten_cb().set(m_clio, FUNC(clio_device::xbus_rdy_w)).invert();
 	m_cdrom->sten_cb().set(m_clio, FUNC(clio_device::xbus_int_w)).invert();
-//  m_cdrom->drq_cb().set(m_clio, FUNC(clio_device::xbus...));
+	m_cdrom->drq_cb().set(m_clio, FUNC(clio_device::xbus_wr_w));
 
 	DAC_16BIT_R2R_TWOS_COMPLEMENT(config, m_dac[0], 0).add_route(ALL_OUTPUTS, "speaker", 1.0, 0);
 	DAC_16BIT_R2R_TWOS_COMPLEMENT(config, m_dac[1], 0).add_route(ALL_OUTPUTS, "speaker", 1.0, 1);
@@ -307,7 +318,9 @@ void _3do_state::_3do(machine_config &config)
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
 	// TODO: proper params (mostly running in interlace mode)
-	m_screen->set_raw(X2_CLOCK_NTSC / 2, 1592, 254, 1534, 263, 22, 262);
+	// htotal=1592 according to page 36 of HW spec, this is off wrt 15.734 kHz spec
+	// (half clocks during HSync?)
+	m_screen->set_raw(X2_CLOCK_NTSC / 2, 1560, 254, 1534, 263, 22, 262);
 	m_screen->set_screen_update(m_amy, FUNC(amy_device::screen_update));
 
 	SPEAKER(config, "speaker", 2).front();
@@ -328,9 +341,12 @@ void _3do_state::_3do_pal(machine_config &config)
 	green_config(config);
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
-	// TODO: proper params
-	m_screen->set_raw(X2_CLOCK_PAL / 2, 1592, 254, 1534, 313, 22, 312);
+	// TODO: as above, actual params are unknown
+	// assumed 15.625 kHz as per PAL spec, display range looks a bit off
+	m_screen->set_raw(X2_CLOCK_PAL / 2, 1888, 254, 1790, 313, 22, 312);
 	m_screen->set_screen_update(m_amy, FUNC(amy_device::screen_update));
+	m_amy->set_is_pal(true);
+	m_madam->set_is_pal(true);
 
 	SPEAKER(config, "speaker", 2).front();
 
