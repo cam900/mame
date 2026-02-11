@@ -447,6 +447,9 @@ superslv
 @source:adds/adds2020.cpp
 adds2020
 
+@source:adds/multivision.cpp
+multivision
+
 @source:adds/vp60.cpp
 vp60
 
@@ -17785,6 +17788,7 @@ ultrchmph
 blktouch
 cdracula
 drgpunch
+drgpunchbl
 gekisha
 gekishap2
 hanamai
@@ -20527,6 +20531,9 @@ ibm5550
 @source:ibm/ibm6580.cpp
 ibm6580
 
+@source:ibm/ptpc110.cpp
+ptpc110
+
 @source:ibm/rs6000_type7xxx.cpp
 rs6k7009
 
@@ -20842,6 +20849,7 @@ lucky8s
 lucky8t
 lucky8u
 lucky8v
+lucky8w
 lucky8tet
 luckybar
 luckylad
@@ -36283,6 +36291,7 @@ excitebko
 excitebkj
 goonies
 hogalley
+hogalleyi
 iceclimb
 iceclimba
 iceclmrd
@@ -36859,6 +36868,7 @@ alibaba
 alibabab
 baracuda
 beastfp
+beastfpa
 bigbucks
 birdiy
 bucaner
@@ -37346,7 +37356,6 @@ qi900
 samdm286
 sarcpc
 scamp386sx
-scsxaio
 sh386sx20
 sis85c471
 sisrabb
@@ -37637,6 +37646,7 @@ queen
 
 @source:pc/scatsx.cpp
 mb1320
+scsxaio
 
 @source:pc/seawolfnm.cpp
 seawolfnm
@@ -46273,6 +46283,7 @@ warriorb
 @source:taito/wgp.cpp
 wgp
 wgp2
+wgp2j
 wgpj
 wgpjoy
 wgpjoya
