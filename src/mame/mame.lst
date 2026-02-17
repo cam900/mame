@@ -37624,6 +37624,9 @@ so30h
 so4saw2
 zito4dps
 
+@source:pc/pcipc_via.cpp
+ls5amvp3
+
 @source:pc/play4texash.cpp
 play4texash
 
@@ -37667,6 +37670,9 @@ gamecst2
 gamecstl
 shutms11
 zidav630e
+
+@source:pc/sshuffle.cpp
+sshuffle
 
 @source:pc/tandy1t.cpp
 t1000
@@ -44019,8 +44025,8 @@ poemzet2
 i7000
 
 @source:skeleton/iam2.cpp
-zhonggmj
 szjl
+zhonggmj
 
 @source:skeleton/icatel.cpp
 icatel
