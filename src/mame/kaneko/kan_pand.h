@@ -58,7 +58,8 @@ protected:
 private:
 	// internal state
 	std::unique_ptr<u8[]> m_spriteram;
-	bitmap_ind16          m_sprites_bitmap; // bitmap to render sprites to, Pandora seems to be frame'buffered'
+	bitmap_ind16          m_sprites_bitmap[2]; // bitmap to render sprites to, Pandora seems to be frame'buffered'
+	u8                    m_buffer;
 	bool                  m_clear_bitmap;
 	u16                   m_bg_pen; // might work some other way..
 	s32                   m_xoffset;

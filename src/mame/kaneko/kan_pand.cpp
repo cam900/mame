@@ -59,6 +59,7 @@ kaneko_pandora_device::kaneko_pandora_device(const machine_config &mconfig, cons
 	: device_t(mconfig, KANEKO_PANDORA, tag, owner, clock)
 	, device_video_interface(mconfig, *this)
 	, device_gfx_interface(mconfig, *this)
+	, m_buffer(0)
 	, m_clear_bitmap(false)
 	, m_bg_pen(0)
 	, m_xoffset(0)
@@ -78,14 +79,20 @@ void kaneko_pandora_device::device_start()
 
 	m_spriteram = std::make_unique<u8[]>(0x1000);
 
-	// 4 64x4 DRAMs - 512x256 (or 2 256x256) 8 bit?
-	m_sprites_bitmap.allocate(512, 256);
+	// 4 64x4 DRAMs - 256x256 8 bit, double buffered
+	for (auto &elem : m_sprites_bitmap)
+	{
+		elem.allocate(256, 256);
+		elem.fill(m_bg_pen);
+	}
 
+	save_item(NAME(m_buffer));
 	save_item(NAME(m_clear_bitmap));
 	save_item(NAME(m_bg_pen));
 	save_item(NAME(m_flip_screen));
 	save_pointer(NAME(m_spriteram), 0x1000);
-	save_item(NAME(m_sprites_bitmap));
+	save_item(NAME(m_sprites_bitmap[0]));
+	save_item(NAME(m_sprites_bitmap[1]));
 }
 
 //-------------------------------------------------
@@ -116,7 +123,7 @@ void kaneko_pandora_device::set_clear_bitmap(int clear)
 
 void kaneko_pandora_device::update(bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	copybitmap_trans(bitmap, m_sprites_bitmap, 0, 0, 0, 0, cliprect, 0);
+	copybitmap_trans(bitmap, m_sprites_bitmap[m_buffer], 0, 0, 0, 0, cliprect, 0);
 }
 
 
@@ -195,13 +202,12 @@ void kaneko_pandora_device::draw(bitmap_ind16 &bitmap, const rectangle &cliprect
 
 void kaneko_pandora_device::eof()
 {
-	rectangle clip(screen().visible_area());
-	clip &= m_sprites_bitmap.cliprect();
+	m_buffer ^= 1;
 	// the games can disable the clearing of the sprite bitmap, to leave sprite trails
 	if (m_clear_bitmap)
-		m_sprites_bitmap.fill(m_bg_pen, clip);
+		m_sprites_bitmap[m_buffer].fill(m_bg_pen);
 
-	draw(m_sprites_bitmap, clip);
+	draw(m_sprites_bitmap[m_buffer], m_sprites_bitmap[m_buffer].cliprect());
 }
 
 /*****************************************************************************
