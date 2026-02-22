@@ -78,7 +78,8 @@ void kaneko_pandora_device::device_start()
 
 	m_spriteram = std::make_unique<u8[]>(0x1000);
 
-	screen().register_screen_bitmap(m_sprites_bitmap);
+	// 4 64x4 DRAMs - 512x256 (or 2 256x256) 8 bit?
+	m_sprites_bitmap.allocate(512, 256);
 
 	save_item(NAME(m_clear_bitmap));
 	save_item(NAME(m_bg_pen));
@@ -194,11 +195,13 @@ void kaneko_pandora_device::draw(bitmap_ind16 &bitmap, const rectangle &cliprect
 
 void kaneko_pandora_device::eof()
 {
+	rectangle clip(screen().visible_area());
+	clip &= m_sprites_bitmap.cliprect();
 	// the games can disable the clearing of the sprite bitmap, to leave sprite trails
 	if (m_clear_bitmap)
-		m_sprites_bitmap.fill(m_bg_pen, screen().visible_area());
+		m_sprites_bitmap.fill(m_bg_pen, clip);
 
-	draw(m_sprites_bitmap, screen().visible_area());
+	draw(m_sprites_bitmap, clip);
 }
 
 /*****************************************************************************
