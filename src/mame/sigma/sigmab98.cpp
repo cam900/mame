@@ -1115,7 +1115,7 @@ ROM_END
 ***************************************************************************/
 
 // Sigma Medal Games
-GAME( 1997, dodghero, 0,        dodghero,  sigma_1b, sigmab98_state, empty_init,     ROT0, "Sigma",             "Minna Atsumare! Dodge Hero",           0 )
+GAME( 1997, dodghero, 0,        dodghero,  sigma_1b, sigmab98_state, empty_init,     ROT0, "Sigma",             "Minna Atsumare! Dodge Hero",           MACHINE_IMPERFECT_TIMING ) // Incorrect speed in title screen, etc.
 GAME( 1997, sushimar, 0,        dodghero,  sigma_3b, sigmab98_state, empty_init,     ROT0, "Sigma",             "Itazura Daisuki! Sushimaru Kun",       0 )
 GAME( 1997, gegege,   0,        sigmab98,  sigma_1b, sigmab98_state, init_gegege,    ROT0, "Sigma / Banpresto", "GeGeGe no Kitarou Youkai Slot",        0 )
 GAME( 1997, b3rinsya, 0,        sigmab98,  sigma_5b, sigmab98_state, init_b3rinsya,  ROT0, "Sigma",             "Burning Sanrinsya - Burning Tricycle", 0 ) // 1997 in the rom
