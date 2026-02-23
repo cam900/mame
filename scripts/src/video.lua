@@ -1840,3 +1840,15 @@ if VIDEOS["ZR36110"] then
 		MAME_DIR .. "src/devices/video/zr36110.h",
 	}
 end
+
+--------------------------------------------------
+--
+--@src/devices/video/ky3211_ky10510.h,VIDEOS["KY3211_KY10510"] = true
+--------------------------------------------------
+
+if VIDEOS["KY3211_KY10510"] then
+	files {
+		MAME_DIR .. "src/devices/video/ky3211_ky10510.cpp",
+		MAME_DIR .. "src/devices/video/ky3211_ky10510.h",
+	}
+end
