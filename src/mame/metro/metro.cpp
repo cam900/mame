@@ -5487,43 +5487,48 @@ GAME( 1992, pangpomsn, pangpoms, pangpoms,  pangpoms,   metro_upd7810_state, emp
 GAME( 1992, skyalert,  0,        skyalert,  skyalert,   metro_upd7810_state, empty_init,    ROT270, "Metro",                                           "Sky Alert", MACHINE_SUPPORTS_SAVE )
 GAME( 1993, ladykill,  0,        karatour,  ladykill,   metro_upd7810_state, init_karatour, ROT90,  "Yanyaka (Mitchell license)",                      "Lady Killer", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1993, moegonta,  ladykill, karatour,  moegonta,   metro_upd7810_state, init_karatour, ROT90,  "Yanyaka",                                         "Moeyo Gonta!! (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+// Japanese subtitle in japanese set, english otherwise: Kanji title is same regardless region
 GAME( 1994, lastfort,  0,        lastfort,  lastfort,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Last Fortress - Toride (Japan, VG420 PCB)", MACHINE_SUPPORTS_SAVE ) // VG420 PCB
 GAME( 1994, lastforte, lastfort, lastfort,  lastfero,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Last Fortress - Toride (China, Rev C)", MACHINE_SUPPORTS_SAVE )
 GAME( 1994, lastfortea,lastfort, lastfort,  lastfero,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Last Fortress - Toride (China, Rev A)", MACHINE_SUPPORTS_SAVE )
-GAME( 1994, lastfortk, lastfort, lastfort,  lastfero,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Last Fortress - Toride (Korea)", MACHINE_SUPPORTS_SAVE )
+GAME( 1994, lastfortk, lastfort, lastfort,  lastfero,   metro_upd7810_state, empty_init,    ROT0,   "Metro (Grand Computer license)",                  "Last Fortress - Toride (Korea)", MACHINE_SUPPORTS_SAVE ) // distributor name is korean (그랜드컴퓨터)
 GAME( 1994, lastfortj, lastfort, lastforg,  ladykill,   metro_upd7810_state, init_karatour, ROT0,   "Metro",                                           "Last Fortress - Toride (Japan, VG460 PCB)", MACHINE_SUPPORTS_SAVE ) // VG460-(A) PCB
-GAME( 1994, lastfortg, lastfort, lastforg,  ladykill,   metro_upd7810_state, init_karatour, ROT0,   "Metro",                                           "Last Fortress - Toride (Germany)", MACHINE_SUPPORTS_SAVE ) // VG460-(A) PCB
+// Germany set has Mah-Jong subtitle
+GAME( 1994, lastfortg, lastfort, lastforg,  ladykill,   metro_upd7810_state, init_karatour, ROT0,   "Metro",                                           "Last Fortress - Toride: Mah-jong (Germany)", MACHINE_SUPPORTS_SAVE ) // VG460-(A) PCB
 
 // MTR5260 / MTR527
-GAME( 1993, poitto,    0,        poitto,    poitto,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Able Corp.",                              "Poitto! (revision D)", MACHINE_SUPPORTS_SAVE )
+GAME( 1993, poitto,    0,        poitto,    poitto,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Able Corp.",                              "Poitto! (Japan revision D)", MACHINE_SUPPORTS_SAVE )
 GAME( 1993, poittoc,   poitto,   poitto,    poitto,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Able Corp.",                              "Poitto! (revision C)", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE ) // missing 1 program ROM
+// All set except korean region has "DHARMA" subtitle
 GAME( 1994, dharma,    0,        dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Doujou", MACHINE_SUPPORTS_SAVE )
 GAME( 1994, dharmag,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Doujou (Germany)", MACHINE_SUPPORTS_SAVE )
 GAME( 1994, dharmaj,   dharma,   dharma,    dharma,     metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Dharma Doujou (Japan)", MACHINE_SUPPORTS_SAVE )
-GAME( 1994, dharmak,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Doujou (Korea)", MACHINE_SUPPORTS_SAVE )
-GAME( 1994, toride2g,  0,        toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Adauchi Gaiden", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1994, toride2gg, toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Adauchi Gaiden (German)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1994, dharmak,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Daluma Dojang - Mangchi Man (Korea)", MACHINE_SUPPORTS_SAVE ) // 다루마 도장: 망치맨
+// Toride II Adauchi Gaiden set: Same title screen regardless region
+GAME( 1994, toride2g,  0,        toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Adauchi Gaiden (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1994, toride2gk, toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Bok Su Oi Jeon Adauchi Gaiden (Korea)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+// Toride II set (non - Adauchi Gaiden revision)
+GAME( 1994, toride2gg, toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II (German)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1994, toride2j,  toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II (Japan, revision K)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1994, toride2ji, toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II (Japan, revision I)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1994, gunmast,   0,        pururun,   gunmast,    metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Gun Master", MACHINE_SUPPORTS_SAVE )
-GAME( 1995, daitorid,  0,        daitorid,  daitorid,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Daitoride", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1995, pururun,   0,        pururun,   pururun,    metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Pururun (set 1)", MACHINE_SUPPORTS_SAVE )
-GAME( 1995, pururuna,  pururun,  pururun,   pururun,    metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Pururun (set 2)", MACHINE_SUPPORTS_SAVE )
-GAME( 1995, puzzli,    0,        puzzli,    puzzli,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Puzzli (revision B)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1995, puzzlia,   puzzli,   puzzlia,   puzzli,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Puzzli (revision A)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1995, daitorid,  0,        daitorid,  daitorid,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Daitoride (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1995, pururun,   0,        pururun,   pururun,    metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Pururun (Japan set 1)", MACHINE_SUPPORTS_SAVE )
+GAME( 1995, pururuna,  pururun,  pururun,   pururun,    metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Pururun (Japan set 2)", MACHINE_SUPPORTS_SAVE )
+GAME( 1995, puzzli,    0,        puzzli,    puzzli,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Puzzli (Japan revision B)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1995, puzzlia,   puzzli,   puzzlia,   puzzli,     metro_upd7810_state, empty_init,    ROT0,   "Metro / Banpresto",                               "Puzzli (Japan revision A)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1996, 3kokushi,  0,        sankokushi,sankokushi, metro_upd7810_state, init_karatour, ROT0,   "Mitchell",                                        "Sankokushi (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 
 // ? with additional gfx data scramble (probably MTR5260 based)
-GAME( 1995, msgogo,    0,        msgogo,    msgogo,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Mouse Shooter GoGo", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1996, daitorida, daitorid, daitoa,    daitoa,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Daitoride (YMF278B version)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
-GAME( 1996, balcube,   0,        balcube,   balcube,    metro_state,         init_balcube,  ROT0,   "Metro",                                           "Bal Cube", MACHINE_SUPPORTS_SAVE )
-GAME( 1996, bangball,  0,        bangball,  bangball,   metro_state,         init_balcube,  ROT0,   "Banpresto / Kunihiko Tashiro+Goodhouse",          "Bang Bang Ball (v1.05)", MACHINE_SUPPORTS_SAVE )
+GAME( 1995, msgogo,    0,        msgogo,    msgogo,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Mouse Shooter GoGo", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // Either english or japanese
+GAME( 1996, daitorida, daitorid, daitoa,    daitoa,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Daitoride (Japan, YMF278B version)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
+GAME( 1996, balcube,   0,        balcube,   balcube,    metro_state,         init_balcube,  ROT0,   "Metro",                                           "Bal Cube (Japan)", MACHINE_SUPPORTS_SAVE )
+GAME( 1996, bangball,  0,        bangball,  bangball,   metro_state,         init_balcube,  ROT0,   "Banpresto / Kunihiko Tashiro+Goodhouse",          "Bang Bang Ball (v1.05)", MACHINE_SUPPORTS_SAVE ) // Either english or japanese
 GAME( 1999, batlbubl,  bangball, batlbubl,  batlbubl,   metro_state,         init_balcube,  ROT0,   "Banpresto (Limenko license?)",                    "Battle Bubble (v2.00)", MACHINE_SUPPORTS_SAVE ) // or bootleg?
 
 // VG330 / VG340 / VG410
-GAME( 1995, dokyusei,  0,        dokyusei,  dokyusei,   gakusai_state,       empty_init,    ROT0,   "Make Software / Elf / Media Trading",             "Mahjong Doukyuusei", MACHINE_SUPPORTS_SAVE )
-GAME( 1995, dokyusp,   0,        dokyusp,   gakusai,    gakusai_state,       empty_init,    ROT0,   "Make Software / Elf / Media Trading",             "Mahjong Doukyuusei Special", MACHINE_SUPPORTS_SAVE )
+GAME( 1995, dokyusei,  0,        dokyusei,  dokyusei,   gakusai_state,       empty_init,    ROT0,   "Make Software / Elf / Media Trading",             "Mahjong Doukyuusei (Japan)", MACHINE_SUPPORTS_SAVE )
+GAME( 1995, dokyusp,   0,        dokyusp,   gakusai,    gakusai_state,       empty_init,    ROT0,   "Make Software / Elf / Media Trading",             "Mahjong Doukyuusei Special (Japan)", MACHINE_SUPPORTS_SAVE )
 GAME( 1996, mouja,     0,        mouja,     mouja,      mouja_state,         empty_init,    ROT0,   "Etona",                                           "Mouja (Japan)", MACHINE_SUPPORTS_SAVE )
 GAME( 1997, gakusai,   0,        gakusai,   gakusai,    gakusai_state,       empty_init,    ROT0,   "MakeSoft",                                        "Mahjong Gakuensai (Japan, set 1)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1997, gakusaia,  gakusai,  gakusai,   gakusai,    gakusai_state,       empty_init,    ROT0,   "MakeSoft",                                        "Mahjong Gakuensai (Japan, set 2)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
