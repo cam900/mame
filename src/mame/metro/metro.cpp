@@ -5503,7 +5503,7 @@ GAME( 1993, poittoc,   poitto,   poitto,    poitto,     metro_upd7810_state, emp
 GAME( 1994, dharma,    0,        dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Doujou", MACHINE_SUPPORTS_SAVE )
 GAME( 1994, dharmag,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Doujou (Germany)", MACHINE_SUPPORTS_SAVE )
 GAME( 1994, dharmaj,   dharma,   dharma,    dharma,     metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Dharma Doujou (Japan)", MACHINE_SUPPORTS_SAVE )
-GAME( 1994, dharmak,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Daluma Dojang - Mangchi Man (Korea)", MACHINE_SUPPORTS_SAVE ) // 다루마 도장: 망치맨
+GAME( 1994, dharmak,   dharma,   dharma,    dharma,     metro_upd7810_state, init_dharmak,  ROT0,   "Metro",                                           "Dharma Dojang - Mangchi Man (Korea)", MACHINE_SUPPORTS_SAVE ) // 다루마 도장: 망치맨
 // Toride II Adauchi Gaiden set: Same title screen regardless region
 GAME( 1994, toride2g,  0,        toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Adauchi Gaiden (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1994, toride2gk, toride2g, toride2g,  toride2g,   metro_upd7810_state, empty_init,    ROT0,   "Metro",                                           "Toride II Bok Su Oi Jeon Adauchi Gaiden (Korea)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
@@ -5520,10 +5520,10 @@ GAME( 1995, puzzlia,   puzzli,   puzzlia,   puzzli,     metro_upd7810_state, emp
 GAME( 1996, 3kokushi,  0,        sankokushi,sankokushi, metro_upd7810_state, init_karatour, ROT0,   "Mitchell",                                        "Sankokushi (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 
 // ? with additional gfx data scramble (probably MTR5260 based)
-GAME( 1995, msgogo,    0,        msgogo,    msgogo,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Mouse Shooter GoGo", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // Either english or japanese
+GAME( 1995, msgogo,    0,        msgogo,    msgogo,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Mouse Shooter GoGo", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE ) // Either English or Japanese
 GAME( 1996, daitorida, daitorid, daitoa,    daitoa,     metro_state,         init_balcube,  ROT0,   "Metro",                                           "Daitoride (Japan, YMF278B version)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_SUPPORTS_SAVE )
 GAME( 1996, balcube,   0,        balcube,   balcube,    metro_state,         init_balcube,  ROT0,   "Metro",                                           "Bal Cube (Japan)", MACHINE_SUPPORTS_SAVE )
-GAME( 1996, bangball,  0,        bangball,  bangball,   metro_state,         init_balcube,  ROT0,   "Banpresto / Kunihiko Tashiro+Goodhouse",          "Bang Bang Ball (v1.05)", MACHINE_SUPPORTS_SAVE ) // Either english or japanese
+GAME( 1996, bangball,  0,        bangball,  bangball,   metro_state,         init_balcube,  ROT0,   "Banpresto / Kunihiko Tashiro+Goodhouse",          "Bang Bang Ball (v1.05)", MACHINE_SUPPORTS_SAVE ) // Either English or Japanese
 GAME( 1999, batlbubl,  bangball, batlbubl,  batlbubl,   metro_state,         init_balcube,  ROT0,   "Banpresto (Limenko license?)",                    "Battle Bubble (v2.00)", MACHINE_SUPPORTS_SAVE ) // or bootleg?
 
 // VG330 / VG340 / VG410
