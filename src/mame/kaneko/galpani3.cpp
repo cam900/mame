@@ -95,7 +95,7 @@ public:
 		m_sprite_bitmap(1024, 1024)
 	{ }
 
-	void galpani3(machine_config &config);
+	void galpani3(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void video_start() override ATTR_COLD;
@@ -114,8 +114,8 @@ private:
 	bitmap_ind16 m_sprite_bitmap;
 	u16 m_priority_buffer_scrollx = 0;
 	u16 m_priority_buffer_scrolly = 0;
-	std::unique_ptr<u32[]> m_spriteram32;
-	std::unique_ptr<u32[]> m_spc_regs;
+	std::unique_ptr<u32 []> m_spriteram32;
+	std::unique_ptr<u32 []> m_spc_regs;
 
 	void sprite32_w(offs_t offset, u16 data, u16 mem_mask = ~0);
 	void sprite32regs_w(offs_t offset, u16 data, u16 mem_mask = ~0);
@@ -136,7 +136,7 @@ private:
 
 
 
-TIMER_DEVICE_CALLBACK_MEMBER(galpani3_state::scanline)// 2, 3, 5 ?
+TIMER_DEVICE_CALLBACK_MEMBER(galpani3_state::scanline) // 2, 3, 5 ?
 {
 	const int scanline = param;
 
@@ -156,8 +156,8 @@ void galpani3_state::video_start()
 	/* so we can use kaneko/sknsspr.cpp */
 	m_spritegen->skns_sprite_kludge(0,0);
 
-	m_spriteram32 = make_unique_clear<u32[]>(0x4000 / 4);
-	m_spc_regs = make_unique_clear<u32[]>(0x40 / 4);
+	m_spriteram32 = make_unique_clear<u32 []>(0x4000 / 4);
+	m_spc_regs = make_unique_clear<u32 []>(0x40 / 4);
 
 	save_item(NAME(m_priority_buffer_scrollx));
 	save_item(NAME(m_priority_buffer_scrolly));
@@ -203,7 +203,7 @@ u32 galpani3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, c
 			const u8  pridat = priline[prioffs];
 
 			auto const sprite_draw_pixel = 
-					[paldata](u32 &dst, u16 sprdat, u16 pri)
+					[paldata] (u32 &dst, u16 sprdat, u16 pri)
 					{
 						if (((sprdat & 0xc000) == pri) && ((sprdat & 0xff) != 0))
 						{
@@ -214,7 +214,7 @@ u32 galpani3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, c
 			// Switchable brightness value in highest bit of palette
 			// TODO : framebuffer1_fbbright1_r() is alpha-blended?
 			auto const fb_draw_pixel =
-					[this](u32 &dst, u8 _chip, u16 _pixel)
+					[this] (u32 &dst, u8 _chip, u16 _pixel)
 					{
 						int alpha = 0xff;
 						const pen_t &pal = m_grap2[_chip]->pen(_pixel);
@@ -240,102 +240,88 @@ u32 galpani3_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, c
 			{
 				sprite_draw_pixel(dst[drawx], sprdat, 0x0000);
 				if (m_grap2[2]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 2, dat3);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x4000);
 				if (dat1 && m_grap2[0]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 0, dat1);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x8000);
 				if (dat2 && m_grap2[1]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 1, dat2);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0xc000);
 			}
 			else if (pridat == 0xcf) // the girl
 			{
 				sprite_draw_pixel(dst[drawx], sprdat, 0x0000);
 				if (m_grap2[0]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 0, 0x100);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x4000);
 				if (m_grap2[1]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 1, 0x100);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x8000);
 				if (dat3 && m_grap2[2]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 2, dat3);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0xc000);
 			}
 			else if (pridat == 0x30) // during the 'gals boxes' on the intro
 			{
 				sprite_draw_pixel(dst[drawx], sprdat, 0x0000);
 				if (m_grap2[1]->framebuffer_enable()) // TODO : Opaqued and Swapped order?
-				{
 					fb_draw_pixel(dst[drawx], 1, dat2);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x4000);
 				if (dat1 && m_grap2[0]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 0, dat1);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x8000);
 				if (dat3 && m_grap2[2]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 2, dat3);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0xc000);
 			}
 			else
 			{
 				sprite_draw_pixel(dst[drawx], sprdat, 0x0000);
 				if (m_grap2[0]->framebuffer_enable()) // TODO : Opaque drawing 1st framebuffer in real PCB?
-				{
 					fb_draw_pixel(dst[drawx], 0, dat1);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x4000);
 				if (dat2 && m_grap2[1]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 1, dat2);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0x8000);
 				if (dat3 && m_grap2[2]->framebuffer_enable())
-				{
 					fb_draw_pixel(dst[drawx], 2, dat3);
-				}
+
 				sprite_draw_pixel(dst[drawx], sprdat, 0xc000);
 			}
-
-			/*
+#if 0
 			else if (pridat == 0x2f) // area outside of the girl
 			{
-			    //dst[drawx] = machine().rand() & 0x3fff;
+				//dst[drawx] = machine().rand() & 0x3fff;
 			}
-
 			else if (pridat == 0x00) // the initial line / box that gets drawn
 			{
-			    //dst[drawx] = machine().rand() & 0x3fff;
+				//dst[drawx] = machine().rand() & 0x3fff;
 			}
 			else if (pridat == 0x30) // during the 'gals boxes' on the intro
 			{
-			    //dst[drawx] = machine().rand() & 0x3fff;
+				//dst[drawx] = machine().rand() & 0x3fff;
 			}
 			else if (pridat == 0x0c) // 'nice' at end of level
 			{
-			    //dst[drawx] = machine().rand() & 0x3fff;
+				//dst[drawx] = machine().rand() & 0x3fff;
 			}
 			else
 			{
-			    //printf("%02x, ",pridat);
+				//printf("%02x, ",pridat);
 			}
-			*/
+#endif
 		}
 	}
 	return 0;
