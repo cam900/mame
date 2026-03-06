@@ -427,6 +427,40 @@ template<int Which>
 void vrender0soc_device::dmac_w(offs_t offset, u32 data, u32 mem_mask)
 {
 	vr0_dma &dma = m_dma[Which];
+	// Control register format: (per DMA controller)
+	// Bit                                     Description
+	// 1111 1111 1111 1111 0000 0000 0000 0000 
+	// fedc ba98 7654 3210 fedc ba98 7654 3210 
+	// xxxx xxxx xxxx xxxx xxxx x--- ---- ---- Reserved
+	// ---- ---- ---- ---- ---- -x-- ---- ---- DMA enable
+	// ---- ---- ---- ---- ---- --x- ---- ---- DMA request polarity
+	// ---- ---- ---- ---- ---- --0- ---- ---- Active high
+	// ---- ---- ---- ---- ---- --1- ---- ---- Active low
+	// ---- ---- ---- ---- ---- ---x ---- ---- DMA Counter write enable
+	// ---- ---- ---- ---- ---- ---0 ---- ---- Disallow counter write
+	// ---- ---- ---- ---- ---- ---1 ---- ---- Allow counter write
+	// ---- ---- ---- ---- ---- ---- xx-- ---- DMA transfer mode
+	// ---- ---- ---- ---- ---- ---- 0*-- ---- Single transfer
+	// ---- ---- ---- ---- ---- ---- 10-- ---- Repeat with reload counter
+	// ---- ---- ---- ---- ---- ---- 11-- ---- Repeat with reload counter and registers
+	// ---- ---- ---- ---- ---- ---- --x- ---- DMA Source address hold
+	// ---- ---- ---- ---- ---- ---- --0- ---- Increase/Decrease source address
+	// ---- ---- ---- ---- ---- ---- --1- ---- Fix source address
+	// ---- ---- ---- ---- ---- ---- ---x ---- DMA Source address direction
+	// ---- ---- ---- ---- ---- ---- ---0 ---- Increase source address
+	// ---- ---- ---- ---- ---- ---- ---1 ---- Decrease source address
+	// ---- ---- ---- ---- ---- ---- ---- x--- DMA Destination address hold
+	// ---- ---- ---- ---- ---- ---- ---- 0--- Increase/Decrease destination address
+	// ---- ---- ---- ---- ---- ---- ---- 1--- Fix destination address
+	// ---- ---- ---- ---- ---- ---- ---- -x-- DMA Destination address direction
+	// ---- ---- ---- ---- ---- ---- ---- -0-- Increase destination address
+	// ---- ---- ---- ---- ---- ---- ---- -1-- Decrease destination address
+	// ---- ---- ---- ---- ---- ---- ---- --xx DMA Transfer width
+	// ---- ---- ---- ---- ---- ---- ---- --00 8 bit
+	// ---- ---- ---- ---- ---- ---- ---- --01 16 bit
+	// ---- ---- ---- ---- ---- ---- ---- --1* 32 bit
+	// *: Don't care
+
 	if (BIT(data ^ dma.ctrl, 10) && BIT(data, 10))   //DMAOn
 	{
 		u32 const ctr = data;
