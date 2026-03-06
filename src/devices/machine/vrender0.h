@@ -140,36 +140,6 @@ private:
 		u32 src = 0;
 		u32 dst = 0;
 		u32 size = 0;
-		// bit 31:11 Reserved
-		// bit 10 DMAEN
-		// - 0b0 Disable
-		// - 0b1 Enable DMA
-		// bit 9 DMA request polarity
-		// - 0b0: Active high
-		// - 0b1: Active low
-		// bit 8 DMA Counter write enable
-		// - 0b0: Disallow counter write
-		// - 0b1: Allow counter write
-		// bit 7-6 DMA transfer mode
-		// - 0b0x: Single transfer
-		// - 0b10: Repeat with reload counter
-		// - 0b11: Repeat with reload counter and registers
-		// bit 5: DMA Source address hold
-		// - 0b0: Increase/Decrease source address
-		// - 0b1: Fix source address
-		// bit 4: DMA Source address direction
-		// - 0b0: Increase source address
-		// - 0b1: Decrease source address
-		// bit 3: DMA Destination address hold
-		// - 0b0: Increase/Decrease destination address
-		// - 0b1: Fix destination address
-		// bit 2: DMA Destination address direction
-		// - 0b0: Increase destination address
-		// - 0b1: Decrease destination address
-		// bit 1-0 DMA Transfer width
-		// - 0b00: 8 bit
-		// - 0b01: 16 bit
-		// - 0b1x: 32 bit
 		u32 ctrl = 0;
 	};
 	vr0_dma m_dma[2];
