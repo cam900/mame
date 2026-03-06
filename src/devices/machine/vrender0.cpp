@@ -433,28 +433,16 @@ void vrender0soc_device::dmac_w(offs_t offset, u32 data, u32 mem_mask)
 	// fedc ba98 7654 3210 fedc ba98 7654 3210 
 	// xxxx xxxx xxxx xxxx xxxx x--- ---- ---- Reserved
 	// ---- ---- ---- ---- ---- -x-- ---- ---- DMA enable
-	// ---- ---- ---- ---- ---- --x- ---- ---- DMA request polarity
-	// ---- ---- ---- ---- ---- --0- ---- ---- Active high
-	// ---- ---- ---- ---- ---- --1- ---- ---- Active low
-	// ---- ---- ---- ---- ---- ---x ---- ---- DMA Counter write enable
-	// ---- ---- ---- ---- ---- ---0 ---- ---- Disallow counter write
-	// ---- ---- ---- ---- ---- ---1 ---- ---- Allow counter write
+	// ---- ---- ---- ---- ---- --x- ---- ---- DMA request active polarity (0: high, 1: low)
+	// ---- ---- ---- ---- ---- ---x ---- ---- DMA Counter write enable (0: disable, 1: enable)
 	// ---- ---- ---- ---- ---- ---- xx-- ---- DMA transfer mode
 	// ---- ---- ---- ---- ---- ---- 0*-- ---- Single transfer
 	// ---- ---- ---- ---- ---- ---- 10-- ---- Repeat with reload counter
 	// ---- ---- ---- ---- ---- ---- 11-- ---- Repeat with reload counter and registers
-	// ---- ---- ---- ---- ---- ---- --x- ---- DMA Source address hold
-	// ---- ---- ---- ---- ---- ---- --0- ---- Increase/Decrease source address
-	// ---- ---- ---- ---- ---- ---- --1- ---- Fix source address
-	// ---- ---- ---- ---- ---- ---- ---x ---- DMA Source address direction
-	// ---- ---- ---- ---- ---- ---- ---0 ---- Increase source address
-	// ---- ---- ---- ---- ---- ---- ---1 ---- Decrease source address
-	// ---- ---- ---- ---- ---- ---- ---- x--- DMA Destination address hold
-	// ---- ---- ---- ---- ---- ---- ---- 0--- Increase/Decrease destination address
-	// ---- ---- ---- ---- ---- ---- ---- 1--- Fix destination address
-	// ---- ---- ---- ---- ---- ---- ---- -x-- DMA Destination address direction
-	// ---- ---- ---- ---- ---- ---- ---- -0-- Increase destination address
-	// ---- ---- ---- ---- ---- ---- ---- -1-- Decrease destination address
+	// ---- ---- ---- ---- ---- ---- --x- ---- DMA Source address hold (0: in/decrease, 1: fix address)
+	// ---- ---- ---- ---- ---- ---- ---x ---- DMA Source address direction (0: increase, 1: decrease)
+	// ---- ---- ---- ---- ---- ---- ---- x--- DMA Destination address hold (0: in/decrease, 1: fix address)
+	// ---- ---- ---- ---- ---- ---- ---- -x-- DMA Destination address direction (0: increase, 1: decrease)
 	// ---- ---- ---- ---- ---- ---- ---- --xx DMA Transfer width
 	// ---- ---- ---- ---- ---- ---- ---- --00 8 bit
 	// ---- ---- ---- ---- ---- ---- ---- --01 16 bit
