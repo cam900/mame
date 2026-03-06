@@ -90,7 +90,7 @@ public:
 	template <int Port> void rx_w(int state) { m_uart[Port]->rx_w((u8)state); }
 
 	// handlers
-	bool crt_is_blanked() { return ((m_crtcregs[0] & 0x0200) == 0x0200); }
+	bool crt_is_blanked() { return BIT(m_crtcregs[0], 9); }
 	bool crt_active_vblank_irq();
 	void int_req(int num);
 	u8 irq_callback();
@@ -127,16 +127,52 @@ private:
 	u8 m_int_high = 0;
 	u32 m_intst = 0;
 
-	u32 m_timer_control[4]{0};
-	u16 m_timer_count[4]{0};
-	emu_timer  *m_timer[4]{nullptr};
+	struct vr0_timer
+	{
+		u32 control = 0;
+		u16 count = 0;
+		emu_timer *timer = nullptr;
+	};
+	vr0_timer m_timer[4];
 
-	struct {
+	struct vr0_dma
+	{
 		u32 src = 0;
 		u32 dst = 0;
 		u32 size = 0;
+		// bit 31:11 Reserved
+		// bit 10 DMAEN
+		// - 0b0 Disable
+		// - 0b1 Enable DMA
+		// bit 9 DMA request polarity
+		// - 0b0: Active high
+		// - 0b1: Active low
+		// bit 8 DMA Counter write enable
+		// - 0b0: Disallow counter write
+		// - 0b1: Allow counter write
+		// bit 7-6 DMA transfer mode
+		// - 0b0x: Single transfer
+		// - 0b10: Repeat with reload counter
+		// - 0b11: Repeat with reload counter and registers
+		// bit 5: DMA Source address hold
+		// - 0b0: Increase/Decrease source address
+		// - 0b1: Fix source address
+		// bit 4: DMA Source address direction
+		// - 0b0: Increase source address
+		// - 0b1: Decrease source address
+		// bit 3: DMA Destination address hold
+		// - 0b0: Increase/Decrease destination address
+		// - 0b1: Fix destination address
+		// bit 2: DMA Destination address direction
+		// - 0b0: Increase destination address
+		// - 0b1: Decrease destination address
+		// bit 1-0 DMA Transfer width
+		// - 0b00: 8 bit
+		// - 0b01: 16 bit
+		// - 0b1x: 32 bit
 		u32 ctrl = 0;
-	} m_dma[2];
+	};
+	vr0_dma m_dma[2];
 
 	devcb_write_line m_int_cb;
 	devcb_write_line::array<2> m_write_tx;
@@ -171,7 +207,6 @@ private:
 	template<int Which> void dmasa_w(offs_t offset, u32 data, u32 mem_mask = ~0);
 	template<int Which> u32 dmada_r();
 	template<int Which> void dmada_w(offs_t offset, u32 data, u32 mem_mask = ~0);
-	inline int dma_setup_hold(u8 setting, u8 bitmask);
 
 	// CRTC
 	u32 crtc_r(offs_t offset);
