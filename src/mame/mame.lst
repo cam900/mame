@@ -457,12 +457,15 @@ vp60
 fashiong
 fashiong2
 fstation
+fstation7
+fstation8
 funlddlx
 funlddlx2
 funlddlx4
 quickjac
 skattv
 skattva
+trumpfas
 
 @source:adp/manohman.cpp
 backgamn
@@ -479,18 +482,41 @@ disc
 disc2000
 disc2001
 disc3000
+disciip
+discoly
+discryl
+discrylb
 dpplpot
 dpplstrt
 elitdisc
 excellnt
 extrbltt
+fullhous
 glksstrn
+herzas
+herzasf1
+herzasf8
 juwel
 karoas
 kniffi
+m21point
 macao
+mas
+mastro
+mbistro
+mclub
+mmax
+mtrio
 rasant
+sesam
+sherzas
+sjackpot
+sprmlti
 sprmltib
+superpro
+v4assef1
+v4assef2
+vmulti
 
 @source:adp/stellafr.cpp
 action
@@ -15196,10 +15222,11 @@ sc6dndema
 sc6dndemb
 sc6dndemc
 
-@source:bfm/bfm_swp.cpp
+@source:bfm/bfm_cobra3.cpp
 c3_ppays
 c3_rtime
 c3_telly
+c3_tellyns
 c3_totp
 
 @source:bfm/bfmsys83.cpp
@@ -15785,6 +15812,7 @@ dimahoou
 dimahoud
 dstlk
 dstlka
+dstlkb
 dstlkh
 dstlku
 dstlku1d
@@ -17259,6 +17287,9 @@ decomult
 @source:dataeast/deshoros.cpp
 destiny
 
+@source:dataeast/dfruit2.cpp
+dfruit2
+
 @source:dataeast/dietgo.cpp
 dietgo
 dietgoe
@@ -17272,6 +17303,7 @@ dreambal
 
 @source:dataeast/exprraid.cpp
 exprraid
+exprraidbl
 exprraidi
 exprraidu
 wexpress
@@ -30201,7 +30233,7 @@ tripjack
 tripjack07
 tripjack11
 
-@source:misc/chameleonrx1.cpp
+@source:misc/chamrx1.cpp
 chamrx1
 
 @source:misc/chance32.cpp
@@ -43592,6 +43624,9 @@ zx97
 
 @source:sinclair/specnext.cpp
 tbblue
+specnext_ks1
+specnext_ks2
+specnext_ks3
 
 @source:sinclair/z88.cpp
 z88
@@ -46613,6 +46648,7 @@ pbaction2
 pbaction3
 pbaction4
 pbactiont
+pbactiont2
 
 @source:tecmo/senjyo.cpp
 baluba
