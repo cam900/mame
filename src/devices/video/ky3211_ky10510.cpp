@@ -94,9 +94,9 @@
 
 #include "screen.h"
 
-static constexpr int integer_part(int x)
+constexpr int integer_part(int x)
 {
-//  return x >> 16;
+	//return x >> 16;
 	return (x + 0x8000) >> 16;
 }
 
