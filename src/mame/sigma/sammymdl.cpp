@@ -159,20 +159,20 @@ public:
 		, m_vblank(0)
 	{ }
 
-	void haekaka(machine_config &config);
-	void gocowboy(machine_config &config);
-	void tdoboon(machine_config &config);
-	void animalc(machine_config &config);
-	void sammymdl(machine_config &config);
-	void itazuram(machine_config &config);
-	void pyenaget(machine_config &config);
+	void haekaka(machine_config &config) ATTR_COLD;
+	void gocowboy(machine_config &config) ATTR_COLD;
+	void tdoboon(machine_config &config) ATTR_COLD;
+	void animalc(machine_config &config) ATTR_COLD;
+	void sammymdl(machine_config &config) ATTR_COLD;
+	void itazuram(machine_config &config) ATTR_COLD;
+	void pyenaget(machine_config &config) ATTR_COLD;
 
-	void init_itazuram();
-	void init_animalc();
-	void init_haekaka();
+	void init_itazuram() ATTR_COLD;
+	void init_animalc() ATTR_COLD;
+	void init_haekaka() ATTR_COLD;
 
 protected:
-	virtual void machine_start() override { m_leds.resolve(); }
+	virtual void machine_start() override ATTR_COLD { m_leds.resolve(); }
 
 private:
 	TIMER_DEVICE_CALLBACK_MEMBER(gocowboy_int);
@@ -428,8 +428,8 @@ void sammymdl_state::gocowboy_leds_w(u8 data)
 
 	// 10 hopper enable?
 	// 20 hopper motor on (active low)?
-	m_hopper_small->motor_w((!(data & 0x20) && (data & 0x10)) ? 1 : 0);
-	m_hopper_large->motor_w((!(data & 0x80) && (data & 0x40)) ? 1 : 0);
+	m_hopper_small->motor_w(BIT(~data, 5) && BIT(data, 4));
+	m_hopper_large->motor_w(BIT(~data, 7) && BIT(data, 6));
 
 	m_out[1] = data;
 	show_3_outputs();

@@ -20,7 +20,7 @@ public:
 	void vtable_w(offs_t offset, u8 data);
 	u8 vtable_r(offs_t offset);
 
-	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect, u8 *spriteram, int pri_mask);
+	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect, const u8 *spriteram, int pri_mask);
 
 protected:
 	ky3211_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock);

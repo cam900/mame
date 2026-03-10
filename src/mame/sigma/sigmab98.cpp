@@ -86,18 +86,18 @@ public:
 		, m_vblank(0)
 	{ }
 
-	void sigmab98(machine_config &config);
-	void dodghero(machine_config &config);
+	void sigmab98(machine_config &config) ATTR_COLD;
+	void dodghero(machine_config &config) ATTR_COLD;
 
-	void init_b3rinsya();
-	void init_tbeastw2();
-	void init_dashhero();
-	void init_gegege();
-	void init_pepsiman();
-	void init_ucytokyu();
+	void init_b3rinsya() ATTR_COLD;
+	void init_tbeastw2() ATTR_COLD;
+	void init_dashhero() ATTR_COLD;
+	void init_gegege() ATTR_COLD;
+	void init_pepsiman() ATTR_COLD;
+	void init_ucytokyu() ATTR_COLD;
 
 protected:
-	virtual void machine_start() override { m_leds.resolve(); }
+	virtual void machine_start() override ATTR_COLD { m_leds.resolve(); }
 
 	void c4_w(u8 data);
 	void c6_w(u8 data);
@@ -154,17 +154,16 @@ public:
 	{
 	}
 
-	void lufykzku(machine_config &config);
-	void mnrockman(machine_config& config);
+	void lufykzku(machine_config &config) ATTR_COLD;
+	void mnrockman(machine_config &config) ATTR_COLD;
 
-	void init_lufykzku();
-	void init_mnrockman();
+	void init_lufykzku() ATTR_COLD;
+	void init_mnrockman() ATTR_COLD;
 
 private:
 	required_device<mb3773_device> m_watchdog;
 	required_device_array<ttl165_device, 2> m_dsw_shifter;
 
-	u8 m_dsw_bit;
 	void dsw_w(int state);
 
 	void lufykzku_c4_w(u8 data);
@@ -179,6 +178,7 @@ private:
 	void lufykzku_io_map(address_map &map) ATTR_COLD;
 	void lufykzku_mem_map(address_map &map) ATTR_COLD;
 
+	u8 m_dsw_bit;
 	u8 m_vblank_vector = 0;
 	u8 m_timer0_vector = 0;
 	u8 m_timer1_vector = 0;

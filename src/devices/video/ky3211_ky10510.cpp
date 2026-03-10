@@ -94,6 +94,12 @@
 
 #include "screen.h"
 
+static constexpr int integer_part(int x)
+{
+//  return x >> 16;
+	return (x + 0x8000) >> 16;
+}
+
 GFXDECODE_START( ky3211_device::gfx_ky3211 )
 	GFXDECODE_DEVICE(DEVICE_SELF, 0, gfx_16x16x4_packed_lsb, 0, 0x100/16  )
 	GFXDECODE_DEVICE(DEVICE_SELF, 0, gfx_16x16x8_raw,        0, 0x100/256 )
@@ -173,13 +179,7 @@ bool ky10510_device::get_attr(const u8 *src, u32 &color, u8 &gfx, bool &flipx, b
 	return true;
 }
 
-static inline const int integer_part(int x)
-{
-//  return x >> 16;
-	return (x + 0x8000) >> 16;
-}
-
-void ky3211_device::draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect, u8 *spriteram, int pri_mask)
+void ky3211_device::draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect, const u8 *spriteram, int pri_mask)
 {
 	const u8 *end = spriteram - 0x10;
 	const u8 *src = end + 0x1000;
