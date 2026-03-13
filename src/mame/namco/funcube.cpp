@@ -80,12 +80,12 @@ public:
 		m_leds(*this, "led%u", 0U)
 	{ }
 
-	void funcube(machine_config &config);
-	void funcube2(machine_config &config);
+	void funcube(machine_config &config) ATTR_COLD;
+	void funcube2(machine_config &config) ATTR_COLD;
 
-	void init_funcube();
-	void init_funcube2();
-	void init_funcube3();
+	void init_funcube() ATTR_COLD;
+	void init_funcube2() ATTR_COLD;
+	void init_funcube3() ATTR_COLD;
 
 private:
 	virtual void machine_start() override ATTR_COLD;

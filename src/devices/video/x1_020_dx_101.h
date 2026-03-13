@@ -49,6 +49,10 @@ private:
 	devcb_write_line m_flip_screen_x_cb;
 	devcb_write_line m_flip_screen_y_cb;
 
+	// memory pointers
+	memory_share_creator<uint16_t> m_spriteram;
+	memory_share_creator<uint16_t> m_vregs;
+
 	// live state
 	std::unique_ptr<uint16_t[]> m_private_spriteram;
 	std::unique_ptr<uint32_t[]> m_realtilenumber;
@@ -56,10 +60,6 @@ private:
 	uint16_t m_rasterposition = 0;
 	uint16_t m_rasterenabled = 0;
 	emu_timer *m_raster_timer = nullptr;
-
-	// memory pointers
-	memory_share_creator<uint16_t> m_spriteram;
-	memory_share_creator<uint16_t> m_vregs;
 };
 
 DECLARE_DEVICE_TYPE(X1_020_DX_101, x1_020_dx_101_device)

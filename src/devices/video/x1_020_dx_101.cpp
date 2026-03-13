@@ -893,9 +893,9 @@ TIMER_CALLBACK_MEMBER(x1_020_dx_101_device::raster_timer_done)
 	{
 		if (BIT(m_rasterenabled, 0))
 		{
+			LOGVIDEO("external int (vpos is %d)\n", screen().vpos());
 			screen().update_partial(screen().vpos() - 1);
 			m_raster_irq_cb(ASSERT_LINE);
-			LOGVIDEO("external int (vpos is %d)\n", screen().vpos());
 		}
 	}
 }

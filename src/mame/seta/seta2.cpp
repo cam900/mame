@@ -134,20 +134,20 @@ public:
 		m_lamps(*this, "lamp%u", 0U)
 	{ }
 
-	void grdians(machine_config &config);
-	void grdiansa(machine_config &config);
-	void myangel(machine_config &config);
-	void penbros(machine_config &config);
-	void pzlbowl(machine_config &config);
-	void myangel2(machine_config &config);
-	void reelquak(machine_config &config);
-	void ablastb(machine_config &config);
-	void gundamex(machine_config &config);
-	void telpacfl(machine_config &config);
-	void samshoot(machine_config &config);
-	void namcostr(machine_config &config);
+	void grdians(machine_config &config) ATTR_COLD;
+	void grdiansa(machine_config &config) ATTR_COLD;
+	void myangel(machine_config &config) ATTR_COLD;
+	void penbros(machine_config &config) ATTR_COLD;
+	void pzlbowl(machine_config &config) ATTR_COLD;
+	void myangel2(machine_config &config) ATTR_COLD;
+	void reelquak(machine_config &config) ATTR_COLD;
+	void ablastb(machine_config &config) ATTR_COLD;
+	void gundamex(machine_config &config) ATTR_COLD;
+	void telpacfl(machine_config &config) ATTR_COLD;
+	void samshoot(machine_config &config) ATTR_COLD;
+	void namcostr(machine_config &config) ATTR_COLD;
 
-	void init_namcostr();
+	void init_namcostr() ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -187,8 +187,8 @@ protected:
 	void video_map(address_map &map) ATTR_COLD;
 	void x1_map(address_map &map) ATTR_COLD;
 
-	void seta2(machine_config &config);
-	void seta2_32m(machine_config &config);
+	void seta2(machine_config &config) ATTR_COLD;
+	void seta2_32m(machine_config &config) ATTR_COLD;
 
 	required_device<cpu_device> m_maincpu;
 	required_device<x1_020_dx_101_device> m_video;
@@ -216,7 +216,7 @@ public:
 		m_keys{ { *this, "P1_KEY%u", 0U }, { *this, "P2_KEY%u", 0U } }
 	{ }
 
-	void mj4simai(machine_config &config);
+	void mj4simai(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
@@ -235,6 +235,8 @@ private:
 class staraudi_state : public seta2_state
 {
 public:
+	static constexpr feature_type unemulated_features() { return feature::CAMERA | feature::PRINTER; }
+
 	staraudi_state(const machine_config &mconfig, device_type type, const char *tag) :
 		seta2_state(mconfig, type, tag),
 		m_rtc(*this, "rtc"),
@@ -243,9 +245,11 @@ public:
 		m_video_region(*this, "video")
 	{
 	}
-	static constexpr feature_type unemulated_features() { return feature::CAMERA | feature::PRINTER; }
 
-	void staraudi(machine_config &config);
+	void staraudi(machine_config &config) ATTR_COLD;
+
+protected:
+	virtual void driver_start() override ATTR_COLD;
 
 private:
 	void camera_w(offs_t offset, uint8_t data, uint8_t mem_mask = ~0);
@@ -257,8 +261,6 @@ private:
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void staraudi_map(address_map &map) ATTR_COLD;
-
-	virtual void driver_start() override;
 
 	void staraudi_debug_outputs();
 

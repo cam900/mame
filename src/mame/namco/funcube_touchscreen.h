@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Luca Elia, David Haywood
+// copyright-holders:Luca Elia,Olivier Galibert
 /***************************************************************************
 
     Namco Touchscreen device for Funcube series
@@ -19,10 +19,10 @@ class funcube_touchscreen_device : public device_t,
 public:
 	funcube_touchscreen_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	virtual ioport_constructor device_input_ports() const override ATTR_COLD;
 	auto tx_cb() { return m_tx_cb.bind(); }
 
 protected:
+	virtual ioport_constructor device_input_ports() const override ATTR_COLD;
 	virtual void device_start() override ATTR_COLD;
 	virtual void device_reset() override ATTR_COLD;
 
