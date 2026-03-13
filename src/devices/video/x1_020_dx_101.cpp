@@ -277,7 +277,7 @@ void x1_020_dx_101_device::vregs_w(offs_t offset, uint16_t data, uint16_t mem_ma
 	COMBINE_DATA(&m_vregs[offset]);
 
 	if (m_vregs[offset] != olddata)
-		LOGVREG("%S: Video Reg %02X <- %04X\n", machine().describe_context(), offset * 2, data);
+		LOGVREG("%s: Video Reg %02X <- %04X\n", machine().describe_context(), offset * 2, data);
 
 	switch (offset * 2)
 	{
@@ -287,19 +287,19 @@ void x1_020_dx_101_device::vregs_w(offs_t offset, uint16_t data, uint16_t mem_ma
 
 	case 0x1c:  // FLIP SCREEN (myangel)    <- this is actually zoom
 		m_flip_screen_cb(BIT(data, 0));
-		if (data & ~1)  LOGVREG("%S: flip screen unknown bits %04X\n", machine().describe_context(), data);
+		if (data & ~1)  LOGVREG("%s: flip screen unknown bits %04X\n", machine().describe_context(), data);
 		break;
 	case 0x2a:  // FLIP X (pzlbowl)
 		m_flip_screen_x_cb(BIT(data, 0));
-		if (data & ~1)  LOGVREG("%S: flipx unknown bits %04X\n", machine().describe_context(), data);
+		if (data & ~1)  LOGVREG("%s: flipx unknown bits %04X\n", machine().describe_context(), data);
 		break;
 	case 0x2c:  // FLIP Y (pzlbowl)
 		m_flip_screen_y_cb(BIT(data, 0));
-		if (data & ~1)  LOGVREG("%S: flipy unknown bits %04X\n", machine().describe_context(), data);
+		if (data & ~1)  LOGVREG("%s: flipy unknown bits %04X\n", machine().describe_context(), data);
 		break;
 
 	case 0x30:  // BLANK SCREEN (pzlbowl, myangel)
-		if (data & ~1)  LOGVREG("%S: blank unknown bits %04X\n", machine().describe_context(), data);
+		if (data & ~1)  LOGVREG("%s: blank unknown bits %04X\n", machine().describe_context(), data);
 		break;
 
 	case 0x24: // funcube3 and staraudi write here instead, why? mirror or different meaning?
@@ -893,9 +893,9 @@ TIMER_CALLBACK_MEMBER(x1_020_dx_101_device::raster_timer_done)
 	{
 		if (BIT(m_rasterenabled, 0))
 		{
+			screen().update_partial(screen().vpos() - 1);
 			m_raster_irq_cb(ASSERT_LINE);
 			LOGVIDEO("external int (vpos is %d)\n", screen().vpos());
-			screen().update_partial(screen().vpos() - 1);
 		}
 	}
 }

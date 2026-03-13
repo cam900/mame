@@ -34170,6 +34170,13 @@ ds5000
 @source:namco/ds6000.cpp
 ds6000
 
+@source:namco/funcube.cpp
+funcube
+funcube2
+funcube3
+funcube4
+funcube5
+
 @source:namco/gal3.cpp
 gal3
 
@@ -34246,6 +34253,9 @@ finalapr1
 finalaprj
 finalaprj1
 speedrcr
+
+@source:namco/namcoeva.cpp
+hammerch
 
 @source:namco/namcona1.cpp
 bbbingo
@@ -43108,9 +43118,6 @@ macsbios
 yujan
 yuka
 
-@source:seta/namcoeva.cpp
-hammerch
-
 @source:seta/rmhaihai.cpp
 rmhaihai
 rmhaihai2
@@ -43203,11 +43210,6 @@ deerhuntj
 endrichs
 endrichsa
 endrichsb
-funcube
-funcube2
-funcube3
-funcube4
-funcube5
 grdians
 grdiansa
 grdiansbl

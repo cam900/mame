@@ -1,10 +1,8 @@
 // license:BSD-3-Clause
-// copyright-holders:Ryan Holtz
+// copyright-holders:Luca Elia, David Haywood
 /***************************************************************************
 
-    Fujifilm Microdevices MD8412B IEEE-1394 Link Layer Controller
-
-    Customized device specifically for Namco System 23
+    Namco Touchscreen device for Funcube series
 
 ***************************************************************************/
 
@@ -92,4 +90,3 @@ void funcube_touchscreen_device::tra_callback()
 {
 	m_tx_cb(transmit_register_get_data_bit());
 }
-

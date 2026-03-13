@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Ryan Holtz
+// copyright-holders:Luca Elia, David Haywood
 /***************************************************************************
 
     Namco Touchscreen device for Funcube series

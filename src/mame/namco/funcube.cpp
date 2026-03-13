@@ -7,8 +7,7 @@
                     driver by   Luca Elia (l.elia@tin.it)
 
 
-CPU    :    TMP68301 or ColdFire*
-            + H8/3007 + PIC12C508
+CPU    :    TMP68301* or ColdFire + H8/3007 + PIC12C508
 
 Video  :    DX-101
 
@@ -26,13 +25,12 @@ OSC    :    50.00000MHz
 Ordered by Board        Year    Game                                    By
 -------------------------------------------------------------------------------------------
 P0-140B                 2000    Funcube                                 Namco
-P0-140B                 2000    Namco Stars                             Namco
 B0-006B                 2001-2  Funcube 2 - 5                           Namco
 -------------------------------------------------------------------------------------------
 
 TODO:
 
-- Proper emulation of the ColdFire CPU, in a core file.
+- Proper emulation of the Touchscreen device.
 - Hacked to run, as they use a ColdFire CPU.
 - Pay-out key causes "unknown error" after coin count reaches 0.
 
