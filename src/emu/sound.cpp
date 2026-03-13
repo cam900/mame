@@ -1056,27 +1056,27 @@ void sound_manager::run_effects()
 				eb.prepare_space(source_samples / sf + 1);
 				int source_sample_index = 0;
 				int dest_index = 0;
-				double m_phase = si.m_speed_phase;
+				double phase = si.m_speed_phase;
 				for(int channel = 0; channel != channels; channel ++) {
 					const sample_t *src = si.m_buffer.ptrs(channel, 0);
-					m_phase = si.m_speed_phase;
-					if(m_phase >= 1) {
-						source_sample_index = int(m_phase);
-						m_phase -= int(m_phase);
+					phase = si.m_speed_phase;
+					if(phase >= 1) {
+						source_sample_index = int(phase);
+						phase -= int(phase);
 					} else
 						source_sample_index = 0;
 					sample_t *dest = eb.ptrw(channel, 0);
 					dest_index = 0;
 					while(source_sample_index < source_samples) {
 						dest[dest_index++] = m_muted ? 0.0 : src[source_sample_index];
-						m_phase += sf;
-						if(m_phase >= 1) {
-							source_sample_index += int(m_phase);
-							m_phase -= int(m_phase);
+						phase += sf;
+						if(phase >= 1) {
+							source_sample_index += int(phase);
+							phase -= int(phase);
 						}
 					}
 				}
-				si.m_speed_phase = m_phase + (source_sample_index - source_samples);
+				si.m_speed_phase = phase + (source_sample_index - source_samples);
 				eb.commit(dest_index);
 			}
 		}
@@ -1158,16 +1158,14 @@ void sound_manager::run_effects()
 		for(auto &si : m_speakers)
 			si.m_effects.back().m_buffer.sync();
 
-		if(!(m_muted & (MUTE_REASON_PAUSE | MUTE_REASON_UI | MUTE_REASON_DEBUGGER))) {
-			machine().osd().sound_begin_update();
+		machine().osd().sound_begin_update();
 
-			// Send the result to the osd
-			for(auto &stream : m_osd_output_streams)
-				if(stream.m_samples)
-					machine().osd().sound_stream_sink_update(stream.m_id, stream.m_buffer.data(), stream.m_samples);
+		// Send the result to the osd
+		for(auto &stream : m_osd_output_streams)
+			if(stream.m_samples)
+				machine().osd().sound_stream_sink_update(stream.m_id, stream.m_buffer.data(), stream.m_samples);
 
-			machine().osd().sound_end_update();
-		}
+		machine().osd().sound_end_update();
 #ifndef SOUND_DISABLE_THREADING
 
 		dlock.lock();
@@ -2668,7 +2666,7 @@ void sound_manager::mapping_update()
 
 u64 sound_manager::rate_and_time_to_index(attotime time, u32 sample_rate) const
 {
-	return time.m_seconds * sample_rate + muldivu_64(time.m_attoseconds, sample_rate,  ATTOSECONDS_PER_SECOND);
+	return time.m_seconds * sample_rate + muldivu_64(time.m_attoseconds, sample_rate, ATTOSECONDS_PER_SECOND);
 }
 
 void sound_manager::update(s32)
