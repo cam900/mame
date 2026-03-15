@@ -68,7 +68,7 @@ u8 neo_zmc_device::bank_r(offs_t offset)
 	if (!machine().side_effects_disabled())
 	{
 		const u8 index = offset & 3;
-		m_banksel[index] = (offset >> 8) & (0xff >> index);
+		m_banksel[index] = (offset >> 8) & (0xff >> index); // or non-masked?
 	}
 	return 0;
 }
