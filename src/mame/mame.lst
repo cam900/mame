@@ -17822,6 +17822,7 @@ mjreach1
 mjreach1a
 mjschuka
 mjswacad
+mjswacads
 mjtenho
 mjxysl
 mmpanic
@@ -18975,8 +18976,8 @@ mastboyod
 @source:gaelco/mastboyo_ms.cpp
 mastboyom
 
-@source:gaelco/radikaldarts.cpp
-radikaldrt
+@source:gaelco/radsys.cpp
+radikald
 
 @source:gaelco/rollext.cpp
 rollext
@@ -20638,6 +20639,9 @@ olihockey
 olihockeya
 unkbubsc
 
+@source:ice/cutrope.cpp
+cutrope
+
 @source:ice/fcourtfev.cpp
 stbasket
 
@@ -21256,6 +21260,10 @@ xcjnh
 xyddz
 xydn
 zjddz
+
+@source:igs/igspc.cpp
+eztouch
+speeddrv
 
 @source:igs/igspoker.cpp
 chleague
@@ -32688,6 +32696,7 @@ df_djpkr
 df_djpkra
 dphl
 dphla
+dphlac
 dphljp
 dphlunkb
 drhl
@@ -37529,9 +37538,6 @@ ast6000
 ast611
 ct486
 
-@source:pc/cuttherope.cpp
-cutrope
-
 @source:pc/dawg.cpp
 dawg
 
@@ -37568,10 +37574,6 @@ ibm5160
 @source:pc/ibmpcjr.cpp
 ibmpcjr
 ibmpcjx
-
-@source:pc/igspc.cpp
-eztouch
-speeddrv
 
 @source:pc/iskr103x.cpp
 iskr1030m
@@ -48660,6 +48662,9 @@ wavesynth
 
 @source:virtual/utdsp563xx.cpp
 utdsp563xx
+
+@source:virtual/utm6502.cpp
+utm6502
 
 @source:visual/v100.cpp
 v100
