@@ -101,7 +101,11 @@ void msm5205_device::device_start()
 	m_vck_timer = timer_alloc(FUNC(msm5205_device::toggle_vck), this);
 	m_capture_timer = timer_alloc(FUNC(msm5205_device::update_adpcm), this);
 
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_OKIM5205, clock());
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5205, clock());
+	if (type() == MSM6585)
+		m_vgm_log->SetProperty(0x00, 0x01);	// MSM6585
+	else
+		m_vgm_log->SetProperty(0x00, 0x00);	// MSM5205
 	m_vgm_log->SetProperty(0x01, (m_s1 << 0) | (m_s2 << 1));
 	m_vgm_log->SetProperty(0x02, (m_bitwidth == 4) ? 1 : 0);
 
@@ -368,20 +372,16 @@ void msm5205_device::device_clock_changed()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void msm5205_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
+void msm5205_device::sound_stream_update(sound_stream &stream)
 {
-	auto &output = outputs[0];
-
 	/* if this voice is active */
 	if (m_signal)
 	{
-		constexpr stream_buffer::sample_t sample_scale = 1.0 / double(1 << 12);
+		constexpr sound_stream::sample_t sample_scale = 1.0 / double(1 << 12);
 		const int dac_mask = (m_dac_bits >= 12) ? 0 : (1 << (12 - m_dac_bits)) - 1;
-		stream_buffer::sample_t val = stream_buffer::sample_t(m_signal & ~dac_mask) * sample_scale;
-		output.fill(val);
+		sound_stream::sample_t val = sound_stream::sample_t(m_signal & ~dac_mask) * sample_scale;
+		stream.fill(0, val);
 	}
-	else
-		output.fill(0);
 }
 
 
@@ -389,8 +389,8 @@ void msm5205_device::sound_stream_update(sound_stream &stream, std::vector<read_
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void msm6585_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
+void msm6585_device::sound_stream_update(sound_stream &stream)
 {
 	// should this be different?
-	msm5205_device::sound_stream_update(stream, inputs, outputs);
+	msm5205_device::sound_stream_update(stream);
 }

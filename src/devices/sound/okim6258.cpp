@@ -121,7 +121,7 @@ void okim6258_device::device_start()
 	m_signal = -2;
 	m_step = 0;
 
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_OKIM6258, clock());
+	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM6258, clock());
 	m_vgm_log->SetProperty(0x01, m_start_divider);
 	m_vgm_log->SetProperty(0x02, m_adpcm_type);
 	m_vgm_log->SetProperty(0x03, (m_output_bits == OUTPUT_12BITS));
@@ -154,15 +154,13 @@ void okim6258_device::device_reset()
 //  sound_stream_update - handle a stream update
 //-------------------------------------------------
 
-void okim6258_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
+void okim6258_device::sound_stream_update(sound_stream &stream)
 {
-	auto &buffer = outputs[0];
-
 	if (m_status & STATUS_PLAYING)
 	{
 		int nibble_shift = m_nibble_shift;
 
-		for (int sampindex = 0; sampindex < buffer.samples(); sampindex++)
+		for (int sampindex = 0; sampindex < stream.samples(); sampindex++)
 		{
 			/* Compute the new amplitude and update the current step */
 			int nibble = (m_data_in >> nibble_shift) & 0xf;
@@ -172,15 +170,11 @@ void okim6258_device::sound_stream_update(sound_stream &stream, std::vector<read
 
 			nibble_shift ^= 4;
 
-			buffer.put_int(sampindex, sample, 32768);
+			stream.put_int(0, sampindex, sample, 32768);
 		}
 
 		/* Update the parameters */
 		m_nibble_shift = nibble_shift;
-	}
-	else
-	{
-		buffer.fill(0);
 	}
 }
 

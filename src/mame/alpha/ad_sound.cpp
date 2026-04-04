@@ -157,12 +157,12 @@ TIMER_CALLBACK_MEMBER(ad_59mc07_device::frq_adjuster_callback)
 	uint8_t frq = m_frq_adjuster->read();
 
 	m_msm->set_clock(MSM5232_MIN_CLOCK + frq * (MSM5232_MAX_CLOCK - MSM5232_MIN_CLOCK) / 100);
-//popmessage("8155: C %02x A %02x  AY: A %02x B %02x Unk:%x", m_8155_port_c, m_8155_port_a, m_ay_port_a, m_ay_port_b, m_cymbal_ctrl & 15);
+	//popmessage("8155: C %02x A %02x  AY: A %02x B %02x Unk:%x", m_8155_port_c, m_8155_port_a, m_ay_port_a, m_ay_port_b, m_cymbal_ctrl & 15);
 
 	m_cymvol *= 0.94f;
 	m_hihatvol *= 0.94f;
 
-	m_msm->ext_vol_w(12, uint8_t((m_hihatvol + m_cymvol * (m_ay_port_b & 3) * 0.33f) * 128.0f));
+	m_msm->ext_vol_w(10, uint8_t((m_hihatvol + m_cymvol * (m_ay_port_b & 3)) * 0x80 / 3));
 	m_msm->set_output_gain(10, m_hihatvol + m_cymvol * (m_ay_port_b & 3) * 0.33f);   /* NO from msm5232 */
 }
 
@@ -190,11 +190,11 @@ void ad_59mc07_device::c0f8_w(offs_t offset, uint8_t data)
 
 		case 4: // c0fc: increment PROM address (written by NMI handler)
 			m_sound_prom_address = (m_sound_prom_address + 1) & 0x1f;
-//       at this point, the 5-bit value
-//       goes to an op-amp and to the base of a transistor. The transistor is part
-//       of a resonator that is used to generate the M5232 clock. The PROM doesn't
-//       actually seem to be important, since even removing it the M5232 clock
-//       continues to come out normally.
+			// at this point, the 5-bit value
+			// goes to an op-amp and to the base of a transistor. The transistor is part
+			// of a resonator that is used to generate the M5232 clock. The PROM doesn't
+			// actually seem to be important, since even removing it the M5232 clock
+			// continues to come out normally.
 			break;
 
 		case 5: // c0fd: n.c.
@@ -231,7 +231,7 @@ void ad_59mc07_device::ay8910_porta_w(uint8_t data)
 void ad_59mc07_device::ay8910_portb_w(uint8_t data)
 {
 	// bongo 3
-	m_samples->set_volume(2, ((data & 0x30)>>4) * 0.33);
+	m_samples->set_volume(2, ((data & 0x30) >> 4) * 0.33);
 	if (data & ~m_ay_port_b & 0x80)
 		m_samples->start(2, 2);
 
@@ -284,14 +284,15 @@ void ad_59mc07_device::dac_latch_w(uint8_t data)
 void ad_59mc07_device::i8155_porta_w(uint8_t data)
 {
 	m_8155_port_a = data;
-	m_msm->ext_vol_w(2, uint8_t((data >> 4) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(3, uint8_t((data >> 4) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(4, uint8_t((data >> 4) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(5, uint8_t((data >> 4) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(6, uint8_t((data & 0x0f) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(7, uint8_t((data & 0x0f) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(8, uint8_t((data & 0x0f) * (128.0f / 15.0)));
-	m_msm->ext_vol_w(9, uint8_t((data & 0x0f) * (128.0f / 15.0)));
+
+	m_msm->ext_vol_w(0, uint8_t((data >> 4) * 0x80 / 15));
+	m_msm->ext_vol_w(1, uint8_t((data >> 4) * 0x80 / 15));
+	m_msm->ext_vol_w(2, uint8_t((data >> 4) * 0x80 / 15));
+	m_msm->ext_vol_w(3, uint8_t((data >> 4) * 0x80 / 15));
+	m_msm->ext_vol_w(4, uint8_t((data & 0x0f) * 0x80 / 15));
+	m_msm->ext_vol_w(5, uint8_t((data & 0x0f) * 0x80 / 15));
+	m_msm->ext_vol_w(6, uint8_t((data & 0x0f) * 0x80 / 15));
+	m_msm->ext_vol_w(7, uint8_t((data & 0x0f) * 0x80 / 15));
 	m_msm->set_output_gain(0, (data >> 4) / 15.0);   // group1 from msm5232
 	m_msm->set_output_gain(1, (data >> 4) / 15.0);   // group1 from msm5232
 	m_msm->set_output_gain(2, (data >> 4) / 15.0);   // group1 from msm5232
@@ -311,17 +312,15 @@ void ad_59mc07_device::i8155_portb_w(uint8_t data)
 void ad_59mc07_device::i8155_portc_w(uint8_t data)
 {
 	m_8155_port_c = data;
-	m_msm->ext_vol_w(10, uint8_t((data & 0x0f) * (128.0f / 15.0)));
+	m_msm->ext_vol_w(8, uint8_t((data & 0x0f) * 0x80 / 15));
 	m_msm->set_output_gain(8, (data & 0x0f) / 15.0);     // SOLO  8' from msm5232
+	uint8_t outvol;
 	if (data & 0x20)
-	{
-		m_msm->ext_vol_w(11, uint8_t((data & 0x0f) * (128.0f / 15.0)));
-		m_msm->set_output_gain(9, (data & 0x0f) / 15.0); // SOLO 16' from msm5232
-	}
+		outvol = data & 0x0f;
 	else
-	{
-		m_msm->set_output_gain(9, 0);   // SOLO 16' from msm5232
-	}
+		outvol = 0;
+	m_msm->ext_vol_w(9, uint8_t(outvol * 0x80 / 15));
+	m_msm->set_output_gain(9, outvol / 15.0); // SOLO 16' from msm5232
 }
 
 void ad_59mc07_device::msm5232_gate(int state)

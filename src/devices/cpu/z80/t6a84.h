@@ -41,13 +41,14 @@ public:
 	uint32_t stack_address(uint16_t address);
 
 protected:
-	static inline constexpr uint32_t PAGE_SIZE = 0x10000;
-
 	t6a84_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock, address_map_constructor io_map);
 
 	// device-level overrides
 	virtual void device_start() override;
 	virtual void device_reset() override;
+
+	// device_execute_interface implementation
+	virtual void execute_run() override;
 
 	// z80 overrides
 	virtual uint8_t stack_read(uint16_t addr) override;
@@ -61,6 +62,10 @@ protected:
 	void data_page_w(uint8_t page);
 	void stack_page_w(uint8_t page);
 	void vector_page_w(uint8_t page);
+
+	void paged_irqfetch();
+	void paged_reti();
+	void paged_jump();
 
 	void internal_io_map(address_map &map) const;
 	virtual space_config_vector memory_space_config() const override;

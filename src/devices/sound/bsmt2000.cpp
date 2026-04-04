@@ -14,6 +14,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "vgmwrite.hpp"
 #include "bsmt2000.h"
 #include "vgmwrite.hpp"
 
@@ -68,6 +69,7 @@ bsmt2000_device::bsmt2000_device(const machine_config &mconfig, const char *tag,
 	, device_rom_interface(mconfig, *this)
 	, m_ready_callback(*this)
 	, m_stream(nullptr)
+	, m_vgm_log(VGMLogger::GetDummyChip())
 	, m_cpu(*this, "bsmt2000")
 	, m_register_select(0)
 	, m_write_data(0)
@@ -145,6 +147,7 @@ void bsmt2000_device::device_start()
 
 void bsmt2000_device::device_reset()
 {
+	m_vgm_log->Write(0x01, 0x00, m_reg_vgm & 0x7f);
 	m_deferred_reset->adjust(attotime::zero);
 }
 
@@ -193,12 +196,12 @@ TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_data_write)
 //  for our sound stream
 //-------------------------------------------------
 
-void bsmt2000_device::sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs)
+void bsmt2000_device::sound_stream_update(sound_stream &stream)
 {
 	// just fill with current left/right values
-	constexpr stream_buffer::sample_t sample_scale = 1.0 / 32768.0;
-	outputs[0].fill(stream_buffer::sample_t(m_left_data) * sample_scale);
-	outputs[1].fill(stream_buffer::sample_t(m_right_data) * sample_scale);
+	constexpr sound_stream::sample_t sample_scale = 1.0 / 32768.0;
+	stream.fill(0, sound_stream::sample_t(m_left_data) * sample_scale);
+	stream.fill(1, sound_stream::sample_t(m_right_data) * sample_scale);
 }
 
 
@@ -230,6 +233,7 @@ uint16_t bsmt2000_device::read_status()
 
 void bsmt2000_device::write_reg(uint16_t data)
 {
+	m_reg_vgm = data;
 	m_deferred_reg_write->adjust(attotime::zero, data);
 }
 
@@ -241,6 +245,7 @@ void bsmt2000_device::write_reg(uint16_t data)
 
 void bsmt2000_device::write_data(uint16_t data)
 {
+	m_vgm_log->Write(0x00, data, m_reg_vgm & 0x7f);
 	m_deferred_data_write->adjust(attotime::zero, data);
 
 	// boost the interleave on a write so that the caller detects the status more accurately

@@ -225,7 +225,7 @@ void seicross_state::palette(palette_device &palette) const
 		// blue component
 		bit0 = BIT(color_prom[i], 6);
 		bit1 = BIT(color_prom[i], 7);
-		int const b = 0x4f * bit0 + 0xa8 * bit1;
+		int const b = 0x52 * bit0 + 0xad * bit1;
 
 		palette.set_pen_color(i, rgb_t(r, g, b));
 	}
@@ -290,8 +290,8 @@ void seicross_state::draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprec
 
 			m_gfxdecode->gfx(1)->transpen(bitmap, cliprect, code, color, flipx, flipy, sx, sy, 0);
 
-			if (sx > 0xf0)
-				m_gfxdecode->gfx(1)->transpen(bitmap, cliprect, code, color, flipx, flipy, sx - 256, sy, 0);
+			const int dx = flip_screen() ? +256 : -256;
+			m_gfxdecode->gfx(1)->transpen(bitmap, cliprect, code, color, flipx, flipy, sx + dx, sy, 0);
 		}
 	}
 }
@@ -467,7 +467,7 @@ static INPUT_PORTS_START( radrad )
 	PORT_DIPSETTING(    0x0f, "7 Coins/2 Credits" )
 	PORT_DIPSETTING(    0x0e, "6 Coins/2 Credits" )
 	PORT_DIPSETTING(    0x03, DEF_STR( 3C_1C ) )
-	PORT_DIPSETTING(    0x0d, "5 Coins/2 Credits" )
+	PORT_DIPSETTING(    0x0d, DEF_STR( 5C_2C ) )
 	PORT_DIPSETTING(    0x0c, DEF_STR( 4C_2C ) )
 	PORT_DIPSETTING(    0x02, DEF_STR( 2C_1C ) )
 	PORT_DIPSETTING(    0x0b, DEF_STR( 3C_2C ) )

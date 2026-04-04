@@ -52,7 +52,7 @@ protected:
 	virtual void device_reset() override ATTR_COLD;
 
 	// device_sound_interface overrides
-	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
+	virtual void sound_stream_update(sound_stream &stream) override;
 
 	// device_rom_interface overrides
 	virtual void rom_bank_pre_change() override;
@@ -77,8 +77,10 @@ private:
 
 	// internal state
 	sound_stream *              m_stream;
+	VGMDeviceLog *              m_vgm_log;
 	required_device<tms32015_device> m_cpu;
 	uint16_t                    m_register_select;
+	uint16_t                    m_reg_vgm;
 	uint16_t                    m_write_data;
 	uint16_t                    m_rom_address;
 	uint16_t                    m_rom_bank;

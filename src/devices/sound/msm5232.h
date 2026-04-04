@@ -17,6 +17,7 @@ public:
 	void write(offs_t offset, uint8_t data);
 	void ext_vol_w(offs_t offset, uint8_t data);
 	void set_clock(int clock);
+	void ext_vol_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides
@@ -26,7 +27,7 @@ protected:
 	virtual void device_post_load() override;
 
 	// sound stream update overrides
-	virtual void sound_stream_update(sound_stream &stream, std::vector<read_stream_view> const &inputs, std::vector<write_stream_view> &outputs) override;
+	virtual void sound_stream_update(sound_stream &stream) override;
 
 private:
 	struct VOICE {
@@ -59,6 +60,7 @@ private:
 
 	// internal state
 	sound_stream *m_stream;
+	VGMDeviceLog *m_vgm_log;
 
 	VOICE   m_voi[8];
 

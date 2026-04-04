@@ -163,12 +163,15 @@ void sb16_lle_device::ctrl8_w(uint8_t data)
 	 * bit3 -
 	 * bit4 -
 	 * bit5 -
-	 * bit6 - ?
+	 * bit6 - ? (wolf3d)
 	 * bit7 - toggle for 8bit irq
 	*/
 	if(data & 4)
 	{
 		m_dma8_cnt = m_dma8_len;
+		if (!(BIT(m_mode, 6)))
+			m_dma8_cnt >>= 1;
+		m_dma8_cnt ++;
 		m_dma8_done = false;
 	}
 	if(!(data & 2) || !(m_ctrl16 & 2))
@@ -210,6 +213,9 @@ void sb16_lle_device::ctrl16_w(uint8_t data)
 	if(data & 4)
 	{
 		m_dma16_cnt = m_dma16_len;
+		if (!(BIT(m_mode, 7)))
+			m_dma16_cnt >>= 1;
+		m_dma16_cnt ++;
 		m_dma16_done = false;
 	}
 	if(!(data & 2) || !(m_ctrl8 & 2))
@@ -382,7 +388,7 @@ void sb16_lle_device::sb16_io(address_map &map)
 	map(0x0004, 0x0004).mirror(0xff00).rw(FUNC(sb16_lle_device::mode_r), FUNC(sb16_lle_device::mode_w));
 	map(0x0005, 0x0005).mirror(0xff00).rw(FUNC(sb16_lle_device::dac_ctrl_r), FUNC(sb16_lle_device::dac_ctrl_w));
 	map(0x0006, 0x0006).mirror(0xff00).r(FUNC(sb16_lle_device::dma_stat_r));
-//  map(0x0007, 0x0007) // unknown
+//  map(0x0007, 0x0007) // unknown, readback status of stereo f/f?
 	map(0x0008, 0x0008).mirror(0xff00).rw(FUNC(sb16_lle_device::ctrl8_r), FUNC(sb16_lle_device::ctrl8_w));
 	map(0x0009, 0x0009).mirror(0xff00).w(FUNC(sb16_lle_device::rate_w));
 	map(0x000A, 0x000A).mirror(0xff00).r(FUNC(sb16_lle_device::dma8_cnt_lo_r));
@@ -428,27 +434,26 @@ void sb16_lle_device::device_add_mconfig(machine_config &config)
 	m_cpu->port_in_cb<2>().set(FUNC(sb16_lle_device::p2_r));
 	m_cpu->port_out_cb<2>().set(FUNC(sb16_lle_device::p2_w));
 
-	SPEAKER(config, "lspeaker").front_left();
-	SPEAKER(config, "rspeaker").front_right();
+	SPEAKER(config, "speaker", 2).front();
 
 	CT1745(config, m_mixer);
 	m_mixer->set_fm_tag("ymf262");
 	m_mixer->set_ldac_tag(m_ldac);
 	m_mixer->set_rdac_tag(m_rdac);
-	m_mixer->add_route(0, "lspeaker", 1.0);
-	m_mixer->add_route(1, "rspeaker", 1.0);
+	m_mixer->add_route(0, "speaker", 1.0, 0);
+	m_mixer->add_route(1, "speaker", 1.0, 1);
 	m_mixer->irq_status_cb().set([this] () {
 		return (m_irq8 << 0) | (m_irq16 << 1) | (m_irq_midi << 2) | (0x8 << 4);
 	});
 
-	DAC_16BIT_R2R(config, m_ldac, 0).add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 0); // unknown DAC
-	DAC_16BIT_R2R(config, m_rdac, 0).add_route(ALL_OUTPUTS, m_mixer, 0.5, AUTO_ALLOC_INPUT, 1); // unknown DAC
+	DAC_16BIT_R2R(config, m_ldac, 0).add_route(ALL_OUTPUTS, m_mixer, 0.5, 0); // unknown DAC
+	DAC_16BIT_R2R(config, m_rdac, 0).add_route(ALL_OUTPUTS, m_mixer, 0.5, 1); // unknown DAC
 
 	ymf262_device &ymf262(YMF262(config, "ymf262", XTAL(14'318'181)));
-	ymf262.add_route(0, m_mixer, 1.00, AUTO_ALLOC_INPUT, 0);
-	ymf262.add_route(1, m_mixer, 1.00, AUTO_ALLOC_INPUT, 1);
-	ymf262.add_route(2, m_mixer, 1.00, AUTO_ALLOC_INPUT, 0);
-	ymf262.add_route(3, m_mixer, 1.00, AUTO_ALLOC_INPUT, 1);
+	ymf262.add_route(0, m_mixer, 1.00, 0);
+	ymf262.add_route(1, m_mixer, 1.00, 1);
+	ymf262.add_route(2, m_mixer, 1.00, 0);
+	ymf262.add_route(3, m_mixer, 1.00, 1);
 
 	PC_JOY(config, m_joy);
 }
@@ -496,7 +501,7 @@ uint8_t sb16_lle_device::dack_r(int line)
 		return ret;
 	}
 
-	++m_adc_fifo_tail %= 16;
+	++m_adc_fifo_tail %= FIFO_SIZE;
 
 	if(m_adc_fifo_ctrl & 4)
 	{
@@ -504,7 +509,7 @@ uint8_t sb16_lle_device::dack_r(int line)
 		return ret;
 	}
 
-	if(m_adc_fifo_head == ((m_adc_fifo_tail + 1) % 16))
+	if(m_adc_fifo_head == ((m_adc_fifo_tail + 1) % FIFO_SIZE))
 		m_isa->drq1_w(0);
 	return ret;
 }
@@ -539,7 +544,7 @@ void sb16_lle_device::dack_w(int line, uint8_t data)
 		return;
 	}
 
-	++m_dac_fifo_head %= 16;
+	++m_dac_fifo_head %= FIFO_SIZE;
 
 	if(m_dac_fifo_ctrl & 4)
 	{
@@ -573,7 +578,7 @@ uint16_t sb16_lle_device::dack16_r(int line)
 		m_isa->drq5_w(0);
 		return ret;
 	}
-	++m_adc_fifo_tail %= 16;
+	++m_adc_fifo_tail %= FIFO_SIZE;
 
 	if(m_adc_fifo_ctrl & 4)
 	{
@@ -581,7 +586,7 @@ uint16_t sb16_lle_device::dack16_r(int line)
 		return ret;
 	}
 
-	if(m_adc_fifo_head == ((m_adc_fifo_tail + 1) % 16))
+	if(m_adc_fifo_head == ((m_adc_fifo_tail + 1) % FIFO_SIZE))
 		m_isa->drq5_w(0);
 	return ret;
 }
@@ -608,7 +613,7 @@ void sb16_lle_device::dack16_w(int line, uint16_t data)
 		m_isa->drq5_w(0);
 		return;
 	}
-	++m_dac_fifo_head %= 16;
+	++m_dac_fifo_head %= FIFO_SIZE;
 
 	if(m_dac_fifo_ctrl & 4)
 	{
@@ -859,12 +864,12 @@ TIMER_CALLBACK_MEMBER(sb16_lle_device::timer_tick)
 		m_isa->drq5_w(1);
 
 	if((!(m_ctrl8 & 2) && !(m_mode & 1)) || (!(m_ctrl16 & 2) && (m_mode & 1)))
-		++m_dac_fifo_tail %= 16;
+		++m_dac_fifo_tail %= FIFO_SIZE;
 
 	if((!(m_ctrl8 & 2) && (m_mode & 1)) || (!(m_ctrl16 & 2) && !(m_mode & 1)))
 	{
 		m_adc_fifo[m_adc_fifo_head].h[0] = adcl;
 		m_adc_fifo[m_adc_fifo_head].h[1] = adcr;
-		++m_adc_fifo_head %= 16;
+		++m_adc_fifo_head %= FIFO_SIZE;
 	}
 }
