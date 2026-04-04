@@ -140,8 +140,12 @@ public:
 		uint32_t lngHzMSM5232;
 		uint32_t lngHzBSMT2000;
 		uint32_t lngHzICS2115;
-		//uint8_t bytReserved[0x0C];
-	};	// -> 0x100 Bytes
+		uint32_t lngHzNamcoWSG;
+		uint32_t lngHzNamcoC15;
+		uint32_t lngHzNamcoC30;
+		uint32_t lngHzNamcoPPW;
+		uint8_t bytReserved[0xF0];
+	};	// -> 0x200 Bytes
 	struct GD3_TAG
 	{
 		uint32_t fccGD3;
@@ -277,6 +281,10 @@ enum ChipTypes : uint8_t
 	VGMC_MSM5232	= 0x2D,
 	VGMC_BSMT2000	= 0x2E,
 	VGMC_ICS2115	= 0x2F,
+	VGMC_NAMCOWSG   = 0x30,
+	VGMC_NAMCOC15   = 0x31,
+	VGMC_NAMCOC30   = 0x32,
+	VGMC_NAMCOPPW   = 0x33,
 };
 
 #endif // __VGMWRITE_HPP__

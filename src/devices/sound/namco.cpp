@@ -27,6 +27,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "vgmwrite.hpp"
 #include "namco.h"
 
 
@@ -57,6 +58,7 @@ namco_audio_device::namco_audio_device(const machine_config &mconfig, device_typ
 	, m_wave_size(0)
 	, m_sound_enable(false)
 	, m_stream(nullptr)
+	, m_vgm_log(VGMLogger::GetDummyChip())
 	, m_namco_clock(0)
 	, m_sample_rate(0)
 	, m_f_fracbits(0)
@@ -89,6 +91,18 @@ namco_cus30_device::namco_cus30_device(const machine_config &mconfig, const char
 
 void namco_audio_device::device_start()
 {
+	if (m_voices == 3)
+		m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_NAMCOWSG, clock());
+	else if (type() == NAMCO)
+		m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_NAMCOPPW, clock());
+	else if (type() == NAMCO_15XX)
+		m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_NAMCOC15, clock());
+	else if (type() == NAMCO_CUS30)
+	{
+		m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_NAMCOC30, clock());
+		m_vgm_log->SetProperty(0x00, m_stereo ? 0x01 : 0x00);
+	}
+
 	// extract globals from the interface
 	m_last_channel = m_channel_list + m_voices;
 
@@ -204,7 +218,10 @@ void namco_audio_device::update_namco_waveform(int offset, uint8_t data)
 void namco_audio_device::build_decoded_waveform(uint8_t *rgnbase)
 {
 	if (rgnbase != nullptr)
+	{
 		m_wavedata = rgnbase;
+		m_vgm_log->DumpSampleROM(0x01, memregion(DEVICE_SELF));
+	}
 	else
 	{
 		m_waveram_alloc = make_unique_clear<uint8_t[]>(0x400);
@@ -294,6 +311,8 @@ void namco_device::pacman_sound_w(offs_t offset, uint8_t data)
 	if (ch >= m_voices)
 		return;
 
+	m_vgm_log->Write(0x00, offset & 0x7F, data);
+
 	// recompute the voice parameters
 	voice = m_channel_list + ch;
 	switch (offset - ch * 5)
@@ -348,6 +367,8 @@ void namco_cus30_device::pacman_sound_w(offs_t offset, uint8_t data)
 
 	if (ch >= m_voices)
 		return;
+
+	m_vgm_log->Write(0x00, offset & 0x7F, data);
 
 	// recompute the voice parameters
 	voice = m_channel_list + ch;
@@ -434,6 +455,8 @@ void namco_device::polepos_sound_w(offs_t offset, uint8_t data)
 
 	ch = (offset & 0x1f) / 4;
 
+	m_vgm_log->Write(0x00, offset & 0x7F, data);
+
 	// recompute the voice parameters
 	voice = m_channel_list + ch;
 	switch (offset & 0x23)
@@ -511,6 +534,8 @@ void namco_15xx_device::namco_15xx_w(offs_t offset, uint8_t data)
 	ch = offset / 8;
 	if (ch >= m_voices)
 		return;
+
+	m_vgm_log->Write(0x00, offset & 0x7F, data);
 
 	// recompute the voice parameters
 	voice = m_channel_list + ch;
@@ -591,6 +616,8 @@ void namco_cus30_device::namcos1_sound_w(offs_t offset, uint8_t data)
 	if (ch >= m_voices)
 		return;
 
+	m_vgm_log->Write(0x00, offset & 0x7F, data);
+
 	// recompute the voice parameters
 	voice = m_channel_list + ch;
 	switch (offset & 7)
@@ -631,6 +658,8 @@ void namco_cus30_device::namcos1_cus30_w(offs_t offset, uint8_t data)
 			m_stream->update();
 
 			m_wavedata[offset] = data;
+
+			m_vgm_log->Write(0x01, offset & 0xFF, data);
 
 			// update the decoded waveform table
 			update_namco_waveform(offset, data);

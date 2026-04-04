@@ -468,6 +468,18 @@ void VGMLogger::Stop(void)
 			case VGMC_ICS2115:
 				vh.lngHzICS2115 &= clock_mask;
 				break;
+			case VGMC_NAMCOWSG:
+				vh.lngHzNamcoWSG &= clock_mask;
+				break;
+			case VGMC_NAMCOC15:
+				vh.lngHzNamcoC15 &= clock_mask;
+				break;
+			case VGMC_NAMCOC30:
+				vh.lngHzNamcoC30 &= clock_mask;
+				break;
+			case VGMC_NAMCOPPW:
+				vh.lngHzNamcoPPW &= clock_mask;
+				break;
 			}
 		}
 		if (vc._pcmCache.CacheData != nullptr)
@@ -807,6 +819,18 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 		case VGMC_ICS2115:
 			chip_val = vh.lngHzICS2115;
 			break;
+		case VGMC_NAMCOWSG:
+			chip_val = vh.lngHzNamcoWSG;
+			break;
+		case VGMC_NAMCOC15:
+			chip_val = vh.lngHzNamcoC15;
+			break;
+		case VGMC_NAMCOC30:
+			chip_val = vh.lngHzNamcoC30;
+			break;
+		case VGMC_NAMCOPPW:
+			chip_val = vh.lngHzNamcoPPW;
+			break;
 		default:
 			return &dummyDevice;	// unknown chip - don't log
 		}
@@ -1023,6 +1047,19 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_ICS2115:
 		vh.lngHzICS2115 = clock;
 		break;
+	case VGMC_NAMCOWSG:
+		vh.lngHzNamcoWSG = clock;
+		break;
+	case VGMC_NAMCOC15:
+		vh.lngHzNamcoC15 = clock;
+		break;
+	case VGMC_NAMCOC30:
+		vh.lngHzNamcoC30 = clock;
+		vc.SetupPCMCache(0x100);
+		break;
+	case VGMC_NAMCOPPW:
+		vh.lngHzNamcoPPW = clock;
+		break;
 	}
 	
 	switch(chipType & 0x7F)
@@ -1089,6 +1126,12 @@ VGMDeviceLog* VGMLogger::OpenDevice(uint8_t chipType, int clock)
 	case VGMC_BSMT2000:
 	case VGMC_ICS2115:
 		Header_SizeCheck(*vfPtr, 0x172, 0x100);
+		break;
+	case VGMC_NAMCOWSG:
+	case VGMC_NAMCOC15:
+	case VGMC_NAMCOC30:
+	case VGMC_NAMCOPPW:
+		Header_SizeCheck(*vfPtr, 0x172, 0x200);
 		break;
 	}
 	
@@ -1435,6 +1478,20 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 	case VGMC_BSMT2000:
 		break;
 	case VGMC_ICS2115:
+		break;
+	case VGMC_NAMCOWSG:
+		break;
+	case VGMC_NAMCOC15:
+		break;
+	case VGMC_NAMCOC30:
+		switch(attr)
+		{
+		case 0x00:	// Output (Mono or Stereo)
+			vh.lngHzNamcoC30 = (vh.lngHzNamcoC30 & 0x7FFFFFFF) | (data << 31);
+			break;
+		}
+		break;
+	case VGMC_NAMCOPPW:
 		break;
 	}
 	
@@ -1997,6 +2054,56 @@ void VGMDeviceLog::Write(uint8_t port, uint16_t r, uint8_t v)
 		wrtCmd.Data[0x02] = v;
 		wrtCmd.CmdLen = 0x03;
 		break;
+	case VGMC_NAMCOWSG:
+		switch(port)
+		{
+		case 0:	// Register write
+			wrtCmd.Data[0x00] = 0x45;
+			wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+			wrtCmd.Data[0x02] = v;
+			wrtCmd.CmdLen = 0x03;
+			break;
+		case 1:	// RAM write
+			r |= (_chipType & 0x80) << 8;
+			wrtCmd.Data[0x00] = 0xCA;
+			wrtCmd.Data[0x01] = (r & 0xFF00) >> 8;	// Chip Select
+			wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;	// RAM address
+			wrtCmd.Data[0x03] = v;
+			wrtCmd.CmdLen = 0x04;
+			break;
+		}
+		break;
+	case VGMC_NAMCOC15:
+		wrtCmd.Data[0x00] = 0x46;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
+	case VGMC_NAMCOC30:
+		switch(port)
+		{
+		case 0:	// Register write
+			wrtCmd.Data[0x00] = 0x47;
+			wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+			wrtCmd.Data[0x02] = v;
+			wrtCmd.CmdLen = 0x03;
+			break;
+		case 1:	// RAM write
+			r |= (_chipType & 0x80) << 8;
+			wrtCmd.Data[0x00] = 0xCB;
+			wrtCmd.Data[0x01] = (r & 0xFF00) >> 8;	// Chip Select
+			wrtCmd.Data[0x02] = (r & 0x00FF) >> 0;	// RAM address
+			wrtCmd.Data[0x03] = v;
+			wrtCmd.CmdLen = 0x04;
+			break;
+		}
+		break;
+	case VGMC_NAMCOPPW:
+		wrtCmd.Data[0x00] = 0x48;
+		wrtCmd.Data[0x01] = r | (_chipType & 0x80);
+		wrtCmd.Data[0x02] = v;
+		wrtCmd.CmdLen = 0x03;
+		break;
 	}
 	
 	_vgmlog->WriteDelay(vf);
@@ -2375,6 +2482,46 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 			break;
 		}
 		break;
+	case VGMC_NAMCOWSG:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM/RAM Data
+			blkType = 0xC4;	// Type: Namco WSG ROM/RAM Data (treated as RAM due to being small and fixed-size)
+			break;
+		}
+		break;
+	case VGMC_NAMCOC15:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0xC5;	// Type: Namco C15 ROM Data (treated as RAM due to being small and fixed-size)
+			break;
+		}
+		break;
+	case VGMC_NAMCOC30:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// RAM Data
+			blkType = 0xC6;	// Type: Namco C30 RAM Data
+			break;
+		}
+		break;
+	case VGMC_NAMCOPPW:
+		switch(type)
+		{
+		case 0x00:
+			break;
+		case 0x01:	// ROM Data
+			blkType = 0xC7;	// Type: Namco Pole Position WSG ROM Data (treated as RAM due to being small and fixed-size)
+			break;
+		}
+		break;
 	}
 	
 	if (! blkType)
@@ -2394,7 +2541,7 @@ void VGMDeviceLog::WriteLargeData(uint8_t type, uint32_t blockSize, uint32_t sta
 			doWrite = true;
 			break;
 		case 0xC0:	// RAM Writes
-			if (blkType == 0xC3)
+			if ((blkType == 0xC3) || (blkType == 0xC4) || (blkType == 0xC5) || (blkType == 0xC7))
 				doWrite = true;	// save/rewrite this as well
 			break;
 		}
@@ -2570,6 +2717,7 @@ void VGMDeviceLog::FlushPCMCache(void)
 	uint8_t blkType;
 	uint8_t cmdType;
 	
+	bool isBE = false, support2Chips = false;
 	cmdType = 0xFF;
 	blkType = 0xFF;
 	switch(_chipType & 0x7F)
@@ -2588,6 +2736,12 @@ void VGMDeviceLog::FlushPCMCache(void)
 	case VGMC_ES5503:
 		blkType = 0xE1;
 		break;
+	case VGMC_NAMCOC30:
+		isBE = true;
+		support2Chips = true;
+		cmdType = 0xCB;
+		blkType = 0xC6;
+		break;
 	}
 	if (_pcmCache.Pos == 0x01 && cmdType != 0xFF)
 		singleWrt = true;
@@ -2596,10 +2750,12 @@ void VGMDeviceLog::FlushPCMCache(void)
 	
 	if (singleWrt)
 	{
+		if (support2Chips)
+			_pcmCache.Start = (_pcmCache.Start & 0x7FFF) | ((_chipType & 0x80) << 8);
 		// it would be a waste of space to write a data block for 1 byte of data
 		fputc(cmdType, vf.hFile);		// Write Memory
-		fputc((_pcmCache.Start >> 0) & 0xFF, vf.hFile);	// offset low
-		fputc((_pcmCache.Start >> 8) & 0xFF, vf.hFile);	// offset high
+		fputc((_pcmCache.Start >> (isBE ? 8 : 0)) & 0xFF, vf.hFile);	// offset low
+		fputc((_pcmCache.Start >> (isBE ? 0 : 8)) & 0xFF, vf.hFile);	// offset high
 		fputc(_pcmCache.CacheData[0x00], vf.hFile);		// Data
 		vf.BytesWrt += 0x04;
 	}

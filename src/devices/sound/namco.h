@@ -57,6 +57,7 @@ protected:
 	int m_wave_size;
 	bool m_sound_enable;
 	sound_stream *m_stream;
+	VGMDeviceLog *m_vgm_log;
 	int m_namco_clock;
 	int m_sample_rate;
 	int m_f_fracbits;
