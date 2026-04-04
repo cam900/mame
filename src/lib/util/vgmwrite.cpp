@@ -1436,7 +1436,6 @@ void VGMDeviceLog::SetProperty(uint8_t attr, uint32_t data)
 		break;
 	case VGMC_ICS2115:
 		break;
->>>>>>> 70e4a7232db71e7ea7f6100089d9065a53be238f
 	}
 	
 	return;

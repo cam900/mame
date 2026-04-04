@@ -204,14 +204,6 @@ void okim6295_device::set_rom_bank(int bank)
 }
 
 
-void okim6295_device::set_rom_bank(int bank)
-{
-	// let's just hope overriding works properly for all drivers
-	device_rom_interface::set_rom_bank(bank);
-	m_vgm_log->Write(0x00, 0x0F, bank & 0xFF);
-}
-
-
 //-------------------------------------------------
 //  rom_bank_pre_change - refresh the stream if the
 //  ROM banking changes
