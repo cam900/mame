@@ -341,6 +341,7 @@ void msm5205_device::s2_w(int state)
 		m_s2 = state;
 		notify_clock_changed();
 	}
+	m_vgm_log->Write(0x00, 0x04, (m_s1 << 0) | (m_s2 << 1));
 }
 
 
