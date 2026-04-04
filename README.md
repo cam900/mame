@@ -1,6 +1,6 @@
 # IMPORTANT
 
-This fork is based on [ValleyBell's fork](https://github.com/ValleyBell/mame/tree/tmp and https://github.com/ValleyBell/mame/tree/vgmlog*), with VGM logging support.
+This fork is based on ValleyBell's fork (especially https://github.com/ValleyBell/mame/tree/tmp and https://github.com/ValleyBell/mame/tree/vgmlog*), with VGM logging support.
 
 Modified by: Mao, cam900
 
