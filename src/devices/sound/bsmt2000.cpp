@@ -16,7 +16,6 @@
 #include "emu.h"
 #include "vgmwrite.hpp"
 #include "bsmt2000.h"
-#include "vgmwrite.hpp"
 
 
 // device type definition
@@ -78,8 +77,6 @@ bsmt2000_device::bsmt2000_device(const machine_config &mconfig, const char *tag,
 	, m_left_data(0)
 	, m_right_data(0)
 	, m_write_pending(false)
-	, m_vgm_log(VGMLogger::GetDummyChip())
-
 {
 }
 
@@ -159,7 +156,6 @@ void bsmt2000_device::device_reset()
 
 TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reset)
 {
-	m_vgm_log->Write(0x01, m_register_select & 0x7f, 0);
 	m_stream->update();
 	m_cpu->reset();
 }
@@ -184,7 +180,6 @@ TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_reg_write)
 TIMER_CALLBACK_MEMBER(bsmt2000_device::deferred_data_write)
 {
 	m_write_data = param & 0xffff;
-	m_vgm_log->Write(0x00, m_write_data, m_register_select & 0x7f);
 	if (m_write_pending) logerror("BSMT2000: Missed data\n");
 	m_write_pending = true;
 }
