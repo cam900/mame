@@ -15,8 +15,8 @@ public:
 	auto gate() { return m_gate_handler_cb.bind(); }
 
 	void write(offs_t offset, uint8_t data);
-	void ext_vol_w(offs_t offset, uint8_t data);
 	void set_clock(int clock);
+	void ext_vol_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides

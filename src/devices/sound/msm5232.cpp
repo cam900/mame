@@ -3,7 +3,6 @@
 #include "emu.h"
 #include "vgmwrite.hpp"
 #include "msm5232.h"
-#include "vgmwrite.hpp"
 
 #define CLOCK_RATE_DIVIDER 16
 
@@ -139,8 +138,10 @@ void msm5232_device::set_capacitors(double cap1, double cap2, double cap3, doubl
 	m_external_capacitance[5] = cap6;
 	m_external_capacitance[6] = cap7;
 	m_external_capacitance[7] = cap8;
+	/*
 	for (int i = 0; i < 8; i++)
 		m_vgm_log->SetProperty(0x10 | i, uint32_t(m_external_capacitance[i] * 1.0e+6 * 0x10000));
+	*/
 }
 
 // Default chip clock is 2119040 Hz
