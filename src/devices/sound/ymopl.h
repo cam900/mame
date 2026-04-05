@@ -190,11 +190,6 @@ protected:
 	u8 m_fm_reg;
 	u8 m_pcm_reg;
 
-	VGMDeviceLog* m_vgm_log;
-	u8 m_fm_port;
-	u8 m_fm_reg;
-	u8 m_pcm_reg;
-
 private:
 	// ADPCM read/write callbacks
 	uint8_t ymfm_external_read(ymfm::access_class type, uint32_t address) override;

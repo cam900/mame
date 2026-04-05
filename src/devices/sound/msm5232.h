@@ -17,7 +17,6 @@ public:
 	void write(offs_t offset, uint8_t data);
 	void ext_vol_w(offs_t offset, uint8_t data);
 	void set_clock(int clock);
-	void ext_vol_w(offs_t offset, uint8_t data);
 
 protected:
 	// device-level overrides
@@ -90,7 +89,6 @@ private:
 
 	double  m_external_capacitance[8]; // in Farads, eg 0.39e-6 = 0.36 uF (microFarads)
 	devcb_write_line m_gate_handler_cb;// callback called when the GATE output pin changes state
-	VGMDeviceLog *m_vgm_log;
 
 	void init_tables();
 	void init_voice(int i);

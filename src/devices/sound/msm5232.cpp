@@ -21,7 +21,6 @@ msm5232_device::msm5232_device(const machine_config &mconfig, const char *tag, d
 	, m_vgm_log(VGMLogger::GetDummyChip())
 	, m_noise_cnt(0), m_noise_step(0), m_noise_rng(0), m_noise_clocks(0), m_UpdateStep(0), m_control1(0), m_control2(0), m_gate(0), m_chip_clock(0), m_rate(0)
 	, m_gate_handler_cb(*this)
-	, m_vgm_log(VGMLogger::GetDummyChip())
 {
 }
 
@@ -35,7 +34,6 @@ void msm5232_device::device_start()
 	int voicenum;
 
 	init(clock(), rate);
-	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5232, clock());
 
 	m_stream = stream_alloc(0, 11, rate);
 	m_vgm_log = machine().vgm_logger().OpenDevice(VGMC_MSM5232, clock());
@@ -459,12 +457,6 @@ void msm5232_device::write(offs_t offset, uint8_t data)
 			break;
 		}
 	}
-}
-
-void msm5232_device::ext_vol_w(offs_t offset, uint8_t data)
-{
-	if (m_vgm_log && m_vgm_log->IsValid())
-		m_vgm_log->Write(0, 0x0e + offset, data);
 }
 
 
