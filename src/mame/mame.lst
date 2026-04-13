@@ -19269,6 +19269,7 @@ pacmanbla
 pacmanblb
 pacmanblc
 pacmanblci
+pacmanblco
 pacmanblv
 pacmanblva
 pajaroes
@@ -28930,6 +28931,7 @@ narc4
 narc6
 saurnfrnt
 shimpact
+shimpactl1
 shimpactp4
 shimpactp5
 shimpactp6
@@ -29146,10 +29148,13 @@ wmg
 @source:midway/zwackery.cpp
 zwackery
 
-@source:miltonbradley/microvsn.cpp
+@source:miltonbradley/grandmaster.cpp
+grandmas
+
+@source:miltonbradley/microvision.cpp
 microvsn
 
-@source:miltonbradley/milton6805.cpp
+@source:miltonbradley/milton.cpp
 milton
 
 @source:miltonbradley/vectrex.cpp
@@ -33006,7 +33011,7 @@ pr_wldkn
 pr_wnstk
 
 @source:misc/ps_m3.cpp
-dreamcha
+dreamhld
 
 @source:misc/psattack.cpp
 psattack
@@ -36209,6 +36214,7 @@ unk128vt
 unk198vt
 unkra200
 vibes240
+vibes240a
 zl383
 zonefusn
 
@@ -43605,7 +43611,7 @@ elwro800
 pent1024
 pentagon
 
-@source:sinclair/pentevo.cpp
+@source:sinclair/evo/pentevo.cpp
 pentevo
 
 @source:sinclair/ql.cpp
@@ -43687,7 +43693,7 @@ tc2048
 ts2068
 uk2086
 
-@source:sinclair/tsconf.cpp
+@source:sinclair/evo/tsconf.cpp
 tsconf
 tsconf2
 
@@ -43703,7 +43709,7 @@ zx80
 zx81
 zx97
 
-@source:sinclair/specnext.cpp
+@source:sinclair/next/specnext.cpp
 tbblue
 specnext_ks1
 specnext_ks2
