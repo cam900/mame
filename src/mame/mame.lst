@@ -493,7 +493,6 @@ elitdisc
 excellnt
 extrbltt
 fullhous
-glksstrn
 herzas
 herzasf1
 herzasf8
@@ -530,6 +529,7 @@ dpplson
 dscbonus
 dscjkpot
 gjubil
+glksstrn
 grandhnd
 grnada
 jack4000
@@ -34729,6 +34729,7 @@ ridgera28
 ridgera2j
 ridgera2ja
 ridgerac
+ridgerac3m
 ridgeraca
 ridgeracb
 ridgeracc
@@ -48306,6 +48307,7 @@ mcom4_02
 minicom
 
 @source:umc/pc486vl.cpp
+md4duv
 pccm912
 sy019s
 tku5s
