@@ -1,5 +1,16 @@
 // license:BSD-3-Clause
 // copyright-holders:Phil Stroffolino, David Haywood
+/*
+
+Namco System 21 3D Rasterizer
+
+TODO:
+- it does not have a z-buffer, MAME is more capable than the real hardware, it should be polygon z-sort
+  like namcos22 which would probably get rid of z-fighting issues
+- it does not support per-z fog either, it should be per-poly (see brightness crawling effect in solvalou)
+- any reason it's not using poly.h?
+
+*/
 
 #include "emu.h"
 #include "namcos21_3d.h"
@@ -23,20 +34,16 @@ void namcos21_3d_device::device_start()
 	allocate_poly_framebuffer();
 }
 
-void namcos21_3d_device::device_reset()
-{
-}
-
 void namcos21_3d_device::allocate_poly_framebuffer()
 {
 	if (m_framebuffer_size_in_bytes == 0)
 		fatalerror("m_framebuffer_size_in_bytes == 0\n");
 
-	m_mpPolyFrameBufferZ = std::make_unique<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
-	m_mpPolyFrameBufferPens = std::make_unique<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
+	m_mpPolyFrameBufferZ = make_unique_clear<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
+	m_mpPolyFrameBufferPens = make_unique_clear<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
 
-	m_mpPolyFrameBufferZ2 = std::make_unique<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
-	m_mpPolyFrameBufferPens2 = std::make_unique<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
+	m_mpPolyFrameBufferZ2 = make_unique_clear<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
+	m_mpPolyFrameBufferPens2 = make_unique_clear<uint16_t[]>(m_framebuffer_size_in_bytes / 2);
 
 	swap_and_clear_poly_framebuffer();
 	swap_and_clear_poly_framebuffer();
@@ -73,7 +80,7 @@ void namcos21_3d_device::copy_visible_poly_framebuffer(bitmap_ind16 &bitmap, con
 		for (int sx = clip.left(); sx <= clip.right(); sx++)
 		{
 			int z = pZ[sx];
-			//if( pZ[sx]!=0x7fff )
+			//if (pZ[sx] != 0x7fff)
 			if (z >= zlo && z <= zhi)
 			{
 				dest[sx] = pPen[sx];
@@ -145,7 +152,7 @@ void namcos21_3d_device::rendertri(const n21_vertex *v0, const n21_vertex *v1, c
 {
 	int dy, ystart, yend, crop;
 
-	/* first, sort so that v0->y <= v1->y <= v2->y */
+	// first, sort so that v0->y <= v1->y <= v2->y
 	for (;;)
 	{
 		if (v0->y > v1->y)
@@ -168,8 +175,8 @@ void namcos21_3d_device::rendertri(const n21_vertex *v0, const n21_vertex *v1, c
 	if (dy)
 	{
 		int y;
-		edge e1; /* short edge (top and bottom) */
-		edge e2; /* long (common) edge */
+		edge e1; // short edge (top and bottom)
+		edge e2; // long (common) edge
 
 		double dx2dy = (v2->x - v0->x) / dy;
 		double dz2dy = (v2->z - v0->z) / dy;
@@ -255,13 +262,10 @@ void namcos21_3d_device::draw_quad(int sx[4], int sy[4], int zcode[4], int color
 {
 	n21_vertex a, b, c, d;
 	int depthcueenable = 1;
-	/*
-	    0x0000..0x1fff  sprite palettes (0x20 sets of 0x100 colors)
-	    0x2000..0x3fff  polygon palette bank0 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
-	    0x4000..0x5fff  polygon palette bank1 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
-	    0x6000..0x7fff  polygon palette bank2 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
-	*/
-
+	// 0x0000..0x1fff  sprite palettes (0x20 sets of 0x100 colors)
+	// 0x2000..0x3fff  polygon palette bank0 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
+	// 0x4000..0x5fff  polygon palette bank1 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
+	// 0x6000..0x7fff  polygon palette bank2 (0x10 sets of 0x200 colors or 0x20 sets of 0x100 colors)
 
 	if (m_fixed_palbase != -1)
 	{
@@ -269,27 +273,11 @@ void namcos21_3d_device::draw_quad(int sx[4], int sy[4], int zcode[4], int color
 		color = m_fixed_palbase | (color & 0xff);
 	}
 	else
-	{ /* map color code to hardware pen */
-		int code = color >> 8;
-		// TODO: aircomb dislikes this logic
-		// (not sure what would use it anyway)
-		//if (code & 0x80)
-		//{
-		//	color = color & 0xff;
-		//	// color = 0x3e00|color;
-		//	color = 0x2100 | color;
-		//	depthcueenable = 0;
-		//}
-		//else
-		{
-			color &= 0xff;
-			color = 0x3e00 | color;
-			if ((code & 0x02) == 0)
-			{
-				color |= 0x100;
-			}
-		}
+	{
+		const int base = (color & 0x200) ? 0x3e00 : 0x3f00;
+		color = base | (color & 0xff);
 	}
+
 	a.x = sx[0];
 	a.y = sy[0];
 	a.z = zcode[0];

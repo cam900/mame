@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:David Haywood
+// copyright-holders:Phil Stroffolino, David Haywood
 #ifndef MAME_NAMCO_NAMCOS21_3D_H
 #define MAME_NAMCO_NAMCOS21_3D_H
 
@@ -12,14 +12,14 @@ public:
 
 	// config
 	void set_fixed_palbase(int base) { m_fixed_palbase = base; }
-	void set_zz_shift_mult(int shift, int mult) { m_zz_shift = shift; m_zzmult = mult;  }
-	void set_depth_reverse(bool reverse) { m_depth_reverse = reverse;  }
+	void set_zz_shift_mult(int shift, int mult) { m_zz_shift = shift; m_zzmult = mult; }
+	void set_depth_reverse(bool reverse) { m_depth_reverse = reverse; }
 
 	void set_framebuffer_size(int width, int height)
 	{
 		m_poly_frame_width = width;
 		m_poly_frame_height = height;
-		m_framebuffer_size_in_bytes = (sizeof(uint16_t)*m_poly_frame_width*m_poly_frame_height);
+		m_framebuffer_size_in_bytes = sizeof(uint16_t)*m_poly_frame_width*m_poly_frame_height;
 	}
 
 	int get_width() { return m_poly_frame_width; }
@@ -33,7 +33,6 @@ public:
 protected:
 	// device-level overrides
 	virtual void device_start() override ATTR_COLD;
-	virtual void device_reset() override ATTR_COLD;
 
 private:
 	struct n21_vertex
