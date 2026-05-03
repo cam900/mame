@@ -7,7 +7,7 @@ Philips P2000T/P2000M
 TODO:
 - Floppy drive (unknown type);
 - Second cart slot (no ROM, auxiliary I/O map for first cart slot);
-- Hookup p2000_cass & p2000_flop SW lists;
+- Hookup p2000_cass, p2000_flop and p2000_quik SW lists;
 - CTC;
 - Fix RAM hookup (can crash at lower sizes);
 - Joystick (cfr. brkwall)
@@ -90,9 +90,11 @@ public:
 	{
 	}
 
-	void p2000t(machine_config &config);
+	void p2000t(machine_config &config) ATTR_COLD;
 
 protected:
+	virtual void machine_start() override ATTR_COLD;
+
 	uint8_t p2000t_port_000f_r(offs_t offset);
 	uint8_t p2000t_port_202f_r();
 	void p2000t_port_101f_w(uint8_t data);
@@ -101,7 +103,6 @@ protected:
 	void p2000t_port_707f_w(uint8_t data);
 	void p2000t_port_9494_w(uint8_t data);
 	uint8_t videoram_r(offs_t offset);
-	virtual void machine_start() override ATTR_COLD;
 
 	INTERRUPT_GEN_MEMBER(p2000_interrupt);
 
@@ -133,11 +134,12 @@ public:
 	{
 	}
 
-	void p2000m(machine_config &config);
+	void p2000m(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void video_start() override ATTR_COLD;
-	void p2000m_palette(palette_device &palette) const;
+
+	void p2000m_palette(palette_device &palette) const ATTR_COLD;
 	uint32_t screen_update_p2000m(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
 	void p2000m_mem(address_map &map) ATTR_COLD;
@@ -634,3 +636,4 @@ ROM_END
 //    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT   CLASS         INIT        COMPANY    FULLNAME          FLAGS
 COMP( 1980, p2000t, 0,      0,      p2000t,  p2000t, p2000t_state, empty_init, "Philips", "P2000T", MACHINE_NOT_WORKING )
 COMP( 1980, p2000m, p2000t, 0,      p2000m,  p2000t, p2000m_state, empty_init, "Philips", "P2000M", MACHINE_NOT_WORKING )
+// P2000C, portable version
