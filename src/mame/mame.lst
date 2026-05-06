@@ -18251,6 +18251,9 @@ specd9
 specd9105g
 starball
 
+@source:excellent/es9606.cpp
+keirind2
+
 @source:excellent/gcpinbal.cpp
 gcpinbal
 pwrflip
@@ -19601,6 +19604,7 @@ pokesmqz
 pokexyqz
 smkatsum
 tomyspt
+udrive
 yuleyuan
 
 @source:handheld/gameking.cpp
@@ -20290,6 +20294,9 @@ mm5a
 rebel5
 rebel5a
 rebel5b
+
+@source:hegenerglaser/mm6.cpp
+mm6
 
 @source:hegenerglaser/modena.cpp
 modena
@@ -21405,6 +21412,7 @@ ketarrs15
 ketarrs151
 ketb
 ketbl
+ketikd
 killbld
 killbld100
 killbld104
@@ -36150,6 +36158,7 @@ micac250
 myaasa
 myaass
 mymman
+orb300
 retror30
 rminitv
 tvkunio1
@@ -37096,6 +37105,7 @@ mspacmanbhe
 mspacmanbi
 mspacmanblt
 mspacmanblt2
+mspacmanblt3
 mspacmanbpl
 mspacmancr
 mspacmane
@@ -43145,7 +43155,7 @@ wizt
 wizta
 
 @source:sequential/prophet5.cpp
-prophet5rev30
+prophet5r30
 
 @source:sequential/prophet600.cpp
 prpht600
@@ -44273,6 +44283,8 @@ kron180
 lanmao
 msaiche
 panda2
+tzwang
+whujiang
 
 @source:skeleton/leadsinger2.cpp
 leadsng2
@@ -46767,6 +46779,7 @@ drgnbowla
 gaiden
 mastninj
 raiga
+raigaa
 ryukendn
 ryukendna
 shadoww
@@ -47286,6 +47299,7 @@ tigerhb1
 tigerhb2
 tigerhb3
 tigerhb4
+tigerhbt
 tigerhj
 
 @source:toaplan/slapfght_ms.cpp
@@ -47662,6 +47676,7 @@ smartfp
 smartfpf
 smartfps
 tkmag220
+typo176
 
 @source:tvgames/generalplus_gpl16250_romram.cpp
 jak_pf
@@ -47826,6 +47841,7 @@ conyfght
 conyping
 conyteni
 easports
+easportsa
 easportsu
 jak_blue
 jak_bobb
@@ -48411,6 +48427,7 @@ panic
 panic2
 panic3
 panic4
+panicbl
 panicger
 panich
 
