@@ -20966,10 +20966,12 @@ lucky8q
 lucky8r
 lucky8s
 lucky8t
+lucky8tet
 lucky8u
 lucky8v
 lucky8w
-lucky8tet
+lucky8x
+lucky8y
 luckybar
 luckylad
 magodds
@@ -29037,6 +29039,9 @@ rfmpb
 rfmpbr2
 swe1pb
 
+@source:midway/predators.cpp
+predtors
+
 @source:midway/seattle.cpp
 biofreak
 blitz
@@ -34536,6 +34541,7 @@ dsabera
 dsaberj
 finalap2
 finalap2j
+finalap2jb
 finalap3
 finalap3a
 finalap3bl
@@ -36995,6 +37001,7 @@ zodiack
 
 @source:orla/hk1000.cpp
 hk1000
+se41
 
 @source:orla/xm200.cpp
 xm200
@@ -40576,6 +40583,7 @@ s10
 s220
 
 @source:roland/roland_s50.cpp
+s330
 s50
 s550
 w30
@@ -44064,6 +44072,7 @@ dynasty
 @source:skeleton/dyna_dc4000.cpp
 aladdin
 aladdina
+aladdinb
 cmast92
 cmast92a
 dynamj
@@ -44124,9 +44133,6 @@ waveterm
 
 @source:skeleton/extrema_m27sv.cpp
 multgmxl
-
-@source:skeleton/falconun.cpp
-falconun
 
 @source:skeleton/fanucs15.cpp
 fanucs15
@@ -44283,8 +44289,10 @@ kron180
 lanmao
 msaiche
 panda2
+pkzw
 tzwang
 whujiang
+whujijqb
 
 @source:skeleton/leadsinger2.cpp
 leadsng2
@@ -44488,6 +44496,9 @@ pm68k
 
 @source:skeleton/powerpack.cpp
 powerpack
+
+@source:skeleton/probowl.cpp
+probowl
 
 @source:skeleton/proteus3.cpp
 proteus3
@@ -49170,6 +49181,7 @@ lucky74b
 lucky88w
 
 @source:wing/pinkiri8.cpp
+4jokers
 janmu
 janshi
 pinkiri8
