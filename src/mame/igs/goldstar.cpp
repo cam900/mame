@@ -268,6 +268,7 @@
 #include "sound/okim6295.h"
 #include "sound/sn76496.h"
 #include "sound/ymopl.h"
+#include "sound/ymopn.h"
 #include "video/ramdac.h"
 
 #include "emupal.h"
@@ -402,7 +403,6 @@ protected:
 	uint8_t m_reel_ena = 0U;
 	uint16_t m_bank_shift = 0x100U;
 
-	virtual void machine_start() override ATTR_COLD { m_lamps.resolve(); }
 	virtual void video_start() override ATTR_COLD;
 
 	void fg_vidram_w(offs_t offset, uint8_t data);
@@ -467,6 +467,7 @@ public:
 	void crazybonb(machine_config &config) ATTR_COLD;
 	void cutylineb(machine_config &config) ATTR_COLD;
 	void jkrmast(machine_config &config) ATTR_COLD;
+	void jkrmastc(machine_config &config) ATTR_COLD;
 	void ll3(machine_config &config) ATTR_COLD;
 	void nfm(machine_config &config) ATTR_COLD;
 	void pkrmast(machine_config &config) ATTR_COLD;
@@ -497,6 +498,7 @@ public:
 	void init_hamhouse9() ATTR_COLD;
 	void init_jkrmast() ATTR_COLD;
 	void init_jkrmastc() ATTR_COLD;
+	void init_jkrmastd() ATTR_COLD;
 	void decrypt_ll3() ATTR_COLD;
 	void init_ll3() ATTR_COLD;
 	void init_ll3b() ATTR_COLD;
@@ -583,6 +585,7 @@ private:
 	void crazybon_portmap(address_map &map) ATTR_COLD;
 	void jkrmast_map(address_map &map) ATTR_COLD;
 	void jkrmast_portmap(address_map &map) ATTR_COLD;
+	void jkrmastc_portmap(address_map &map) ATTR_COLD;
 	void ll3_map(address_map &map) ATTR_COLD;
 	void ll3_portmap(address_map &map) ATTR_COLD;
 	void nfm_map(address_map &map) ATTR_COLD;
@@ -666,6 +669,7 @@ public:
 	void magodds(machine_config &config) ATTR_COLD;
 	void mbstar(machine_config &config) ATTR_COLD;
 	void megaline(machine_config &config) ATTR_COLD;
+	void mtonic2(machine_config &config) ATTR_COLD;
 	void nd8lines(machine_config &config) ATTR_COLD;
 	void super972(machine_config &config) ATTR_COLD;
 	void superdrg(machine_config &config) ATTR_COLD;
@@ -798,6 +802,8 @@ private:
 	void mbstar_map(address_map &map) ATTR_COLD;
 	void megaline_map(address_map &map) ATTR_COLD;
 	void megaline_portmap(address_map &map) ATTR_COLD;
+	void mtonic2_map(address_map &map) ATTR_COLD;
+	void mtonic2_portmap(address_map &map) ATTR_COLD;
 	void nd8lines_map(address_map &map) ATTR_COLD;
 	void superdrg_map(address_map &map) ATTR_COLD;
 	void superdrg_opcodes_map(address_map &map) ATTR_COLD;
@@ -4426,6 +4432,19 @@ void cmaster_state::jkrmast_portmap(address_map &map)
 	map(0x18, 0x18).w(FUNC(cmaster_state::jkm_vid_reg_w)); // enable reg
 }
 
+// TODO: unknown reads / writes
+void cmaster_state::jkrmastc_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));  // Inputs
+	map(0x04, 0x07).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));  // DIP switches
+	map(0x09, 0x09).r("aysnd", FUNC(ay8910_device::data_r));
+	map(0x0a, 0x0b).w("aysnd", FUNC(ay8910_device::data_address_w));
+	//map(0x13, 0x13).w(FUNC(cmaster_state::pkm_out0_w));
+	map(0x1c, 0x1c).lw8(NAME([this] (uint8_t data) { m_reel_bank = (data & 0x30) >> 4; m_bgcolor = data & 0x03; m_bg_tilemap->mark_all_dirty(); }));
+	map(0x1d, 0x1d).w(FUNC(cmaster_state::jkm_vid_reg_w)); // enable reg
+}
+
 void cmaster_state::ll3_portmap(address_map &map)
 {
 	map.global_mask(0xff);
@@ -4803,6 +4822,37 @@ void wingco_state::magodds_map(address_map &map)
 	map(0xb860, 0xb860).w(FUNC(wingco_state::magodds_outb860_w));    // watchdog
 	map(0xb870, 0xb870).w("snsnd", FUNC(sn76489_device::write));     // sound
 	map(0xc000, 0xffff).rom().region("maincpu", 0xc000);
+}
+
+void wingco_state::mtonic2_map(address_map &map) // TODO: verify everything
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram().share("nvram");
+	map(0x8800, 0x8fff).ram().w(FUNC(wingco_state::fg_vidram_w)).share(m_fg_vidram);
+	map(0x9000, 0x97ff).ram().w(FUNC(wingco_state::fg_atrram_w)).share(m_fg_atrram);
+	map(0x9800, 0x99ff).ram().w(FUNC(wingco_state::reel_ram_w<0>)).share(m_reel_ram[0]);
+	map(0x9a00, 0x9bff).ram().w(FUNC(wingco_state::reel_ram_w<1>)).share(m_reel_ram[1]);
+	map(0x9c00, 0x9dff).ram().w(FUNC(wingco_state::reel_ram_w<2>)).share(m_reel_ram[2]);
+	map(0x9e00, 0x9fff).ram(); // also used. 4th reel?
+	map(0xb000, 0xb03f).ram();
+	map(0xb040, 0xb07f).ram().share(m_reel_scroll[0]);
+	map(0xb080, 0xb0bf).ram().share(m_reel_scroll[1]);
+	map(0xb0c0, 0xb0ff).ram();
+	map(0xb100, 0xb17f).ram().share(m_reel_scroll[2]);
+	map(0xb800, 0xb803).rw("ppi8255_0", FUNC(i8255_device::read), FUNC(i8255_device::write));  // Input Ports
+	map(0xb810, 0xb813).rw("ppi8255_1", FUNC(i8255_device::read), FUNC(i8255_device::write));  // Input Ports
+	map(0xb820, 0xb823).rw("ppi8255_2", FUNC(i8255_device::read), FUNC(i8255_device::write));  // Input/Output Ports
+	map(0xb830, 0xb831).rw("ym", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0xb850, 0xb850).w(FUNC(wingco_state::magodds_outb850_w));
+	map(0xb860, 0xb860).w(FUNC(wingco_state::magodds_outb860_w));
+	map(0xc000, 0xffff).rom().region("maincpu", 0x8000); // banked somehow?
+}
+
+void wingco_state::mtonic2_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+
+	map(0x00, 0x00).lw8(NAME([this] (uint8_t data) { logerror("%s tonic communication write: %02x\n", machine().describe_context(), data); }));
 }
 
 void goldstar_state::kkotnoli_map(address_map &map)
@@ -15733,7 +15783,7 @@ void sanghopm_state::star100(machine_config &config)
 	screen.screen_vblank().set_inputline(m_maincpu, 0, HOLD_LINE);
 
 	PALETTE(config, m_palette).set_entries(0x100);
-	RAMDAC(config, "ramdac", 0, "palette").set_addrmap(0, &sanghopm_state::ramdac_map);
+	RAMDAC(config, "ramdac", "palette").set_addrmap(0, &sanghopm_state::ramdac_map);
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_sangho);
 
@@ -16478,6 +16528,26 @@ void wingco_state::magodds(machine_config &config)
 	TICKET_DISPENSER(config, m_ticket_dispenser, attotime::from_msec(50));
 }
 
+void wingco_state::mtonic2(machine_config &config)
+{
+	magodds(config);
+
+	m_maincpu->set_addrmap(AS_PROGRAM, &wingco_state::mtonic2_map);
+	m_maincpu->set_addrmap(AS_IO, &wingco_state::mtonic2_portmap);
+
+	// TODO: adapt GFX handling (bigger color PROMs, 4 reels, different banking)
+
+	config.device_remove("snsnd");
+	config.device_remove("aysnd");
+
+	ym2203_device &ym(YM2203(config, "ym", AY_CLOCK)); // TODO: clock not verified
+	ym.port_a_read_callback().set_ioport("DSW3");
+	ym.port_b_read_callback().set_ioport("DSW4");
+	ym.port_a_write_callback().set(FUNC(wingco_state::ay8910_outputa_w));
+	ym.port_b_write_callback().set(FUNC(wingco_state::ay8910_outputb_w));
+	ym.add_route(ALL_OUTPUTS, "mono", 1.0);
+}
+
 void goldstar_state::kkotnoli(machine_config &config)
 {
 	// basic machine hardware
@@ -16849,6 +16919,21 @@ void cmaster_state::jkrmast(machine_config &config)
 	subdevice<ay8910_device>("aysnd")->port_b_read_callback().set_ioport("DSW4");
 }
 
+void cmaster_state::jkrmastc(machine_config &config)
+{
+	jkrmast(config);
+
+	m_maincpu->set_addrmap(AS_IO, &cmaster_state::jkrmastc_portmap);
+
+	m_ppi[0]->in_pa_callback().set_ioport("IN2");
+	m_ppi[0]->in_pb_callback().set_ioport("IN0");
+	m_ppi[0]->in_pc_callback().set_ioport("IN1");
+
+	m_ppi[1]->in_pa_callback().set_ioport("DSW1");
+	m_ppi[1]->in_pb_callback().set_ioport("DSW2");
+	m_ppi[1]->in_pc_callback().set_ioport("DSW3");
+}
+
 void cmaster_state::crazybon(machine_config &config)
 {
 	pkrmast(config);
@@ -16859,7 +16944,7 @@ void cmaster_state::crazybon(machine_config &config)
 	I8255A(config.replace(), m_ppi[1]);
 
 	PALETTE(config.replace(), m_palette).set_entries(0x100);
-	RAMDAC(config, "ramdac", 0, "palette").set_addrmap(0, &cmaster_state::ramdac_map);
+	RAMDAC(config, "ramdac", "palette").set_addrmap(0, &cmaster_state::ramdac_map);
 }
 
 void cmaster_state::crazybonb(machine_config &config)
@@ -21352,6 +21437,29 @@ ROM_START( jkrmastc )
 	ROM_LOAD( "n82s129.h3",  0x0000, 0x0100, CRC(cfb152cf) SHA1(3166b9b21be4ce1d3b6fc8974c149b4ead03abac) )
 ROM_END
 
+ROM_START( jkrmastd )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "27c512.bin", 0x4000, 0x4000, CRC(7af5ec24) SHA1(5c2756781f3a1d338f8c6034828b2ef254668c25) )
+	ROM_CONTINUE(           0x0000, 0x4000 )
+	ROM_CONTINUE(           0xc000, 0x4000 )
+	ROM_CONTINUE(           0x8000, 0x4000 )
+
+	ROM_REGION( 0x20000, "gfx1", 0 )
+	ROM_LOAD( "b.l5", 0x00000, 0x20000, CRC(69f412a5) SHA1(dafcf59be991c3b37f66cc05529154650013615a) )
+
+	ROM_REGION( 0x20000, "gfx2", 0 )
+	ROM_LOAD( "a.j5", 0x00000, 0x20000, CRC(2e567f2c) SHA1(efbfe38b2014d30b5d1e41396e88f7c9b659df93) )
+
+	ROM_REGION( 0x200, "colours", 0 )
+	ROM_LOAD( "n82s147a.s8", 0x000, 0x200, CRC(da92f0ae) SHA1(1269a2029e689a5f111c57e80825b3756b50521e) )
+
+	ROM_REGION( 0x200, "proms", ROMREGION_ERASE00 )
+	// filled at init()
+
+	ROM_REGION( 0x100, "proms2", 0 )
+	ROM_LOAD( "n82s129.h3",  0x0000, 0x0100, CRC(cfb152cf) SHA1(3166b9b21be4ce1d3b6fc8974c149b4ead03abac) )
+ROM_END
+
 /*
   Poker Master
 
@@ -24383,6 +24491,44 @@ ROM_END
   4x DSW
 
 */
+
+ROM_START( mtonic ) // this is much more similar to magodds than to mtonic2
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "8_tonic.7e", 0x0000, 0x8000, CRC(ddcb8b1f) SHA1(ee4d01997a1e2263b0ff8af83b82df616228d4c5) ) // 1ST AND 2ND HALF IDENTICAL
+	ROM_IGNORE(                     0x8000 )
+	ROM_LOAD( "9_tonic.8e", 0x8000, 0x8000, CRC(fa64562b) SHA1(bc9df5e4ffe5866fcadb036f544d6a53ebb266db) ) // 1ST AND 2ND HALF IDENTICAL
+	ROM_IGNORE(                     0x8000 )
+
+	ROM_REGION( 0x30000, "gfx1", 0 )
+	ROM_LOAD( "5_tonic.10j", 0x00000, 0x10000, CRC(59acd42d) SHA1(2b0534cc50d8b2b0275e55f2a9f069124bb733d1) )
+	ROM_LOAD( "6_tonic.11j", 0x10000, 0x10000, CRC(d212790b) SHA1(16330fca735453f52f0435763d273974e653f0fd) )
+	ROM_LOAD( "7_tonic.13j", 0x20000, 0x10000, CRC(46ce72e5) SHA1(dbd64b6189c83442856a53d67dbf725fcb108564) )
+
+	ROM_REGION( 0x10000, "gfx2", 0 )
+	ROM_LOAD( "1_tonic.10l", 0x0000, 0x4000, CRC(746588db) SHA1(2a0af552011246d4cc0cd0b670907cf8685ce8ef) )
+	ROM_LOAD( "2_tonic.11l", 0x4000, 0x4000, CRC(8b7dd248) SHA1(a3ebde9fd0b6b1e42aa9b6d8e30c225abf2f80ce) )
+	ROM_LOAD( "3_tonic.13l", 0x8000, 0x4000, CRC(de05e678) SHA1(8b9fcb9f912075a20a9ae38100006b57d508e0e7) )
+	ROM_LOAD( "4_tonic.14l", 0xc000, 0x4000, CRC(8c542eee) SHA1(cb424e2a67c6d39302beca7cd5244bcad4a91189) )
+
+	// PROMs weren't dumped, taken from mtonic2. TODO: loading to be verified
+	ROM_REGION( 0xc00, "proms", 0 )
+	ROM_LOAD( "dm74s573n.14d", 0x000, 0x400, CRC(9cc0d144) SHA1(ce5de17a3f6da6d14657a4322c57891fa9804874) BAD_DUMP )
+	ROM_LOAD( "dm74s573n.12d", 0x400, 0x400, CRC(b6ba79ac) SHA1(c6415d80301346712c58730ab03079b7dc15e12e) BAD_DUMP )
+	ROM_LOAD( "dm74s573n.13d", 0x800, 0x400, CRC(ae27855a) SHA1(9b822c85d88f8ef8a503818cbf870aa9b0ff7c40) BAD_DUMP )
+
+	ROM_REGION( 0x100, "proms2", 0 )
+	ROM_LOAD( "n82s129an.2n", 0x000, 0x100, CRC(fc0652fd) SHA1(4326550edb3023017b564a84f94daff532608891) BAD_DUMP )
+
+	ROM_REGION( 0x240, "proms3", 0 )
+	ROM_LOAD( "n82s123an.14c", 0x000, 0x020, CRC(6a13320b) SHA1(6d7c663477f3fbc22fb716e15bfdd9c452eb686a) BAD_DUMP )
+	ROM_LOAD( "n82s123an.4f",  0x020, 0x020, CRC(1aa176f3) SHA1(fe777cba829046f850ab612b927bde4fe0d37811) BAD_DUMP )
+	ROM_LOAD( "n82s147an.13b", 0x040, 0x200, CRC(d01f10b3) SHA1(36b97831b26c899b8c5a1596bbbf54f58a32fae3) BAD_DUMP )
+
+	ROM_REGION( 0x400, "plds", ROMREGION_ERASE00 )
+	ROM_LOAD( "palce16v8h-25.9f", 0x000, 0x117, NO_DUMP )
+	ROM_LOAD( "palce16v8h-25.9h", 0x200, 0x117, NO_DUMP )
+ROM_END
+
 ROM_START( mtonic2 )
 	ROM_REGION( 0x10000, "maincpu", 0 )
 	ROM_LOAD( "8_tonic.7e", 0x0000, 0x8000, CRC(71df6972) SHA1(281c93184b611a0227a409a0bfe2d8c72d5da878) )
@@ -24398,6 +24544,9 @@ ROM_START( mtonic2 )
 	ROM_LOAD( "2_tonic.11l", 0x4000, 0x4000, CRC(8b7dd248) SHA1(a3ebde9fd0b6b1e42aa9b6d8e30c225abf2f80ce) )
 	ROM_LOAD( "3_tonic.13l", 0x8000, 0x4000, CRC(de05e678) SHA1(8b9fcb9f912075a20a9ae38100006b57d508e0e7) )
 	ROM_LOAD( "4_tonic.14l", 0xc000, 0x4000, CRC(8c542eee) SHA1(cb424e2a67c6d39302beca7cd5244bcad4a91189) )
+
+	ROM_REGION( 0x800, "nvram", 0 ) // pre-initialized
+	ROM_LOAD( "nvram", 0x000, 0x800, CRC(5362d6f5) SHA1(41d191f54607afb682200018a71b39b1fc90d58c) )
 
 	// TODO: PROMs loading to be verified
 	ROM_REGION( 0xc00, "proms", 0 )
@@ -30818,12 +30967,8 @@ void cmaster_state::init_jkrmast()
 {
 	uint8_t *rom = memregion("maincpu")->base();
 
-	for (int A = 0; A < 0x8000; A++)
-	{
-		uint8_t x = rom[A];
-		x = bitswap<8>(x ^ 0x0a, 5, 6, 1, 4, 7, 2, 3, 0);
-		rom[A] = x;
-	}
+	for (int i = 0; i < 0x8000; i++)
+		rom[i] = bitswap<8>(rom[i] ^ 0x0a, 5, 6, 1, 4, 7, 2, 3, 0);
 
 	uint8_t buf[0x8000];
 	memcpy(buf, rom, 0x8000);
@@ -30845,7 +30990,113 @@ void cmaster_state::init_jkrmast()
 
 void cmaster_state::init_jkrmastc()
 {
-	// TODO: decryption
+	// decryption verified via ICE dump
+
+	uint8_t *rom = memregion("maincpu")->base();
+
+	for (int i = 0x0000; i < 0x4000; i++)
+		rom[i] = bitswap<8>(rom[i] ^ 0x12, 0, 6, 5, 1, 3, 2, 7, 4);
+
+	for (int i = 0x4000; i < 0x8000; i++)
+		rom[i] = bitswap<8>(rom[i] ^ 0x81, 1, 6, 5, 0, 3, 2, 4, 7);
+
+	uint8_t buf[0x8000];
+	memcpy(buf, rom, 0x8000);
+
+	for (int i = 0; i < 0x8000; i++)
+	{
+		if ((i & 0x78) == 0x00)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x08)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x10)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x18)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x20)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x28)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x30)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x38)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x40)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x48)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x50)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x58)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x60)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x68)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x70)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x78)
+			rom[i] = buf[i ^ 0x10];
+	}
+
+	init_palnibbles();
+}
+
+void cmaster_state::init_jkrmastd()
+{
+	// decryption verified via ICE dump
+
+	uint8_t *rom = memregion("maincpu")->base();
+
+	for (int i = 0x0000; i < 0x4000; i++)
+		rom[i] = bitswap<8>(rom[i] ^ 0x48, 7, 4, 5, 6, 0, 2, 1, 3);
+
+	for (int i = 0x4000; i < 0x8000; i++)
+	{
+		if (BIT(rom[i], 5))
+			rom[i] = bitswap<8>(rom[i] ^ 0x48, 7, 4, 5, 3, 0, 2, 1, 6);
+		else
+			rom[i] = bitswap<8>(rom[i] ^ 0x48, 7, 6, 5, 0, 3, 2, 1, 4);
+	}
+
+	uint8_t buf[0x8000];
+	memcpy(buf, rom, 0x8000);
+
+	for (int i = 0; i < 0x8000; i++)
+	{
+		if ((i & 0x78) == 0x00)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x08)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x10)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x18)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x20)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x28)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x30)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x38)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x40)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x48)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x50)
+			rom[i] = buf[i ^ 0x18];
+		else if ((i & 0x78) == 0x58)
+			rom[i] = buf[i];
+		else if ((i & 0x78) == 0x60)
+			rom[i] = buf[i ^ 0x10];
+		else if ((i & 0x78) == 0x68)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x70)
+			rom[i] = buf[i ^ 0x08];
+		else if ((i & 0x78) == 0x78)
+			rom[i] = buf[i ^ 0x10];
+	}
 
 	init_palnibbles();
 }
@@ -33868,7 +34119,8 @@ GAMEL( 1991, tonypok,    0,         cm,        tonypok,   cmaster_state, init_to
 GAME(  1999, jkrmast,    0,         jkrmast,   jkrmast,   cmaster_state, init_jkrmast,   ROT0, "Pick-A-Party USA",   "Joker Master 2000 Special Edition (V515)",     0 )
 GAME(  1999, jkrmasta,   jkrmast,   jkrmast,   jkrmast,   cmaster_state, init_jkrmast,   ROT0, "Pick-A-Party USA",   "Joker Master 2000 Special Edition (V512/513)", 0 )
 GAME(  1999, jkrmastb,   jkrmast,   jkrmast,   jkrmastb,  cmaster_state, init_jkrmast,   ROT0, "Pick-A-Party USA",   "Joker Master 2000 Special Edition (V512)",     0 )
-GAME(  1997, jkrmastc,   jkrmast,   jkrmast,   jkrmastb,  cmaster_state, init_jkrmastc,  ROT0, "Pick-A-Party USA",   "Joker Master 2000 Special Edition (V1C)",      MACHINE_NOT_WORKING ) // encrypted
+GAME(  1997, jkrmastc,   jkrmast,   jkrmastc,  jkrmastb,  cmaster_state, init_jkrmastc,  ROT0, "Pick-A-Party USA",   "The New 1997 Joker Master (V1C)",              MACHINE_NOT_WORKING ) // protected? calls into NVRAM when starting wheels. Needs inputs / outputs
+GAME(  1997, jkrmastd,   jkrmast,   jkrmastc,  jkrmastb,  cmaster_state, init_jkrmastd,  ROT0, "Pick-A-Party USA",   "The New 1997 Joker Master - New York (V3G)",   MACHINE_NOT_WORKING ) // protected? calls into NVRAM when starting wheels. Needs inputs / outputs
 GAME(  1993, pkrmast,    0,         pkrmast,   pkrmast,   cmaster_state, init_pkrmast,   ROT0, "Fun USA",            "Poker Master (ED-1993, dual game, set 1)",     0 ) // puts FUN USA 95H N/G  V2.20 in NVRAM
 GAME(  1993, pkrmasta,   pkrmast,   pkrmast,   pkrmast,   cmaster_state, init_pkrmast,   ROT0, "Fun USA",            "Poker Master (ED-1993, dual game, set 2)",     0 ) // puts PM93 JAN 29/1996 V1.52 in NVRAM
 GAME(  1993, missbingo,  pkrmast,   pkrmast,   pkrmast,   cmaster_state, init_pkrmast,   ROT0, "Fun USA",            "Miss Bingo (Poker Master HW, dual game)",      0 )
@@ -34060,7 +34312,8 @@ GAME(  1992, magoddsa,   magodds,  magodds,  magodds,  wingco_state,   empty_ini
 GAME(  1992, magoddsb,   magodds,  magodds,  magodds,  wingco_state,   empty_init,     ROT0, "Pal Company / Micro Manufacturing Inc.", "Magical Odds (set 3)",                             0 )
 GAME(  1991, magoddsc,   magodds,  magodds,  magoddsc, wingco_state,   init_magoddsc,  ROT0, "Pal Company",                            "Magical Odds (set 4, custom encrypted CPU block)", MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 GAME(  1991, magoddsd,   magodds,  magodds,  magoddsc, wingco_state,   init_magoddsc,  ROT0, "Pal Company",                            "Magical Odds (set 5, custom encrypted CPU block)", MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
-GAME(  199?, mtonic2,    0,        magodds,  magoddsc, wingco_state,   init_magoddsc,  ROT0, "Pal Company",                            "Magical Tonic Part 2",                             MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME(  199?, mtonic,     0,        magodds,  magodds,  wingco_state,   init_magoddsc,  ROT0, "Pal Company",                            "Magical Tonic",                                    MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
+GAME(  199?, mtonic2,    0,        mtonic2,  magodds,  wingco_state,   init_magoddsc,  ROT0, "Pal Company",                            "Magical Tonic Part 2 (ver 007)",                   MACHINE_WRONG_COLORS | MACHINE_NOT_WORKING | MACHINE_NO_SOUND )
 
 
 // --- Amcoe games ---
