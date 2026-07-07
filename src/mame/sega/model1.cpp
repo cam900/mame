@@ -804,7 +804,7 @@ void model1_state::irq_raise(int level)
 	m_maincpu->set_input_line(0, ASSERT_LINE);
 }
 
-IRQ_CALLBACK_MEMBER(model1_state::irq_callback)
+u8 model1_state::irq_callback()
 {
 	for (int i = 0; i < 8; i++)
 		if (BIT(m_irq_status, i))
@@ -912,7 +912,7 @@ void model1_state::model1_mem(address_map &map)
 
 	/* OBJ  */
 
-	/* COL  */ map(0x900000, 0x903fff).ram().w(m_palette, FUNC(palette_device::write16)).share("palette");
+	/* COL  */ map(0x900000, 0x903fff).ram().w(FUNC(model1_state::model1_paletteram_w)).share("palette");
 	/*      */ map(0x910000, 0x91bfff).ram().share("color_xlat");
 
 	/* EX0  */
@@ -1356,7 +1356,7 @@ ROM_START( swa )
 	ROM_RELOAD(              0x080000, 0x80000 )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP)
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-16470.7", 0x000000, 0x020000, CRC(7da18cf7) SHA1(bd432d882d217277faee120e2577357a32eb4a6e) )
@@ -1404,7 +1404,7 @@ ROM_START( swaj )
 	ROM_RELOAD(              0x080000, 0x80000 )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-16470.7", 0x000000, 0x020000, CRC(7da18cf7) SHA1(bd432d882d217277faee120e2577357a32eb4a6e) )
@@ -1461,7 +1461,7 @@ ROM_START( wingwar )
 	ROM_LOAD16_BYTE( "mpr-16733.11", 0x1200001, 0x80000, CRC(e105847b) SHA1(8489a6c91fd6d1e9ba81e8eaf36c514da30dccbe) )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-17126.7", 0x000000, 0x20000, CRC(50178e40) SHA1(fb01aecfbe4e90adc997de0d45a63c16ef353b37) )
@@ -1522,7 +1522,7 @@ ROM_START( wingwaru )
 	ROM_LOAD16_BYTE( "mpr-16733.11", 0x1200001, 0x80000, CRC(e105847b) SHA1(8489a6c91fd6d1e9ba81e8eaf36c514da30dccbe) )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-16751.7", 0x000000, 0x20000, CRC(23ba5ebc) SHA1(b98aab546c5e980baeedbada4e7472eb4c588260) )
@@ -1574,7 +1574,7 @@ ROM_START( wingwarj )
 	ROM_LOAD16_BYTE( "mpr-16733.11", 0x1200001, 0x80000, CRC(e105847b) SHA1(8489a6c91fd6d1e9ba81e8eaf36c514da30dccbe) )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-16751.7", 0x000000, 0x20000, CRC(23ba5ebc) SHA1(b98aab546c5e980baeedbada4e7472eb4c588260) )
@@ -1628,7 +1628,7 @@ ROM_START( wingwar360 )
 	ROM_LOAD16_BYTE( "mpr-16733.11", 0x1200001, 0x80000, CRC(e105847b) SHA1(8489a6c91fd6d1e9ba81e8eaf36c514da30dccbe) )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-17126.7", 0x000000, 0x20000, CRC(50178e40) SHA1(fb01aecfbe4e90adc997de0d45a63c16ef353b37) )
@@ -1680,7 +1680,7 @@ ROM_START( netmerc )
 	ROM_LOAD16_BYTE( "epr-18127.ic11", 0x1200001, 0x80000, CRC(d307a4ca) SHA1(5555235f740c1b09f6e1587d0fceb35b23d4a8a8) )
 
 	ROM_REGION32_LE( 0x2000, "tgp_copro", 0)
-	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(c5ddb8fc) SHA1(9e21d3a07ffa315e0139483b664e3fa283ef4e06) BAD_DUMP )
+	ROM_LOAD( "315-5711.bin", 0, 0x2000, CRC(6a21f304) SHA1(d5c61ea6e4744f10170ea556068c248bd43bb111) BAD_DUMP)
 
 	ROM_REGION( 0xc0000, M1AUDIO_CPU_REGION, ROMREGION_BE|ROMREGION_16BIT )  /* 68K code */
 	ROM_LOAD16_WORD_SWAP( "epr-18121.ic7", 0x00000, 0x80000, CRC(113285b5) SHA1(5d060cee41e8d6a4a918f890c2d169d87dbcad79) )
@@ -1713,7 +1713,7 @@ void model1_state::model1(machine_config &config)
 	V60(config, m_maincpu, 32_MHz_XTAL / 2);
 	m_maincpu->set_addrmap(AS_PROGRAM, &model1_state::model1_mem);
 	m_maincpu->set_addrmap(AS_IO, &model1_state::model1_io);
-	m_maincpu->set_irq_acknowledge_callback(FUNC(model1_state::irq_callback));
+	m_maincpu->irq_cycle_callback().set(FUNC(model1_state::irq_callback));
 
 	// vf (at least) depends on default being 1-filled for ranking to initialize properly
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_1); // 2x MB84256A-70LL + battery
@@ -1896,12 +1896,12 @@ void model1_state::netmerc(machine_config &config)
 //  SYSTEM DRIVERS
 //**************************************************************************
 
-//    YEAR  NAME        PARENT   MACHINE     INPUT       CLASS         INIT        ROTATION  COMPANY  FULLNAME              FLAGS
+//    YEAR  NAME        PARENT   MACHINE     INPUT       CLASS         INIT        ROTATION  COMPANY  FULLNAME                    FLAGS
 GAME( 1993, vf,         0,       vf,         vf,         model1_state, empty_init, ROT0,     "Sega",  "Virtua Fighter",           MACHINE_NOT_WORKING )
 GAMEL(1992, vr,         0,       vr,         vr,         model1_state, empty_init, ROT0,     "Sega",  "Virtua Racing",            0, layout_vr )
 GAME( 1993, vformula,   vr,      vformula,   vr,         model1_state, empty_init, ROT0,     "Sega",  "Virtua Formula",           MACHINE_IMPERFECT_GRAPHICS )
-GAME( 1993, swa,        0,       swa,        swa,        model1_state, empty_init, ROT0,     "Sega",  "Star Wars Arcade (US)",    MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_CONTROLS )
-GAME( 1993, swaj,       swa,     swa,        swa,        model1_state, empty_init, ROT0,     "Sega",  "Star Wars Arcade (Japan)", MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_CONTROLS )
+GAME( 1994, swa,        0,       swa,        swa,        model1_state, empty_init, ROT0,     "Sega",  "Star Wars (Sega, US)",     MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_CONTROLS )
+GAME( 1994, swaj,       swa,     swa,        swa,        model1_state, empty_init, ROT0,     "Sega",  "Star Wars (Sega, Japan)",  MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_CONTROLS )
 GAME( 1994, wingwar,    0,       wingwar,    wingwar,    model1_state, empty_init, ROT0,     "Sega",  "Wing War (World)",         0 )
 GAME( 1994, wingwaru,   wingwar, wingwar,    wingwar,    model1_state, empty_init, ROT0,     "Sega",  "Wing War (US)",            0 )
 GAME( 1994, wingwarj,   wingwar, wingwar,    wingwar,    model1_state, empty_init, ROT0,     "Sega",  "Wing War (Japan)",         0 )

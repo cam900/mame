@@ -142,12 +142,21 @@ private:
 		ARB_START,
 		ARB_EVALUATE,
 
-		// dma transfer
+		// dma transfer (initiator)
 		DMA_IN_REQ,
 		DMA_IN_ACK,
 		DMA_OUT_REQ,
 		DMA_OUT_DRQ,
 		DMA_OUT_ACK,
+
+		// dma transfer (target): we drive R̅E̅Q̅ and wait for the initiator's A̅C̅K̅
+		TSEND_DRQ,   // request a byte from the host (DMA send to initiator)
+		TSEND_REQ,   // drive data + R̅E̅Q̅
+		TSEND_ACK,   // initiator asserted A̅C̅K̅: deassert R̅E̅Q̅
+		TSEND_END,   // initiator released A̅C̅K̅: next byte or done
+		TRECV_REQ,   // drive R̅E̅Q̅ (target receive from initiator)
+		TRECV_ACK,   // initiator drove data + A̅C̅K̅: latch it, deassert R̅E̅Q̅
+		TRECV_END,   // initiator released A̅C̅K̅: next byte or done
 	}
 	m_state;
 
@@ -158,12 +167,12 @@ private:
 	u8 m_tcmd;
 	u8 m_bas;
 	u8 m_idata;
+	u8 m_selen;   // select enable register (target selection / initiator reselection ID match)
 
 	// line state
 	u32 m_scsi_ctrl;
 	bool m_irq_state;
 	bool m_drq_state;
-
 	bool const m_has_lbs;
 };
 
