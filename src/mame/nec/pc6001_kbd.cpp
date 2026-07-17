@@ -19,10 +19,10 @@ TODO:
 **************************************************************************************************/
 
 #include "emu.h"
-#include "machine/keyboard.ipp"
 #include "pc6001_kbd.h"
 
-#include "utf8.h"
+#include "machine/keyboard.ipp"
+
 
 DEFINE_DEVICE_TYPE(PC6001_KBD,   pc6001_kbd_device,   "pc6001_kbd",     "NEC PC-6001 Keyboard")
 
@@ -32,15 +32,16 @@ pc6001_kbd_device::pc6001_kbd_device(const machine_config &mconfig, const char *
 	, m_key_irq_cb(*this)
 	, m_keyfn_irq_cb(*this)
 	, m_joy_irq_cb(*this)
+	, m_joy_trigger_timer(nullptr)
 {
 }
 
 static INPUT_PORTS_START( pc6001_kbd )
 	PORT_START("KEY0")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
-//	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("CTRL") PORT_CODE(KEYCODE_LCONTROL)
+//  PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("CTRL") PORT_CODE(KEYCODE_LCONTROL)
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("SHIFT") PORT_CODE(KEYCODE_LSHIFT) PORT_CODE(KEYCODE_RSHIFT)
-//	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("GRPH") PORT_CODE(KEYCODE_LALT)
+//  PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("GRPH") PORT_CODE(KEYCODE_LALT)
 	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_UNUSED )
 
 	PORT_START("KEY1")
@@ -98,7 +99,7 @@ static INPUT_PORTS_START( pc6001_kbd )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Y) PORT_CHAR('y') PORT_CHAR('Y')
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_H) PORT_CHAR('h') PORT_CHAR('H')
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_N) PORT_CHAR('n') PORT_CHAR('N')
- 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('=')
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('=')
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("^") PORT_CHAR('^') PORT_CHAR('~')
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("F4 / F9") PORT_CODE(KEYCODE_F4)
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('0')
@@ -109,7 +110,7 @@ static INPUT_PORTS_START( pc6001_kbd )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_J) PORT_CHAR('j') PORT_CHAR('J')
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_CODE(KEYCODE_M) PORT_CHAR('m') PORT_CHAR('M')
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_UNUSED )
-	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("\xEF\xBF\xA5") PORT_CHAR(165) PORT_CHAR('|')
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME(u8"¥") PORT_CHAR(U'¥') PORT_CHAR('|')
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("F5 / F10") PORT_CODE(KEYCODE_F5)
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_UNUSED )
 
@@ -128,12 +129,12 @@ static INPUT_PORTS_START( pc6001_kbd )
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("KANA") PORT_TOGGLE
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("INS") PORT_CODE(KEYCODE_INSERT) PORT_CHAR(UCHAR_MAMEKEY(INSERT))
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("DEL") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(UCHAR_MAMEKEY(BACKSPACE))
-//	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("ROT")
+//  PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("ROT")
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("HOME CLR") PORT_CODE(KEYCODE_HOME) PORT_CHAR(UCHAR_MAMEKEY(HOME))
 	PORT_BIT( 0xe0, IP_ACTIVE_HIGH, IPT_UNUSED )
 
-//	PORT_START("KEY_MOD")
-//	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("CAPS") PORT_CODE(KEYCODE_CAPSLOCK) PORT_TOGGLE
+//  PORT_START("KEY_MOD")
+//  PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("CAPS") PORT_CODE(KEYCODE_CAPSLOCK) PORT_TOGGLE
 INPUT_PORTS_END
 
 ioport_constructor pc6001_kbd_device::device_input_ports() const
@@ -162,25 +163,26 @@ void pc6001_kbd_device::device_reset()
 
 std::tuple<uint8_t, bool> pc6001_kbd_device::translate(uint8_t row, uint8_t column)
 {
-	const u8 keytable[4][10 * 8] = {
+	static const u8 keytable[4][10 * 8] = {
 		// normal
+		// confirmed using lowercase ASCII (ax2:snap3 at least wants shiftless z and x)
 		{
 //     [0]  ----   CTRL   SHIFT  GRAPH  ----   ----   ----   ----
 			0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,
-//     [1]  1      Q      A      Z      K      I      8      ,
-			0x31,  0x51,  0x41,  0x5a,  0x4b,  0x49,  0x38,  0x2c,
-//     [2]  2      W      S      X      L      O      9      .
-			0x32,  0x57,  0x53,  0x58,  0x4c,  0x4f,  0x39,  0x2e,
-//     [3]  3      E      D      C      ;      P      F1     /
-			0x33,  0x45,  0x44,  0x43,  0x3b,  0x50,  0xf0,  0x2f,
-//     [4]  4      R      F      V      :      @      F2     _?
-			0x34,  0x52,  0x46,  0x56,  0x3a,  0x40,  0xf1,  0x5f,
-//     [5]  5      T      G      B      ]      [      F3     SPACE
-			0x35,  0x54,  0x47,  0x42,  0x5d,  0x5b,  0xf2,  0x20,
-//     [6]  6      Y      H      N      -      ^      F4     0
-			0x36,  0x59,  0x48,  0x4e,  0x2d,  0x5e,  0xf3,  0x30,
-//     [7]  7      U      J      M      -----  YEN?   F5     -----
-			0x37,  0x55,  0x4a,  0x4d,  0x00,  0x5c,  0xf4,  0x00,
+//     [1]  1      q      a      z      k      i      8      ,
+			0x31,  0x71,  0x61,  0x7a,  0x6b,  0x69,  0x38,  0x2c,
+//     [2]  2      w      s      x      l      o      9      .
+			0x32,  0x77,  0x73,  0x78,  0x6c,  0x6f,  0x39,  0x2e,
+//     [3]  3      e      d      c      ;      p      F1     /
+			0x33,  0x65,  0x64,  0x63,  0x3b,  0x70,  0xf0,  0x2f,
+//     [4]  4      r      f      v      :      @      F2     _?
+			0x34,  0x72,  0x66,  0x76,  0x3a,  0x40,  0xf1,  0x5f,
+//     [5]  5      t      g      b      ]      [      F3     SPACE
+			0x35,  0x74,  0x67,  0x62,  0x5d,  0x5b,  0xf2,  0x20,
+//     [6]  6      y      h      n      -      ^      F4     0
+			0x36,  0x79,  0x68,  0x6e,  0x2d,  0x5e,  0xf3,  0x30,
+//     [7]  7      u      j      m      -----  YEN?   F5     -----
+			0x37,  0x75,  0x6a,  0x6d,  0x00,  0x5c,  0xf4,  0x00,
 //     [8]  RET    STOP   UP     DOWN   RIGHT  LEFT   TAB    ESC?
 			0x0d,  0xfa,  0x1e,  0x1f,  0x1c,  0x1d,  0x09,  0x1b,
 //     [9]  KANA   INS?   DEL    ROT?   HOME   -----  -----  -----
@@ -190,22 +192,22 @@ std::tuple<uint8_t, bool> pc6001_kbd_device::translate(uint8_t row, uint8_t colu
 		{
 //     [0]  ----   CTRL   SHIFT  GRAPH  ----   ----   ----   ----
 			0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,
-//     [1]  !      q      a      z      k      i      (      <
-			0x21,  0x71,  0x61,  0x7a,  0x6b,  0x69,  0x28,  0x3c,
-//     [2]  "      w      s      x      l      o      )      >
-			0x22,  0x77,  0x73,  0x78,  0x6c,  0x6f,  0x29,  0x3e,
-//     [3]  #      e      d      c      +      p      F6     ?
-			0x23,  0x65,  0x64,  0x63,  0x2b,  0x70,  0xf5,  0x3f,
-//     [4]  $      r      f      v      *      @?     F7     _?
-			0x24,  0x72,  0x66,  0x76,  0x2a,  0x40,  0xf6,  0x5f,
-//     [5]  %      t      g      b      }      {      F8     SPACE
-			0x25,  0x74,  0x67,  0x62,  0x7d,  0x7b,  0xf7,  0x20,
-//     [6]  &      y      h      n      =      ~?     F9     0
-			0x26,  0x79,  0x68,  0x6e,  0x3d,  0x7e,  0xf8,  0x30,
-//     [7]  \      u      j      m      -----  |?     F10    -----
-			0x27,  0x75,  0x6a,  0x6d,  0x00,  0x7c,  0xf9,  0x00,
+//     [1]  !      Q      A      Z      K      I      (      <
+			0x21,  0x51,  0x41,  0x5a,  0x4b,  0x49,  0x28,  0x3c,
+//     [2]  "      W      S      X      L      O      )      >
+			0x22,  0x57,  0x53,  0x58,  0x4c,  0x4f,  0x29,  0x3e,
+//     [3]  #      E      D      C      +      P      F6     ?
+			0x23,  0x45,  0x44,  0x43,  0x2b,  0x50,  0xf5,  0x3f,
+//     [4]  $      R      F      V      *      @?     F7     _?
+			0x24,  0x52,  0x46,  0x56,  0x2a,  0x40,  0xf6,  0x5f,
+//     [5]  %      T      G      B      }      {      F8     SPACE
+			0x25,  0x54,  0x47,  0x42,  0x7d,  0x7b,  0xf7,  0x20,
+//     [6]  &      Y      H      N      =      ~?     F9     0
+			0x26,  0x59,  0x48,  0x4e,  0x3d,  0x7e,  0xf8,  0x30,
+//     [7]  \      U      J      M      -----  |?     F10    -----
+			0x27,  0x55,  0x4a,  0x4d,  0x00,  0x7c,  0xf9,  0x00,
 //     [8]  RET    STOP   UP     DOWN   RIGHT  LEFT   TAB    ESC?
-			0x0d,  0xfa,  0x1e,  0x1f,  0x1c,  0x1b,  0x09,  0x1b,
+			0x0d,  0xfa,  0x1e,  0x1f,  0x1c,  0x1d,  0x09,  0x1b,
 //     [9]  KANA   INS?   DEL    ROT?   CLR    ----   ----   ----
 			0x00,  0x00,  0x08,  0x00,  0x0c,  0x00,  0x00,  0x00
 		},
@@ -253,7 +255,7 @@ std::tuple<uint8_t, bool> pc6001_kbd_device::translate(uint8_t row, uint8_t colu
 //     [7]  \      u      j      m      -----  |?     F10    -----
 			0x8c,  0xe5,  0xef,  0xf3,  0x00,  0xb0,  0x79,  0x00,
 //     [8]  RET    STOP   UP     DOWN   RIGHT  LEFT   TAB    ESC?
-			0x0d,  0x7a,  0x1e,  0x1f,  0x1c,  0x1b,  0x09,  0x1b,
+			0x0d,  0x7a,  0x1e,  0x1f,  0x1c,  0x1d,  0x09,  0x1b,
 //     [9]  KANA   INS?   DEL    ROT?   CLR    ----   ----   ----
 			0x00,  0x00,  0x08,  0x00,  0x0c,  0x00,  0x00,  0x00
 		}
@@ -320,11 +322,15 @@ uint8_t pc6001_kbd_device::convert_key_to_joy_map()
 {
 	const uint8_t space_key = BIT(m_key_rows[5]->read(), 7);
 	const uint8_t shift_key = BIT(m_key_rows[0]->read(), 2);
+	const uint8_t stop_key = BIT(m_key_rows[8]->read(), 1);
 	const uint8_t dir_keys = m_key_rows[8]->read() & 0x3c;
 	uint8_t joy_press = 0;
 
 	joy_press |= space_key << 7;
+	// joy_press |= machine().input().code_pressed(KEYCODE_Z) << 6;
 	joy_press |= dir_keys;
+	// pc6001mk2:frontlin (enter/exit tanks)
+	joy_press |= stop_key << 1;
 	joy_press |= shift_key;
 
 	return joy_press;
