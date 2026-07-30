@@ -467,6 +467,7 @@ quickjac
 sbsoli
 skattv
 skattva
+skattvs1
 trumpfas
 
 @source:adp/manohman.cpp
@@ -611,6 +612,9 @@ s950scsi
 s612
 s700
 x7000
+
+@source:akai/xr10.cpp
+xr10
 
 @source:alesis/alesis.cpp
 hr16
@@ -17217,13 +17221,14 @@ vp122
 adam
 
 @source:coleco/coleco.cpp
+bit90
 coleco
 colecop
 czz50
 dina
 onyx
 prsarcde
-bit90
+splice
 
 @source:coleco/wrinkles.cpp
 wrinkles
@@ -20784,6 +20789,7 @@ mephisto3d
 mephistoa
 mephistoe2
 mephistoe2a
+mephistoe2o
 mephistoj
 
 @source:hegenerglaser/europa.cpp
@@ -29340,6 +29346,7 @@ unkpacgd
 unksig
 unksiga
 unksigb
+unksigc
 
 @source:misc/a1supply.cpp
 tv21
@@ -33688,6 +33695,9 @@ mvme162
 
 @source:motorola/powerstack.cpp
 powerstk
+
+@source:motorola/startac70.cpp
+startac70
 
 @source:motorola/sys1121.cpp
 sys1121
@@ -43402,6 +43412,8 @@ anpanmct
 cmcwa
 cscaoysd
 dbzbgck
+dchopper
+gkitarou
 gyakyu
 kghmytda
 satoyama
@@ -44127,6 +44139,7 @@ sb8085
 sbrain
 sagafox
 sagafoxf80
+sist600
 
 @source:skeleton/scopus.cpp
 sagitta180
@@ -47390,6 +47403,9 @@ crei680
 @source:trainer/cvicny.cpp
 cvicny
 
+@source:trainer/dgp80.cpp
+dgp80
+
 @source:trainer/dolphunk.cpp
 dauphin
 
@@ -47478,6 +47494,7 @@ tanodr64h
 
 @source:trs/lnw80.cpp
 lnw80
+mxcomp
 
 @source:trs/max80.cpp
 max80
@@ -47522,6 +47539,7 @@ trs80m3
 trs80m4
 trs80m4p
 cp500
+naja800
 
 @source:trs/vis.cpp
 vis
@@ -48922,6 +48940,7 @@ miprimlec
 
 @source:vtech/glcx.cpp
 bs9009cx
+cbcomm
 gl6600cx
 gl8008cx
 gtbmcx
