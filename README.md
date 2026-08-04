@@ -1,3 +1,7 @@
+# IMPORTANT
+
+**THIS BRANCH IS FORK FOR SUPPORT SEIBU SPI CRT TESTER FROM UPSTREAM MAME! SEE [HERE](https://github.com/mamedev/mame) FOR UPSTREAM!**
+
 # MAME
 
 ## What is MAME?
@@ -23,7 +27,7 @@ MAME's purpose is to preserve decades of software history. As electronic technol
 
 ### CI status and code scanning
 
-[![CI (Linux)](https://github.com/mamedev/mame/workflows/CI%20(Linux)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-linux.yml) [![CI (Windows](https://github.com/mamedev/mame/workflows/CI%20(Windows)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-windows.yml) [![CI (macOS)](https://github.com/mamedev/mame/workflows/CI%20(macOS)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-macos.yml) [![Compile UI translations](https://github.com/mamedev/mame/workflows/Compile%20UI%20translations/badge.svg)](https://github.com/mamedev/mame/actions/workflows/language.yml) [![Build documentation](https://github.com/mamedev/mame/workflows/Build%20documentation/badge.svg)](https://github.com/mamedev/mame/actions/workflows/docs.yml)  [![Coverity Scan Status](https://scan.coverity.com/projects/5727/badge.svg?flat=1)](https://scan.coverity.com/projects/mame-emulator)
+[![CI (Linux)](<https://github.com/mamedev/mame/workflows/CI%20(Linux)/badge.svg>)](https://github.com/mamedev/mame/actions/workflows/ci-linux.yml) [![CI (Windows](<https://github.com/mamedev/mame/workflows/CI%20(Windows)/badge.svg>)](https://github.com/mamedev/mame/actions/workflows/ci-windows.yml) [![CI (macOS)](<https://github.com/mamedev/mame/workflows/CI%20(macOS)/badge.svg>)](https://github.com/mamedev/mame/actions/workflows/ci-macos.yml) [![Compile UI translations](<https://github.com/mamedev/mame/workflows/Compile%20UI%20translations/badge.svg>)](https://github.com/mamedev/mame/actions/workflows/language.yml) [![Build documentation](<https://github.com/mamedev/mame/workflows/Build%20documentation/badge.svg>)](https://github.com/mamedev/mame/actions/workflows/docs.yml)  [![Coverity Scan Status](https://scan.coverity.com/projects/5727/badge.svg?flat=1)](https://scan.coverity.com/projects/mame-emulator)
 
 ### How to compile?
 
@@ -53,6 +57,7 @@ In order to generate solution and project files just run:
 ```
 make vs2022
 ```
+
 or use this command to build it directly using msbuild
 
 ```
@@ -63,7 +68,7 @@ make vs2022 MSBUILD=1
 
 MAME source code should be viewed and edited with your editor set to use four spaces per tab. Tabs are used for initial indentation of lines, with one tab used per indentation level. Spaces are used for other alignment within a line.
 
-Some parts of the code follow [Allman style](https://en.wikipedia.org/wiki/Indent_style#Allman_style); some parts of the code follow [K&R style](https://en.wikipedia.org/wiki/Indent_style#K.26R_style) -- mostly depending on who wrote the original version. **Above all else, be consistent with what you modify, and keep whitespace changes to a minimum when modifying existing source.** For new code, the majority tends to prefer Allman style, so if you don't care much, use that.
+Some parts of the code follow [Allman style](https://en.wikipedia.org/wiki/Indent_style#Allman_style); some parts of the code follow [K&amp;R style](https://en.wikipedia.org/wiki/Indent_style#K.26R_style) -- mostly depending on who wrote the original version. **Above all else, be consistent with what you modify, and keep whitespace changes to a minimum when modifying existing source.** For new code, the majority tends to prefer Allman style, so if you don't care much, use that.
 
 All contributors need to either add a standard header for license info (on new files) or inform us of their wishes regarding which of the following licenses they would like their code to be made available under: the [BSD-3-Clause](http://opensource.org/licenses/BSD-3-Clause) license, the [LGPL-2.1](http://opensource.org/licenses/LGPL-2.1), or the [GPL-2.0](http://opensource.org/licenses/GPL-2.0).
 

@@ -140,7 +140,7 @@ void seibuspi_tilemap_state::rfjet_bg_decrypt(u8 *rom, int size)
 void seibuspi_tilemap_state::tile_decrypt_key_w(u16 data)
 {
 	if (data != 0 && data != 1)
-		logerror("Decryption key: %04X\n", data);
+		logerror("%s: Decryption key: %04X\n", machine().describe_context(), data);
 }
 
 
