@@ -70,9 +70,9 @@ void arm_iomd_device::base_map(address_map &map)
 	map(0x024, 0x027).rw(FUNC(arm_iomd_device::irqrq_r<IRQB>), FUNC(arm_iomd_device::irqrq_w<IRQB>));
 	map(0x028, 0x02b).rw(FUNC(arm_iomd_device::irqmsk_r<IRQB>), FUNC(arm_iomd_device::irqmsk_w<IRQB>));
 
-//  map(0x030, 0x033).r(FUNC(arm_iomd_device::fiqst_r));
-//  map(0x034, 0x037).rw(FUNC(arm_iomd_device::fiqrq_r), FUNC(arm_iomd_device::fiqrq_w));
-//  map(0x038, 0x03b).rw(FUNC(arm_iomd_device::fiqmsk_r), FUNC(arm_iomd_device::fiqmsk_w));
+	map(0x030, 0x033).r(FUNC(arm_iomd_device::fiqst_r));
+	map(0x034, 0x037).rw(FUNC(arm_iomd_device::fiqrq_r), FUNC(arm_iomd_device::fiqrq_w));
+	map(0x038, 0x03b).rw(FUNC(arm_iomd_device::fiqmsk_r), FUNC(arm_iomd_device::fiqmsk_w));
 
 	// timers
 	map(0x040, 0x043).rw(FUNC(arm_iomd_device::tNlow_r<0>), FUNC(arm_iomd_device::tNlow_w<0>));
@@ -161,7 +161,7 @@ arm_iomd_device::arm_iomd_device(const machine_config &mconfig, device_type type
 	, m_iocr_read_id_cb(*this, 1)
 	, m_iocr_write_id_cb(*this)
 	, m_irq_cb(*this)
-//  , m_fiq_cb(*this)
+	, m_fiq_cb(*this)
 	, m_sndcur(0)
 	, m_sndend(0)
 	, m_sndcur_reg{ 0, 0 }
@@ -270,8 +270,10 @@ void arm_iomd_device::device_start()
 	save_item(NAME(m_videqual));
 	save_item(NAME(m_cursor_enable));
 	save_item(NAME(m_cursinit));
-	save_pointer(NAME(m_irq_mask), std::size(m_irq_mask));
-	save_pointer(NAME(m_irq_status), std::size(m_irq_status));
+	save_item(NAME(m_irq_mask));
+	save_item(NAME(m_irq_status));
+	save_item(NAME(m_fiq_mask));
+	save_item(NAME(m_fiq_status));
 
 	m_host_space = &m_host_cpu->space(AS_PROGRAM);
 
@@ -337,6 +339,8 @@ void arm_iomd_device::device_reset()
 	m_sound_dma_on = false;
 	m_sndcur_buffer = 0;
 
+	m_fiq_status = 0x80;
+	m_fiq_mask = 0;
 	// ...
 }
 
@@ -359,7 +363,6 @@ TIMER_CALLBACK_MEMBER(arm_iomd_device::timer_elapsed)
 //  READ/WRITE HANDLERS
 //**************************************************************************
 
-// TODO: nINT1
 u32 arm_iomd_device::iocr_r()
 {
 	u8 res = 0;
@@ -368,7 +371,8 @@ u32 arm_iomd_device::iocr_r()
 	res|= m_iocr_read_od_cb[1]() << 1;
 	res|= m_iocr_read_od_cb[0]() << 0;
 
-	return (m_vidc->flyback_r() << 7) | 0x34 | (res & m_iocr_ddr);
+	// bit 6 routes to nINT1 readback (the FDC index one)
+	return (m_vidc->flyback_r() << 7) | (BIT(m_irq_status[IRQA], 2) << 6) | 0x34 | (res & m_iocr_ddr);
 }
 
 void arm_iomd_device::iocr_w(u32 data)
@@ -555,6 +559,47 @@ template <unsigned Which> void arm_iomd_device::irqmsk_w(u32 data)
 	flush_irq();
 }
 
+void arm_iomd_device::flush_fiq()
+{
+	m_fiq_cb(!!(m_fiq_status & m_fiq_mask));
+}
+
+void arm_iomd_device::trigger_fiq(u8 irq_type)
+{
+	m_fiq_status |= irq_type;
+	flush_fiq();
+}
+
+u32 arm_iomd_device::fiqst_r()
+{
+	return m_fiq_status;
+}
+
+u32 arm_iomd_device::fiqrq_r()
+{
+	return m_fiq_status & m_fiq_mask;
+}
+
+u32 arm_iomd_device::fiqmsk_r()
+{
+	return m_fiq_mask;
+}
+
+void arm_iomd_device::fiqrq_w(u32 data)
+{
+	u8 res = m_fiq_status & ~data;
+	m_fiq_status = res;
+	// bit 7 is FIQ force
+	m_fiq_status |= 0x80;
+	flush_fiq();
+}
+
+void arm_iomd_device::fiqmsk_w(u32 data)
+{
+	m_fiq_mask = data & 0xff;
+	flush_fiq();
+}
+
 // master clock control
 inline void arm7500fe_iomd_device::refresh_host_cpu_clocks()
 {
@@ -644,8 +689,17 @@ u32 arm_iomd_device::version_r()
 
 // sound DMA
 
+// TODO: shouldn't be read-backable
 template <unsigned Which> u32 arm_iomd_device::sdcur_r() { return m_sndcur_reg[Which]; }
-template <unsigned Which> void arm_iomd_device::sdcur_w(offs_t offset, u32 data, u32 mem_mask) { COMBINE_DATA(&m_sndcur_reg[Which]); }
+
+template <unsigned Which> void arm_iomd_device::sdcur_w(offs_t offset, u32 data, u32 mem_mask)
+{
+	COMBINE_DATA(&m_sndcur_reg[Which]);
+	m_sndbuffer_ok[Which] = true;
+	irqrq_w<IRQDMA>(0x10);
+}
+
+// TODO: shouldn't be read-backable
 template <unsigned Which> u32 arm_iomd_device::sdend_r()
 {
 	return (m_sndstop_reg[Which] << 31) | (m_sndlast_reg[Which] << 30) | (m_sndend_reg[Which] & 0x00fffff0);
@@ -658,6 +712,7 @@ template <unsigned Which> void arm_iomd_device::sdend_w(offs_t offset, u32 data,
 	m_sndstop_reg[Which] = BIT(data, 31);
 	m_sndlast_reg[Which] = BIT(data, 30);
 	m_sndbuffer_ok[Which] = true;
+	irqrq_w<IRQDMA>(0x10);
 }
 
 u32 arm_iomd_device::sdcr_r()
@@ -813,12 +868,14 @@ void arm_iomd_device::sound_drq(int state)
 			return;
 
 		for (int ch = 0; ch < 2; ch++)
-			m_vidc->write_dac32(ch, (m_host_space->read_word(m_sndcur + ch*2)));
+			m_vidc->write_dac32(ch, (m_host_space->read_word(m_sndcur + ch * 2)));
 
 		m_sndcur += 4;
 
 		if (m_sndcur >= m_sndend)
 		{
+			trigger_irq<IRQDMA>(0x10);
+
 			m_vidc->update_sound_mode(m_sound_dma_on);
 			if (m_sound_dma_on)
 			{
@@ -828,12 +885,73 @@ void arm_iomd_device::sound_drq(int state)
 			}
 			else
 			{
-				// ...
+				// TODO: disable sound
 			}
 		}
 	}
 	else
 	{
-		// ...
+		// TODO: VIDC10 compatible mode
 	}
+}
+
+// Misc public interrupts
+
+// Parallel port
+void arm_iomd_device::int2_w(int state)
+{
+	if (state)
+		trigger_irq<IRQA>(0x01);
+	else
+		irqrq_w<IRQA>(0x01);
+}
+
+// FDC index
+// TODO: ARM7500FE claims active low (nINT1)
+void arm_iomd_device::int1_w(int state)
+{
+	if (state)
+		trigger_irq<IRQA>(0x04);
+	else
+		irqrq_w<IRQA>(0x04);
+}
+
+// IDE
+void arm_iomd_device::int7_w(int state)
+{
+	if (state)
+		trigger_irq<IRQB>(0x02);
+	else
+		irqrq_w<IRQB>(0x02);
+}
+
+// Serial
+// TODO: ARM7500FE claims active low (nINT6)
+void arm_iomd_device::int6_w(int state)
+{
+	if (state)
+		trigger_irq<IRQB>(0x04);
+	else
+		irqrq_w<IRQB>(0x04);
+}
+
+// FDC irq
+// TODO: ARM7500FE claims active low (nINT4)
+void arm_iomd_device::int4_w(int state)
+{
+	if (state)
+		trigger_irq<IRQB>(0x10);
+	else
+		irqrq_w<IRQB>(0x10);
+}
+
+// FIQ related
+
+// Floppy DRQ
+void arm_iomd_device::int9_w(int state)
+{
+	if (state)
+		trigger_fiq(0x01);
+	else
+		fiqrq_w(0x01);
 }

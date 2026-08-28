@@ -2378,6 +2378,21 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/bus/nds/ndsslot.h,BUSES["NDS"] = true
+---------------------------------------------------
+
+if BUSES["NDS"] then
+	files {
+		MAME_DIR .. "src/devices/bus/nds/ndsslot.cpp",
+		MAME_DIR .. "src/devices/bus/nds/ndsslot.h",
+		MAME_DIR .. "src/devices/bus/nds/rom.cpp",
+		MAME_DIR .. "src/devices/bus/nds/rom.h",
+	}
+end
+
+
+---------------------------------------------------
+--
 --@src/devices/bus/generic/slot.h,BUSES["GENERIC"] = true
 ---------------------------------------------------
 
@@ -3392,6 +3407,8 @@ if BUSES["MM2"] then
 		MAME_DIR .. "src/devices/bus/mm2/exp.h",
 		MAME_DIR .. "src/devices/bus/mm2/crtc186.cpp",
 		MAME_DIR .. "src/devices/bus/mm2/crtc186.h",
+		MAME_DIR .. "src/devices/bus/mm2/ioe186.cpp",
+		MAME_DIR .. "src/devices/bus/mm2/ioe186.h",
 		MAME_DIR .. "src/devices/bus/mm2/meme186.cpp",
 		MAME_DIR .. "src/devices/bus/mm2/meme186.h",
 		MAME_DIR .. "src/devices/bus/mm2/mm2kb.cpp",
