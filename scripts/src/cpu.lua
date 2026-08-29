@@ -165,21 +165,8 @@ end
 --------------------------------------------------
 -- Acorn ARM series
 --
---@src/devices/cpu/arm/arm.h,CPUS["ARM"] = true
 --@src/devices/cpu/arm7/arm7.h,CPUS["ARM7"] = true
 --------------------------------------------------
-
-if CPUS["ARM"] then
-	files {
-		MAME_DIR .. "src/devices/cpu/arm/arm.cpp",
-		MAME_DIR .. "src/devices/cpu/arm/arm.h",
-	}
-end
-
-if opt_tool(CPUS, "ARM") then
-	table.insert(disasm_files , MAME_DIR .. "src/devices/cpu/arm/armdasm.cpp")
-	table.insert(disasm_files , MAME_DIR .. "src/devices/cpu/arm/armdasm.h")
-end
 
 if CPUS["ARM7"] then
 	files {
