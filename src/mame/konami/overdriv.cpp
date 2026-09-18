@@ -31,15 +31,18 @@
       codes $8xx (sub $5F40), ctrl $79/$39 (FLIP_X|FLIP_Y, no swap).
       Palette: LVC A = CI1, LVC B = CI2. Line word0 bits 8-13 are the 053251
       priority; $3F lines sit behind the skybox ($3E).
-    - Origins (visible area at 0,0): K051316 (7,-16) both, K053250 (0,-16) both,
-      K053246 (-45,38). The OBJ window register is $FFE0/$FEEA only until the
-      first demo; $99EE sets $FFD3/$FEEA every gameplay frame and nothing resets it.
+    - Origins (visible area at 0,0): K051316 (7,-16) both, K053250 (-12,-16) road
+      and (-8,-16) structures, K053246 (-45,38). The K053250 x offset is the
+      road's vertical origin under ROT90: -12 puts packet 211 on row 112, where
+      the PCB has it. The OBJ window register is $FFE0/$FEEA only until the first
+      demo; $99EE sets $FFD3/$FEEA every gameplay frame and nothing resets it.
     - The "Continue?" sprites are not visible until you press start
     - priorities
 
-    The issues below are both IRQ timing, and relate to when the sprites get
-    copied across by the DMA
-    - Some flickering sprites, this might be an interrupt/timing issue
+    - OBJ RAM is double buffered: $118000 is the sub CPU's copy and the $130005
+      DMA latches it into the 053246, which is what the display reads. The sub
+      rebuilds the list over the two frames after each trigger, so drawing from
+      the CPU copy showed a half-rewritten table two frames out of every six.
     - The screen is cluttered with sprites which aren't supposed to be visible,
       increasing the coordinate mask in k053247_sprites_draw() from 0x3ff to 0xfff
       fixes this but breaks other games (e.g. Vendetta).
@@ -110,6 +113,8 @@ private:
 	void sub_irq4_assert_w(uint16_t data);
 	void sub_irq5_assert_w(uint16_t data);
 	void objdma_w(uint8_t data);
+	uint16_t objram_r(offs_t offset);
+	void objram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	void io_latch_w(uint8_t data);
 	uint8_t io_status_r();
 	void io_ack_w(uint8_t data);
@@ -134,6 +139,7 @@ private:
 	int32_t   m_layerpri[4]{};
 	int       m_sprite_pass = 0;
 	emu_timer *m_objdma_end_timer = nullptr;
+	std::unique_ptr<uint16_t[]> m_objram;
 
 	/* misc */
 	uint16_t  m_cpuB_ctrl = 0;
@@ -452,10 +458,29 @@ TIMER_CALLBACK_MEMBER(overdriv_state::objdma_end_cb)
 	m_subcpu->set_input_line(6, HOLD_LINE);
 }
 
+uint16_t overdriv_state::objram_r(offs_t offset)
+{
+	return m_objram[offset];
+}
+
+void overdriv_state::objram_w(offs_t offset, uint16_t data, uint16_t mem_mask)
+{
+	COMBINE_DATA(&m_objram[offset]);
+}
+
 void overdriv_state::objdma_w(uint8_t data)
 {
 	if(data & 0x10)
+	{
+		// The 053246 latches the sub CPU's list into its own buffer here and the
+		// display reads that buffer, not the CPU RAM. The sub rebuilds the list
+		// over the two frames that follow each trigger, so mapping $118000
+		// straight onto the chip made the screen show a half-rewritten table for
+		// two frames out of every six.
+		for (int i = 0; i < 0x1000/2; i++)
+			m_k053246->k053247_word_w(i, m_objram[i], 0xffff);
 		m_objdma_end_timer->adjust(attotime::from_usec(100));
+	}
 
 	m_k053246->k053246_w(5, data);
 }
@@ -468,7 +493,7 @@ void overdriv_state::sub_map(address_map &map)
 	map(0x0c1000, 0x0c1fff).rw(m_k053250[0], FUNC(k053250_device::ram_r), FUNC(k053250_device::ram_w)); // LVC A (bridges/walls)
 	map(0x100000, 0x10000f).rw(m_k053250[0], FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
 	map(0x108000, 0x10800f).rw(m_k053250[1], FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
-	map(0x118000, 0x118fff).rw(m_k053246, FUNC(k053247_device::k053247_word_r), FUNC(k053247_device::k053247_word_w)); // data gets copied to sprite chip with DMA..
+	map(0x118000, 0x118fff).rw(FUNC(overdriv_state::objram_r), FUNC(overdriv_state::objram_w)); // CPU-side list; the $130005 DMA copies it into the 053246
 	map(0x120000, 0x120001).r(m_k053246, FUNC(k053247_device::k053246_r));
 	map(0x128000, 0x128001).rw(FUNC(overdriv_state::cpuB_ctrl_r), FUNC(overdriv_state::cpuB_ctrl_w)); /* enable K053247 ROM reading, plus something else */
 	map(0x130000, 0x130007).rw(m_k053246, FUNC(k053247_device::k053246_r), FUNC(k053247_device::k053246_w));
@@ -536,6 +561,8 @@ INPUT_PORTS_END
 void overdriv_state::machine_start()
 {
 	m_objdma_end_timer = timer_alloc(FUNC(overdriv_state::objdma_end_cb), this);
+	m_objram = std::make_unique<uint16_t[]>(0x1000/2);
+	save_pointer(NAME(m_objram), 0x1000/2);
 
 	save_item(NAME(m_cpuB_ctrl));
 	save_item(NAME(m_io_latch));
@@ -619,15 +646,21 @@ void overdriv_state::overdriv(machine_config &config)
 
 	K053251(config, m_k053251);
 
-	// LVC A's x offset is +4 instead of 0 as a stop-gap: its per-line scroll values
-	// only carry about 3/4 of the relief the PCB shows (17 rows across the half
-	// width against 22 for the road and for the PCB's own railing), so the bridge
-	// railing floats up to 6 pixels above the road at the screen edges. +4 buries
-	// the over-corrected centre behind the road and leaves at most 2 pixels of gap.
-	// The real fix is the $140001 perspective coprocessor, which still has a
-	// guessed mailbox layout (see sub_alu_w).
-	K053250(config, m_k053250[0], "palette", m_screen, 4, -16); // LVC A: $100000 / $C1000 / e18-e20
-	K053250(config, m_k053250[1], "palette", m_screen, 0, -16); // LVC B: $108000 / $C0000 / e17-e16
+	// The x offset is the road's vertical origin (bitmap x is the portrait screen's
+	// vertical axis under ROT90). -12 puts the first road line (packet 211, written
+	// by the main CPU every frame) on screen row 112 instead of 124, which is where
+	// the PCB recording has it in every stage and which is also where the K051316
+	// skybox horizon sits. With the old 0 the road sat 12 rows low, so roadside
+	// sprites and traffic floated over a band of bare ground.
+	// LVC A gets -8, i.e. +4 relative to the road: its per-line scroll values only
+	// carry about 3/4 of the relief the PCB shows (17 rows across the half width
+	// against 22 for the road and for the PCB's own railing), so bridge railings
+	// float up to 6 pixels above the road at the screen edges. +4 buries the
+	// over-corrected centre behind the road and leaves at most 2 pixels of gap.
+	// That part is a stop-gap; the real fix is the $140001 perspective coprocessor,
+	// which still has a guessed mailbox layout (see sub_alu_w).
+	K053250(config, m_k053250[0], "palette", m_screen, -8, -16);  // LVC A: $100000 / $C1000 / e18-e20
+	K053250(config, m_k053250[1], "palette", m_screen, -12, -16); // LVC B: $108000 / $C0000 / e17-e16
 
 	K053252(config, m_k053252, 24_MHz_XTAL / 4);
 	// Boot image HC=384 VC=264 vis 305x224. offsets(104,16) pushed max_x to 408 (past HTOTAL).
