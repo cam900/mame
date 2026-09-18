@@ -7,11 +7,33 @@
     driver by Nicola Salmoria
 
     Notes:
-    - irq source for main CPU aren't understood, needs HW tests.
-    - Missing road (two unemulated K053250)
-    - Visible area and relative placement of sprites and tiles is most likely wrong.
-    - Test mode doesn't work well with 3 IRQ5 per frame, the ROM check doesn't work
-      and the coin A setting isn't shown. It's OK with 1 IRQ5 per frame.
+    - Main IRQ4 is vblank (scanline 256). IRQ5 is the CCU-style timer.
+      Attract $40036 counts completed demo plays (cmpi #6), not IRQ5 ticks.
+      Six demo plays ($200001==1, $200003==1) share the gameplay timer:
+      IRQ5 at lines 0 and 140 so $400B2 reaches 3 and chip0 ROZ MOVEP runs,
+      calibrated against the PCB recording (TIME 0.68/s vs 0.675/s measured).
+      Title ($200001==1, $200003>=2) and boot/ROM-check ($200001==0) get one
+      IRQ5 per frame. CCU INT-TIME is never rewritten after the boot MOVEM;
+      demo↔title only changes work-RAM counters ($40036/$40064/$40032) and
+      LVC ctrl bytes ($200200=$69/$79/$39, $200208=$60/$10). IRQ5 is skipped
+      while IPL>=5 so a long ISR cannot stack and starve IRQ4.
+    - Test mode ROM check also lives on IRQ5; keep 1/frame until $200001!=0.
+    - Sub IRQ4 comes from main $230000, IRQ5 ($238000) is GFX ROM check only,
+      IRQ6 is K053246 OBJ DMA end — not the main CPU.
+    - Sub $140001 is a perspective ALU (cmds $18/$1B) over $20BFxx, not a copy
+      trigger. Main $140000 is MOVE.B watchdog (D8-D15). CCU res_change can
+      fire extra vblanks, so the watchdog is time-based rather than 8 vblanks.
+    - LVC wiring (checked against the sub CPU ROM test and the line data):
+      LVC A = regs $100000, ROM window $218000, 3 ROMs (e18/e19/e20), line RAM $C1000
+      LVC B = regs $108000, ROM window $220000, 2 ROMs (e17/e16), line RAM $C0000
+      LVC B is the road (main CPU prepares it in $201400/$203300, sub copies to
+      $C0300), ctrl $60 (SWAP_XY). LVC A draws bridges/walls/tunnels from course
+      codes $8xx (sub $5F40), ctrl $79/$39 (FLIP_X|FLIP_Y, no swap).
+      Palette: LVC A = CI1, LVC B = CI2. Line word0 bits 8-13 are the 053251
+      priority; $3F lines sit behind the skybox ($3E).
+    - Origins (visible area at 0,0): K051316 (7,-16) both, K053250 (0,-16) both,
+      K053246 (-45,38). The OBJ window register is $FFE0/$FEEA only until the
+      first demo; $99EE sets $FFD3/$FEEA every gameplay frame and nothing resets it.
     - The "Continue?" sprites are not visible until you press start
     - priorities
 
@@ -28,10 +50,10 @@
 
 #include "machine/k053252.h"
 #include "machine/timer.h"
+#include "machine/watchdog.h"
 #include "k053246_k053247_k055673.h"
 #include "k053250.h"
 #include "k053251.h"
-#include "konami_helper.h"
 
 #include "cpu/m68000/m68000.h"
 #include "cpu/m6809/m6809.h"
@@ -48,6 +70,8 @@
 
 #include "overdriv.lh"
 
+#include <algorithm>
+
 namespace {
 
 class overdriv_state : public driver_device
@@ -59,10 +83,14 @@ public:
 		, m_subcpu(*this, "sub")
 		, m_audiocpu(*this, "audiocpu")
 		, m_k051316(*this, "k051316_%u", 1)
+		, m_k053250(*this, "k053250_%u", 1)
 		, m_k053246(*this, "k053246")
 		, m_k053251(*this, "k053251")
 		, m_k053252(*this, "k053252")
+		, m_watchdog(*this, "watchdog")
 		, m_screen(*this, "screen")
+		, m_share1(*this, "share1")
+		, m_roadram(*this, "roadram")
 		, m_led(*this, "led0")
 	{ }
 
@@ -82,6 +110,10 @@ private:
 	void sub_irq4_assert_w(uint16_t data);
 	void sub_irq5_assert_w(uint16_t data);
 	void objdma_w(uint8_t data);
+	void io_latch_w(uint8_t data);
+	uint8_t io_status_r();
+	void io_ack_w(uint8_t data);
+	void sub_alu_w(uint8_t data);
 	TIMER_CALLBACK_MEMBER(objdma_end_cb);
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
@@ -99,21 +131,27 @@ private:
 	uint16_t  m_zoom_colorbase[2]{};
 	uint16_t  m_road_colorbase[2]{};
 	uint16_t  m_sprite_colorbase = 0;
+	int32_t   m_layerpri[4]{};
+	int       m_sprite_pass = 0;
 	emu_timer *m_objdma_end_timer = nullptr;
 
 	/* misc */
 	uint16_t  m_cpuB_ctrl = 0;
-	int32_t   m_fake_timer = 0;
+	uint8_t   m_io_latch = 0;
 
 	/* devices */
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_subcpu;
 	required_device<cpu_device> m_audiocpu;
 	required_device_array<k051316_device, 2> m_k051316;
+	required_device_array<k053250_device, 2> m_k053250;
 	required_device<k053247_device> m_k053246;
 	required_device<k053251_device> m_k053251;
 	required_device<k053252_device> m_k053252;
+	required_device<watchdog_timer_device> m_watchdog;
 	required_device<screen_device> m_screen;
+	required_shared_ptr<uint16_t> m_share1;
+	required_shared_ptr<uint16_t> m_roadram;
 	output_finder<> m_led;
 };
 
@@ -151,23 +189,36 @@ void overdriv_state::eeprom_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 
 TIMER_DEVICE_CALLBACK_MEMBER(overdriv_state::cpuA_scanline)
 {
-	const int timer_threshold = 168; // fwiw matches 0 on mask ROM check, so IF it's a timer irq then should be close ...
 	int scanline = param;
 
-	m_fake_timer ++;
-
-	// TODO: irqs routines are TOO slow right now, it ends up firing spurious irqs for whatever reason (shared ram fighting?)
-	//       this is a temporary solution to get rid of deprecat lib and the crashes, but also makes the game timer to be too slow.
-	//       Update: gameplay is actually too fast compared to timer, first attract mode shouldn't even surpass first blue car on right.
-	if(scanline == 256) // vblank-out irq
+	// IRQ4: vblank-out. Firmware zeros $400B2 and kicks the watchdog here.
+	if (scanline == 256)
 	{
-		// m_screen->frame_number() & 1
 		m_maincpu->set_input_line(4, HOLD_LINE);
+		return;
 	}
-	else if(m_fake_timer >= timer_threshold) // timer irq
+
+	// $200001 phase / $200003 attract (low bytes of $200000/$200002).
+	// Demo play (phase 1 index 1) and driving (phase >= 2) need a second IRQ5
+	// late in the frame so $400B2 reaches 3 and the chip0 ROZ MOVEP runs.
+	// Title (phase 1 index >= 2) and boot stay at one IRQ5 per frame.
+	// Lines 0/140 were picked against the PCB recording: TIME counts down
+	// 0.680/s (PCB 0.675/s) and the chip0 MOVEP still runs 0.49x per frame.
+	// The old 0/56/112/168 schedule ran the game logic 1.4x too fast
+	// (0.963/s) for the same MOVEP rate.
+	const uint8_t phase = uint8_t(m_share1[0]);
+	const uint8_t attract = uint8_t(m_share1[1]);
+	const bool play_irq5 = (phase >= 2) || (phase == 1 && attract == 1);
+	const bool irq5 = play_irq5
+		? (scanline == 0 || scanline == 140)
+		: (scanline == 0);
+
+	if (irq5)
 	{
-		m_fake_timer -= timer_threshold;
-		m_maincpu->set_input_line(5, HOLD_LINE);
+		// HOLD_LINE stacks if the previous IRQ5 is still running (IPL=5).
+		const int ipl = (int(m_maincpu->state_int(M68K_SR)) >> 8) & 7;
+		if (ipl < 5)
+			m_maincpu->set_input_line(5, HOLD_LINE);
 	}
 }
 
@@ -204,12 +255,64 @@ void overdriv_state::cpuB_ctrl_w(offs_t offset, uint16_t data, uint16_t mem_mask
 
 	if (ACCESSING_BITS_0_7)
 	{
-		/* bit 0 = enable sprite ROM reading */
+		/* bit 0 = OBJCHA / sprite ROM window ($128001) */
 		m_k053246->k053246_set_objcha_line( (data & 0x01) ? ASSERT_LINE : CLEAR_LINE);
 
-		/* bit 1 used but unknown (irq enable?) */
+		/* bit 1 set by sub TRAP #0 ($104C = #2); not an IRQ mask */
+	}
+}
 
-		/* other bits unused? */
+void overdriv_state::io_latch_w(uint8_t data)
+{
+	m_io_latch = data;
+}
+
+uint8_t overdriv_state::io_status_r()
+{
+	// Firmware waits for == 1 then writes ack $0E0005. PCB chip is unidentified;
+	// never-ready (0) matches the previous unmapped read and avoids a false handshake.
+	return 0;
+}
+
+void overdriv_state::io_ack_w(uint8_t /*data*/)
+{
+}
+
+void overdriv_state::sub_alu_w(uint8_t data)
+{
+	// Perspective coprocessor. Mailbox is the top of $208000 RAM.
+	// $20BFC8.w / $20BFCA.w -> $20BFCC.l  ($18, 16/16 -> Q16.16)
+	// $20BFE4.l / $20BFE8.w -> $20BFEA.l  ($1B, 32/16)
+	auto put32 = [this](unsigned word_off, int32_t value)
+	{
+		m_roadram[word_off]     = uint16_t(uint32_t(value) >> 16);
+		m_roadram[word_off + 1] = uint16_t(uint32_t(value));
+	};
+
+	switch (data)
+	{
+	case 0x18:
+		{
+			int16_t num = int16_t(m_roadram[0x1fe4]); // $20BFC8
+			int16_t den = int16_t(m_roadram[0x1fe5]); // $20BFCA
+			int32_t q = den ? int32_t((int64_t(num) << 16) / den) : 0;
+			put32(0x1fe6, q); // $20BFCC
+			break;
+		}
+	case 0x1b:
+		{
+			int32_t num = int32_t((uint32_t(m_roadram[0x1ff2]) << 16) | m_roadram[0x1ff3]); // $20BFE4
+			int16_t den = int16_t(m_roadram[0x1ff4]); // $20BFE8
+			int32_t q = den ? int32_t(int64_t(num) / den) : 0;
+			put32(0x1ff5, q); // $20BFEA
+			break;
+		}
+	case 0x1d:
+	case 0x1e:
+		// Load / start strobes around the $208000 segment buffer. No mailbox write.
+		break;
+	default:
+		break;
 	}
 }
 
@@ -242,11 +345,14 @@ void overdriv_state::sub_irq5_assert_w(uint16_t data)
 
 K053246_CB_MEMBER(overdriv_state::sprite_callback)
 {
-	int pri = (color & 0xffe0) >> 5;   /* ??????? */
-	if (pri)
-		priority_mask = 0x02;
+	// word6 bits 5-10: 6-bit 053251 priority, smaller is in front.
+	// Priority bitmap holds the per-line LVC priority (0-30, 30 = backdrop).
+	// Pass 0 draws pri>=1 behind the dashboard, pass 1 draws pri 0 above it.
+	const int pri = (color & 0x7e0) >> 5;
+	if (m_sprite_pass == 0)
+		priority_mask = pri ? int((1u << std::min(pri, 30)) - 1) : 0x7fffffff;
 	else
-		priority_mask = 0x00;
+		priority_mask = pri ? 0x7fffffff : 0;
 
 	color = m_sprite_colorbase + (color & 0x001f);
 }
@@ -285,19 +391,28 @@ uint32_t overdriv_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 
 	for (int i = 0; i < 2; i++)
 	{
-		int prev_colorbase = m_zoom_colorbase[i];
+		const int prev_colorbase = m_zoom_colorbase[i];
 		m_zoom_colorbase[i] = m_k053251->get_palette_index(k053251_device::CI4 - i);
 
 		if (m_zoom_colorbase[i] != prev_colorbase)
 			m_k051316[i]->mark_tmap_dirty();
 	}
 
+	// 053251: CI4 skybox reg $3E, CI3 dashboard reg 0, CI0-2 (OBJ, LVC) use pins.
+	// Priority bitmap = 6-bit priority clamped to 0-30 (31 is taken by pdrawgfx).
+	const int sky_pri = m_k053251->get_priority(k053251_device::CI4);
+	const int lvc_flags = k053250_device::DRAW_LINE_PRIORITY | k053250_device::DRAW_NO_LINE_WRAP | k053250_device::DRAW_FLIPX_9BIT;
+
 	screen.priority().fill(0, cliprect);
-
-	m_k051316[0]->zoom_draw(screen, bitmap, cliprect, TILEMAP_DRAW_OPAQUE, 0);
-	m_k051316[1]->zoom_draw(screen, bitmap, cliprect, 0, 1);
-
-	m_k053246->k053247_sprites_draw(bitmap,cliprect);
+	m_k051316[0]->zoom_draw(screen, bitmap, cliprect, TILEMAP_DRAW_OPAQUE, 30);          // skybox
+	m_k053250[0]->draw(bitmap, cliprect, m_road_colorbase[1], lvc_flags, screen.priority(), sky_pri); // LVC A: CI1
+	m_k053250[1]->draw(bitmap, cliprect, m_road_colorbase[0], lvc_flags, screen.priority(), sky_pri); // LVC B: CI2
+	m_sprite_pass = 0;
+	m_k053246->k053247_sprites_draw(bitmap, cliprect);                                     // world OBJ
+	m_k051316[1]->zoom_draw(screen, bitmap, cliprect, 0, 0);                              // dashboard (CI3 = 0)
+	screen.priority().fill(0, cliprect);
+	m_sprite_pass = 1;
+	m_k053246->k053247_sprites_draw(bitmap, cliprect);                                     // pri 0 OBJ (hands, HUD)
 	return 0;
 }
 
@@ -309,9 +424,11 @@ void overdriv_state::main_map(address_map &map)
 	map(0x080000, 0x080fff).ram().w("palette", FUNC(palette_device::write16)).share("palette");
 	map(0x0c0000, 0x0c0001).portr("INPUTS");
 	map(0x0c0002, 0x0c0003).portr("SYSTEM");
-	map(0x0e0000, 0x0e0001).nopw();            /* unknown (always 0x30) */
-	map(0x100000, 0x10001f).rw(m_k053252, FUNC(k053252_device::read), FUNC(k053252_device::write)).umask16(0x00ff); /* 053252? (LSB) */
-	map(0x140000, 0x140001).nopw(); //watchdog reset?
+	map(0x0e0001, 0x0e0001).w(FUNC(overdriv_state::io_latch_w));
+	map(0x0e0003, 0x0e0003).r(FUNC(overdriv_state::io_status_r));
+	map(0x0e0005, 0x0e0005).w(FUNC(overdriv_state::io_ack_w));
+	map(0x100000, 0x10001f).rw(m_k053252, FUNC(k053252_device::read), FUNC(k053252_device::write)).umask16(0x00ff); /* K053252 CCU (LSB) */
+	map(0x140000, 0x140000).w(m_watchdog, FUNC(watchdog_timer_device::reset_w)); /* MOVE.B #1, $140000 */
 	map(0x180001, 0x180001).rw("adc", FUNC(adc0804_device::read), FUNC(adc0804_device::write));
 	map(0x1c0000, 0x1c001f).w(m_k051316[0], FUNC(k051316_device::ctrl_w)).umask16(0xff00);
 	map(0x1c8000, 0x1c801f).w(m_k051316[1], FUNC(k051316_device::ctrl_w)).umask16(0xff00);
@@ -347,19 +464,20 @@ void overdriv_state::sub_map(address_map &map)
 {
 	map(0x000000, 0x03ffff).rom();
 	map(0x080000, 0x083fff).ram(); /* work RAM */
-	map(0x0c0000, 0x0c1fff).ram(); //.rw("k053250_1", FUNC(k053250_device::ram_r), FUNC(k053250_device::ram_w));
-	map(0x100000, 0x10000f).rw("k053250_1", FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
-	map(0x108000, 0x10800f).rw("k053250_2", FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
+	map(0x0c0000, 0x0c0fff).rw(m_k053250[1], FUNC(k053250_device::ram_r), FUNC(k053250_device::ram_w)); // LVC B (road)
+	map(0x0c1000, 0x0c1fff).rw(m_k053250[0], FUNC(k053250_device::ram_r), FUNC(k053250_device::ram_w)); // LVC A (bridges/walls)
+	map(0x100000, 0x10000f).rw(m_k053250[0], FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
+	map(0x108000, 0x10800f).rw(m_k053250[1], FUNC(k053250_device::reg_r), FUNC(k053250_device::reg_w));
 	map(0x118000, 0x118fff).rw(m_k053246, FUNC(k053247_device::k053247_word_r), FUNC(k053247_device::k053247_word_w)); // data gets copied to sprite chip with DMA..
 	map(0x120000, 0x120001).r(m_k053246, FUNC(k053247_device::k053246_r));
 	map(0x128000, 0x128001).rw(FUNC(overdriv_state::cpuB_ctrl_r), FUNC(overdriv_state::cpuB_ctrl_w)); /* enable K053247 ROM reading, plus something else */
 	map(0x130000, 0x130007).rw(m_k053246, FUNC(k053247_device::k053246_r), FUNC(k053247_device::k053246_w));
 	map(0x130005, 0x130005).w(FUNC(overdriv_state::objdma_w));
-	//map(0x140000, 0x140001) used in later stages, set after writes at 0x208000-0x20bfff range
+	map(0x140001, 0x140001).w(FUNC(overdriv_state::sub_alu_w));
 	map(0x200000, 0x203fff).ram().share("share1");
-	map(0x208000, 0x20bfff).ram(); // sprite indirect table?
-	map(0x218000, 0x219fff).r("k053250_1", FUNC(k053250_device::rom_r));
-	map(0x220000, 0x221fff).r("k053250_2", FUNC(k053250_device::rom_r));
+	map(0x208000, 0x20bfff).ram().share("roadram"); // road segments + $20BFxx ALU mailbox
+	map(0x218000, 0x219fff).r(m_k053250[0], FUNC(k053250_device::rom_r));
+	map(0x220000, 0x221fff).r(m_k053250[1], FUNC(k053250_device::rom_r));
 }
 
 void overdriv_state::sound_ack_w(uint8_t data)
@@ -420,21 +538,26 @@ void overdriv_state::machine_start()
 	m_objdma_end_timer = timer_alloc(FUNC(overdriv_state::objdma_end_cb), this);
 
 	save_item(NAME(m_cpuB_ctrl));
+	save_item(NAME(m_io_latch));
 	save_item(NAME(m_sprite_colorbase));
 	save_item(NAME(m_zoom_colorbase));
 	save_item(NAME(m_road_colorbase));
-	save_item(NAME(m_fake_timer));
+	save_item(NAME(m_layerpri));
+	save_item(NAME(m_sprite_pass));
 }
 
 void overdriv_state::machine_reset()
 {
+	for (int i = 0; i < 4; i++)
+		m_layerpri[i] = 0;
+
 	m_cpuB_ctrl = 0;
+	m_io_latch = 0x30;
 	m_sprite_colorbase = 0;
 	m_zoom_colorbase[0] = 0;
 	m_zoom_colorbase[1] = 0;
 	m_road_colorbase[0] = 0;
 	m_road_colorbase[1] = 0;
-	m_fake_timer = 0;
 
 	/* start with cpu B halted */
 	m_subcpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
@@ -450,9 +573,7 @@ void overdriv_state::overdriv(machine_config &config)
 
 	M68000(config, m_subcpu, 24_MHz_XTAL / 2);  /* 12 MHz */
 	m_subcpu->set_addrmap(AS_PROGRAM, &overdriv_state::sub_map);
-	//m_subcpu->set_vblank_int("screen", FUNC(overdriv_state::cpuB_interrupt));
-	/* IRQ 5 and 6 are generated by the main CPU. */
-	/* IRQ 5 is used only in test mode, to request the checksums of the gfx ROMs. */
+	// Sub IRQ4: main $230000. IRQ5: main $238000 (GFX ROM check). IRQ6: OBJ DMA end.
 
 	/* 1.789 MHz?? This might be the right speed, but ROM testing */
 	/* takes a little too much (the counter wraps from 0000 to 9999). */
@@ -464,6 +585,11 @@ void overdriv_state::overdriv(machine_config &config)
 	config.set_maximum_quantum(attotime::from_hz(12000));
 
 	EEPROM_ER5911_16BIT(config, "eeprom").default_data(overdriv_default_eeprom, 128);
+
+	// Hardware is a short vblank watchdog, but K053252 res_change() calls
+	// screen.configure() on every boot MOVEM write and can count those as
+	// vblanks. Time-based avoids a reset loop through POST / $1110 delay.
+	WATCHDOG_TIMER(config, m_watchdog).set_time(attotime::from_seconds(3));
 
 	ADC0804(config, "adc", RES_K(10), CAP_P(150)).vin_callback().set_ioport("PADDLE");
 
@@ -477,27 +603,35 @@ void overdriv_state::overdriv(machine_config &config)
 
 	K053246(config, m_k053246, 24_MHz_XTAL);
 	m_k053246->set_sprite_callback(FUNC(overdriv_state::sprite_callback));
-	m_k053246->set_config(NORMAL_PLANE_ORDER, 77, 22);
+	m_k053246->set_config(NORMAL_PLANE_ORDER, -45, 38);
 	m_k053246->set_palette("palette");
 
 	K051316(config, m_k051316[0], 24_MHz_XTAL / 2);
 	m_k051316[0]->set_palette("palette");
-	m_k051316[0]->set_offsets(110, -1);
+	m_k051316[0]->set_offsets(7, -16);
 	m_k051316[0]->set_wrap(1);
 	m_k051316[0]->set_zoom_callback(FUNC(overdriv_state::zoom_callback_1));
 
 	K051316(config, m_k051316[1], 24_MHz_XTAL / 2);
 	m_k051316[1]->set_palette("palette");
-	m_k051316[1]->set_offsets(111, 1);
+	m_k051316[1]->set_offsets(7, -16);
 	m_k051316[1]->set_zoom_callback(FUNC(overdriv_state::zoom_callback_2));
 
 	K053251(config, m_k053251);
 
-	K053250(config, "k053250_1", "palette", m_screen, 0, 0);
-	K053250(config, "k053250_2", "palette", m_screen, 0, 0);
+	// LVC A's x offset is +4 instead of 0 as a stop-gap: its per-line scroll values
+	// only carry about 3/4 of the relief the PCB shows (17 rows across the half
+	// width against 22 for the road and for the PCB's own railing), so the bridge
+	// railing floats up to 6 pixels above the road at the screen edges. +4 buries
+	// the over-corrected centre behind the road and leaves at most 2 pixels of gap.
+	// The real fix is the $140001 perspective coprocessor, which still has a
+	// guessed mailbox layout (see sub_alu_w).
+	K053250(config, m_k053250[0], "palette", m_screen, 4, -16); // LVC A: $100000 / $C1000 / e18-e20
+	K053250(config, m_k053250[1], "palette", m_screen, 0, -16); // LVC B: $108000 / $C0000 / e17-e16
 
 	K053252(config, m_k053252, 24_MHz_XTAL / 4);
-	m_k053252->set_offsets(13*8, 2*8);
+	// Boot image HC=384 VC=264 vis 305x224. offsets(104,16) pushed max_x to 408 (past HTOTAL).
+	m_k053252->set_offsets(0, 0);
 
 	/* sound hardware */
 	SPEAKER(config, "speaker", 2).front();

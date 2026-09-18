@@ -13,6 +13,15 @@
 class k053250_device : public device_t, public device_gfx_interface, public device_video_interface
 {
 public:
+	// draw() flags
+	enum : int
+	{
+		DRAW_LINE_PRIORITY = 0x01, // write per-line priority (word0 bits 8-13, clamped to 30) to the priority bitmap;
+		                           // lines above the 'priority' argument are hidden behind the backdrop layer
+		DRAW_NO_LINE_WRAP  = 0x02, // swapped mode: line start is a plain signed offset (no 512-pixel wrap)
+		DRAW_FLIPX_9BIT    = 0x04  // normal mode FLIP_X mirrors around the 9-bit counter (512), not the visible area
+	};
+
 	template <typename T, typename U>
 	k053250_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, T &&palette_tag, U &&screen_tag, int offx, int offy)
 		: k053250_device(mconfig, tag, owner, clock)
@@ -43,6 +52,7 @@ public:
 	void ram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	uint16_t rom_r(offs_t offset);
 
+	void draw(bitmap_ind16 &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority);
 	void draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority);
 
 protected:
@@ -66,9 +76,10 @@ private:
 	// internal helpers
 	void unpack_nibbles();
 	void dma(int limiter);
-	static void pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *pal_base, uint8_t *source,
+	template <class BitmapClass> void draw_common(BitmapClass &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority);
+	template <class BitmapClass> void pdraw_scanline32(BitmapClass &bitmap, int color, uint8_t *source,
 			const rectangle &cliprect, int linepos, int scroll, int zoom,
-			uint32_t clipmask, uint32_t wrapmask, uint32_t orientation, bitmap_ind8 &priority, uint8_t pri);
+			uint32_t clipmask, uint32_t wrapmask, uint32_t orientation, bitmap_ind8 &priority, uint8_t pri, bool force_pri = false);
 };
 
 DECLARE_DEVICE_TYPE(K053250, k053250_device)

@@ -4,6 +4,8 @@
 #include "k053250.h"
 #include "screen.h"
 
+#include <algorithm>
+
 
 DEFINE_DEVICE_TYPE(K053250, k053250_device, "k053250", "Konami 053250 LVC")
 
@@ -48,10 +50,15 @@ void k053250_device::device_reset()
 }
 
 // utility function to render a clipped scanline vertically or horizontally
-inline void k053250_device::pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *pal_base, uint8_t *source,
+template <class BitmapClass>
+inline void k053250_device::pdraw_scanline32(BitmapClass &bitmap, int color, uint8_t *source,
 		const rectangle &cliprect, int linepos, int scroll, int zoom,
-		uint32_t clipmask, uint32_t wrapmask, uint32_t orientation, bitmap_ind8 &priority, uint8_t pri)
+		uint32_t clipmask, uint32_t wrapmask, uint32_t orientation, bitmap_ind8 &priority, uint8_t pri, bool force_pri)
 {
+	const pen_t *pal_base = nullptr;
+	constexpr bool rgb = sizeof(typename BitmapClass::pixel_t) != 2;
+	if (rgb)
+		pal_base = palette().pens() + (color % palette().entries());
 	// a sixteen-bit fixed point resolution should be adequate to our application
 	constexpr uint32_t FIXPOINT_PRECISION = 16;
 	constexpr uint32_t FIXPOINT_PRECISION_HALF = 1 << (FIXPOINT_PRECISION-1);
@@ -61,9 +68,9 @@ inline void k053250_device::pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *
 	uint32_t src_wrapmask;
 	uint8_t *src_base;
 	int src_fx, src_fdx;
-	int pix_data, dst_offset;
+	int dst_offset;
 	uint8_t *pri_base;
-	uint32_t *dst_base;
+	typename BitmapClass::pixel_t *dst_base;
 	int dst_adv;
 
 	// flip X and flip Y also switch role when the X Y coordinates are swapped
@@ -158,7 +165,7 @@ inline void k053250_device::pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *
 	{
 		// calculate target increment for vertical scanlines which is the bitmap's pitch value
 		dst_adv = bitmap.rowpixels();
-		dst_offset= dst_length * dst_adv;
+		dst_offset = dst_length * dst_adv;
 		pri_base = &priority.pix(dst_start, linepos + dst_offset);
 		dst_base = &bitmap.pix(dst_start, linepos + dst_offset);
 	}
@@ -172,19 +179,21 @@ inline void k053250_device::pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *
 
 	dst_offset = -dst_offset; // negate target offset in order to terminated draw loop at 0 condition
 
-	if (pri)
+	if (pri || force_pri)
 	{
 		// draw scanline and update priority bitmap
 		do
 		{
-			pix_data = src_base[(src_fx>>FIXPOINT_PRECISION) & src_wrapmask];
+			const uint8_t pix_data = src_base[(src_fx>>FIXPOINT_PRECISION) & src_wrapmask];
 			src_fx += src_fdx;
 
 			if (pix_data)
 			{
-				pix_data = pal_base[pix_data];
+				if (rgb)
+					dst_base[dst_offset] = pal_base[pix_data];
+				else
+					dst_base[dst_offset] = color + pix_data;
 				pri_base[dst_offset] = pri;
-				dst_base[dst_offset] = pix_data;
 			}
 		}
 		while (dst_offset += dst_adv);
@@ -194,22 +203,25 @@ inline void k053250_device::pdraw_scanline32(bitmap_rgb32 &bitmap, const pen_t *
 		// draw scanline but do not update priority bitmap
 		do
 		{
-			pix_data = src_base[(src_fx>>FIXPOINT_PRECISION) & src_wrapmask];
+			const uint8_t pix_data = src_base[(src_fx>>FIXPOINT_PRECISION) & src_wrapmask];
 			src_fx += src_fdx;
 
 			if (pix_data)
 			{
-				dst_base[dst_offset] = pal_base[pix_data];
+				if (rgb)
+					dst_base[dst_offset] = pal_base[pix_data];
+				else
+					dst_base[dst_offset] = color + pix_data;
 			}
 		}
 		while (dst_offset += dst_adv);
 	}
 }
 
-void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority)
+template <class BitmapClass>
+void k053250_device::draw_common(BitmapClass &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority)
 {
 	uint8_t *pix_ptr;
-	const pen_t *pal_base, *pal_ptr;
 	uint32_t src_clipmask, src_wrapmask, dst_wrapmask;
 	int linedata_offs, line_pos, line_start, line_end, scroll_corr;
 	int color, offset, zoom, scroll, passes, i;
@@ -291,6 +303,11 @@ void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int c
 		if (orientation & ORIENTATION_FLIP_X)
 		{
 			scroll_corr = -scroll_corr; // X scroll adjustment should be negated in X flipped scenarios
+
+			// Over Drive: the flipped line origin is 0x200 - (scroll + global X), i.e. the
+			// 9-bit pixel counter is mirrored, not the visible window (pdraw mirrors around min+max)
+			if (flags & DRAW_FLIPX_9BIT)
+				scroll_corr += 0x200 - (dst_minx + dst_maxx);
 		}
 
 		if (orientation & ORIENTATION_FLIP_Y)
@@ -326,7 +343,7 @@ void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int c
 			linedata_offs += screen().visible_area().max_x; // and get info for the first line from the bottom
 		}
 
-		if (src_clipmask)
+		if (src_clipmask && !(flags & DRAW_NO_LINE_WRAP))
 		{
 			// determine target wrap boundary and draw scanline in two passes if the source is clipped
 			dst_wrapmask = dst_height - 1;
@@ -344,9 +361,6 @@ void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int c
 	linedata_offs &= 0x7ff;                         // and it should wrap at the four-kilobyte boundary
 	linedata_offs += line_start * linedata_adv;     // pre-advance line info offset for the clipped region
 
-	// load physical palette base
-	pal_base = palette().pens() + (colorbase << 4) % palette().entries();
-
 	// walk the target bitmap within the visible area vertically or horizontally, one line at a time
 	for (line_pos = line_start; line_pos <= line_end; linedata_offs += linedata_adv, line_pos++)
 	{
@@ -355,12 +369,21 @@ void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int c
 		color = line_ram[linedata_offs];            // get scanline color code
 		if (color == 0xffff) continue;              // reject scanline if color code equals minus one
 
+		// per-line priority (goes to the 053251 priority pins on Over Drive)
+		uint8_t line_pri = (uint8_t)priority;
+		if (flags & DRAW_LINE_PRIORITY)
+		{
+			const int p = (color >> 8) & 0x3f;
+			if (p > priority) continue;             // behind the (opaque) backdrop layer
+			line_pri = uint8_t(std::min(p, 30));
+		}
+
 		offset = line_ram[linedata_offs + 1];       // get first pixel offset in ROM
 		if (!(color & 0xff) && !offset) continue;   // reject scanline if both color and pixel offset are 0
 
 		// calculate physical palette location
 		// there can be thirty-two color codes and each code represents sixteen pens
-		pal_ptr = pal_base + ((color & 0x1f) << 4);
+		const uint16_t col_ptr = (colorbase + (color & 0x1f)) << 4;
 
 		// calculate physical pixel location
 		// each offset unit represents 256 pixels and should wrap at ROM boundary for safety
@@ -403,14 +426,24 @@ void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int c
 			    orientation  : flags indicating whether scanlines should be drawn horizontally, vertically, forward or backward
 			    priority     : value to be written to the priority bitmap, no effect when equals 0
 			*/
-			pdraw_scanline32(bitmap, pal_ptr, pix_ptr, cliprect,
-					line_pos, scroll, zoom, src_clipmask, src_wrapmask, orientation, priority_bitmap, (uint8_t)priority);
+			pdraw_scanline32(bitmap, col_ptr, pix_ptr, cliprect,
+					line_pos, scroll, zoom, src_clipmask, src_wrapmask, orientation, priority_bitmap, line_pri, (flags & DRAW_LINE_PRIORITY) != 0);
 
 			// shift scanline position one virtual screen upward to render the wrapped end if necessary
 			scroll -= dst_height;
 		}
 		while (--i);
 	}
+}
+
+void k053250_device::draw(bitmap_ind16 &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority)
+{
+	draw_common(bitmap, cliprect, colorbase, flags, priority_bitmap, priority);
+}
+
+void k053250_device::draw(bitmap_rgb32 &bitmap, const rectangle &cliprect, int colorbase, int flags, bitmap_ind8 &priority_bitmap, int priority)
+{
+	draw_common(bitmap, cliprect, colorbase, flags, priority_bitmap, priority);
 }
 
 void k053250_device::dma(int limiter)
