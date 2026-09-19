@@ -223,9 +223,23 @@ public:
 			oy -= m_dy;
 		}
 
-		// the coordinates given are for the *center* of the sprite
-		ox -= (zoomx * width) >> 13;
-		oy -= (zoomy * height) >> 13;
+		// the coordinates given are for the *center* of the sprite.
+		//
+		// Truncating the half-size here throws away the sub-pixel phase of every
+		// zoomed sprite: the drawn size then always floor()s to the same value no
+		// matter where the sprite sits, so two pieces the game butts together
+		// cannot meet and a 1-pixel hole opens between them (Over Drive: the
+		// steering wheel / driver's gloves).  Keeping the fraction and letting the
+		// top and bottom edges round from the same continuous coordinate makes
+		// adjacent pieces tile exactly.  Sprites at 1:1 are unaffected, since
+		// (zoom * size) >> 1 is then an exact multiple of 4096.
+		// OD_SPRSUBPIX=0 restores the old truncating behaviour.
+		const int ox12 = (ox << 12) - ((zoomx * width) >> 1);
+		const int oy12 = (oy << 12) - ((zoomy * height) >> 1);
+		ox = ox12 >> 12;
+		oy = oy12 >> 12;
+		const int ox_frac = ox12 & 0xfff;
+		const int oy_frac = oy12 & 0xfff;
 
 		if (gx_objzbuf && gx_shdzbuf) // GX
 		{
@@ -241,7 +255,7 @@ public:
 				pri,
 				zcode, alpha, drawmode,
 				gx_objzbuf, gx_shdzbuf,
-				0, nullptr);
+				0, nullptr, ox_frac, oy_frac);
 		}
 		else // non-GX
 		{
@@ -282,7 +296,7 @@ public:
 				0,
 				0, 0, 0,
 				nullptr, nullptr,
-				primask,whichtable);
+				primask,whichtable, ox_frac, oy_frac);
 		}
 	}
 
@@ -303,7 +317,8 @@ public:
 			u8* gx_objzbuf, u8* gx_shdzbuf,
 			/* non-gx specifics */
 			int primask,
-			u8* whichtable)
+			u8* whichtable,
+			int ox_frac = 0, int oy_frac = 0)
 	{
 		static const int xoffset[8] = { 0, 1, 4, 5, 16, 17, 20, 21 };
 		static const int yoffset[8] = { 0, 2, 8, 10, 32, 34, 40, 42 };
@@ -313,13 +328,13 @@ public:
 
 		for (int y=0; y<height; y++)
 		{
-			sy = oy + ((zoomy * y + (1<<11)) >> 12);
-			zh = (oy + ((zoomy * (y+1) + (1<<11)) >> 12)) - sy;
+			sy = oy + ((oy_frac + zoomy * y + (1<<11)) >> 12);
+			zh = (oy + ((oy_frac + zoomy * (y+1) + (1<<11)) >> 12)) - sy;
 
 			for (int x=0; x<width; x++)
 			{
-				sx = ox + ((zoomx * x + (1<<11)) >> 12);
-				zw = (ox + ((zoomx * (x+1) + (1<<11)) >> 12)) - sx;
+				sx = ox + ((ox_frac + zoomx * x + (1<<11)) >> 12);
+				zw = (ox + ((ox_frac + zoomx * (x+1) + (1<<11)) >> 12)) - sx;
 				tempcode = code;
 
 				if (mirrorx)

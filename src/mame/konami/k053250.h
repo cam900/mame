@@ -19,7 +19,11 @@ public:
 		DRAW_LINE_PRIORITY = 0x01, // write per-line priority (word0 bits 8-13, clamped to 30) to the priority bitmap;
 		                           // lines above the 'priority' argument are hidden behind the backdrop layer
 		DRAW_NO_LINE_WRAP  = 0x02, // swapped mode: line start is a plain signed offset (no 512-pixel wrap)
-		DRAW_FLIPX_9BIT    = 0x04  // normal mode FLIP_X mirrors around the 9-bit counter (512), not the visible area
+		DRAW_FLIPX_9BIT    = 0x04, // normal mode FLIP_X mirrors around the 9-bit counter (512), not the visible area
+		DRAW_SRC_WRAP      = 0x08  // wrap the source offset inside the strip instead of clipping it.  Over Drive's
+		                           // road emits per-line scroll values that start the strip part-way across the
+		                           // line, or past its end; with the strip clipped the head of those lines is
+		                           // never painted and the backdrop shows through.
 	};
 
 	template <typename T, typename U>

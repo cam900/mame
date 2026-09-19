@@ -74,6 +74,7 @@
 #include "overdriv.lh"
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
 
@@ -113,6 +114,7 @@ private:
 	void sub_irq4_assert_w(uint16_t data);
 	void sub_irq5_assert_w(uint16_t data);
 	void objdma_w(uint8_t data);
+	void object_dma();
 	uint16_t objram_r(offs_t offset);
 	void objram_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	void io_latch_w(uint8_t data);
@@ -139,6 +141,7 @@ private:
 	int32_t   m_layerpri[4]{};
 	int       m_sprite_pass = 0;
 	emu_timer *m_objdma_end_timer = nullptr;
+	double m_irq5_acc = 0.0;   // OD_IRQ5MHZ free-running IRQ5 phase accumulator
 	std::unique_ptr<uint16_t[]> m_objram;
 
 	/* misc */
@@ -201,6 +204,15 @@ TIMER_DEVICE_CALLBACK_MEMBER(overdriv_state::cpuA_scanline)
 	if (scanline == 256)
 	{
 		m_maincpu->set_input_line(4, HOLD_LINE);
+
+		// Canonical K053246 behaviour, for A/B testing only - see objdma_w().
+		static const int dbg_dmavbl = [] { const char *e = std::getenv("OD_OBJDMAVBL"); return e ? atoi(e) : 0; }();
+		static const int dbg_dmaus2 = [] { const char *e = std::getenv("OD_OBJDMAUS"); return e ? atoi(e) : 384; }();
+		if (dbg_dmavbl && m_k053246->k053246_is_irq_enabled())
+		{
+			object_dma();
+			m_objdma_end_timer->adjust(attotime::from_usec(dbg_dmaus2));
+		}
 		return;
 	}
 
@@ -215,9 +227,29 @@ TIMER_DEVICE_CALLBACK_MEMBER(overdriv_state::cpuA_scanline)
 	const uint8_t phase = uint8_t(m_share1[0]);
 	const uint8_t attract = uint8_t(m_share1[1]);
 	const bool play_irq5 = (phase >= 2) || (phase == 1 && attract == 1);
-	const bool irq5 = play_irq5
+	bool irq5 = play_irq5
 		? (scanline == 0 || scanline == 140)
 		: (scanline == 0);
+
+	// OD_IRQ5MHZ=<rate in millihertz>: free-running IRQ5 whose period is NOT a
+	// divisor of the frame.  IRQ5 ($4E62) is the game's main tick, so its rate
+	// sets the whole demo's pace.  Measured against the PCB attract recording
+	// (six scene cuts, 65.92 s total, uniform 10.5-10.8 s scenes):
+	//     0/56/112/168 : 46.97 s total, median scene 7.50 s
+	//     0/140        : median scene 12.44 s, irregular
+	//     OD_IRQ5MHZ=104167 (= 24 MHz / 230400 = one tick per 150 scanlines,
+	//                        9.6 ms): 66.00 s total, median scene 10.67 s
+	// 104.1667 / 59.185 = 1.757 ticks per frame, so it cannot be written as a
+	// per-frame scanline list at all.  DEFAULT OFF; the real source of IRQ5 on
+	// the PCB is still unidentified (the K053252 CCU's INT1 timer is disabled:
+	// INT1EN = 00, INT-TIME = 00).
+	static const int dbg_hz_m = [] { const char *e = std::getenv("OD_IRQ5MHZ"); return e ? atoi(e) : 0; }();
+	if (dbg_hz_m > 0 && play_irq5)
+	{
+		m_irq5_acc += double(dbg_hz_m) / 1000.0 / 15625.0;
+		irq5 = false;
+		if (m_irq5_acc >= 1.0) { m_irq5_acc -= 1.0; irq5 = true; }
+	}
 
 	if (irq5)
 	{
@@ -407,12 +439,25 @@ uint32_t overdriv_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 	// 053251: CI4 skybox reg $3E, CI3 dashboard reg 0, CI0-2 (OBJ, LVC) use pins.
 	// Priority bitmap = 6-bit priority clamped to 0-30 (31 is taken by pdrawgfx).
 	const int sky_pri = m_k053251->get_priority(k053251_device::CI4);
-	const int lvc_flags = k053250_device::DRAW_LINE_PRIORITY | k053250_device::DRAW_NO_LINE_WRAP | k053250_device::DRAW_FLIPX_9BIT;
+	// Set to false to go back to "the LVC layers do not drive the 053251 priority
+	// pins": the road then never covers a sprite.  With it true the road's own
+	// per-line priority (word0 bits 8-13, 0x02 for the nearest lines) wins over
+	// almost every sprite, which is what makes road strips cut into the cars and
+	// the roadside crowd.  Which one the PCB does is still open.
+	static constexpr bool LVC_LINE_PRIORITY = true;
+	const int lvc_flags = (LVC_LINE_PRIORITY ? k053250_device::DRAW_LINE_PRIORITY : 0)
+			| k053250_device::DRAW_NO_LINE_WRAP | k053250_device::DRAW_FLIPX_9BIT;
+	// DRAW_SRC_WRAP makes the road chip wrap its source strip instead of clipping
+	// it, which fills the lines whose per-line scroll starts the strip part-way
+	// across the line.  It is NOT enabled: it changes nothing in attract mode and
+	// during play it paints road-edge graphics into places that cannot be checked
+	// against the PCB yet.  Set it here to A/B test.
+	const int lvcb_flags = lvc_flags;
 
 	screen.priority().fill(0, cliprect);
 	m_k051316[0]->zoom_draw(screen, bitmap, cliprect, TILEMAP_DRAW_OPAQUE, 30);          // skybox
 	m_k053250[0]->draw(bitmap, cliprect, m_road_colorbase[1], lvc_flags, screen.priority(), sky_pri); // LVC A: CI1
-	m_k053250[1]->draw(bitmap, cliprect, m_road_colorbase[0], lvc_flags, screen.priority(), sky_pri); // LVC B: CI2
+	m_k053250[1]->draw(bitmap, cliprect, m_road_colorbase[0], lvcb_flags, screen.priority(), sky_pri); // LVC B: CI2
 	m_sprite_pass = 0;
 	m_k053246->k053247_sprites_draw(bitmap, cliprect);                                     // world OBJ
 	m_k051316[1]->zoom_draw(screen, bitmap, cliprect, 0, 0);                              // dashboard (CI3 = 0)
@@ -468,18 +513,60 @@ void overdriv_state::objram_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 	COMBINE_DATA(&m_objram[offset]);
 }
 
+// The canonical K053246 object DMA, as gijoe / moo / simpsons / xexex implement
+// it: 256 entries of 8 words are scanned, only entries whose word 0 has bit 15
+// set are copied, and they are packed to the front of the chip's buffer; word 0
+// of every remaining destination entry is cleared so it reads as inactive.
+// Over Drive renders identically either way (the 053247 draw code re-filters on
+// bit 15 and compaction preserves the relative order - measured 0 pixels of
+// difference over 39 sampled frames), but this matches the chip.
+// OD_OBJDMACOMPACT=0 restores the straight 1:1 copy.
+void overdriv_state::object_dma()
+{
+	uint16_t *dst;
+	m_k053246->k053247_get_ram(&dst);
+	const uint16_t *src = m_objram.get();
+	int num_inactive = 256;
+
+	for (int counter = 256; counter; --counter)
+	{
+		if (BIT(*src, 15))
+		{
+			dst = std::copy_n(src, 8, dst);
+			num_inactive--;
+		}
+		src += 8;
+	}
+	while (num_inactive--)
+	{
+		*dst = 0;
+		dst += 8;
+	}
+}
+
 void overdriv_state::objdma_w(uint8_t data)
 {
-	if(data & 0x10)
+	// OD_OBJDMAVBL=1 moves the copy to vblank (what the other K053246 drivers
+	// do: the chip DMAs every frame while DMAEN is set).  DEFAULT OFF - measured
+	// against the PCB it is clearly worse here, because Over Drive leaves DMAEN
+	// set but its sub CPU only finishes a list once every six frames, so a
+	// per-frame copy captures half-rebuilt lists.
+	static const int dbg_vbl = [] { const char *e = std::getenv("OD_OBJDMAVBL"); return e ? atoi(e) : 0; }();
+	// 42.7 us (clear) + 341.3 us (transfer) at the 6 MHz dot clock, the figure
+	// quoted in gijoe / simpsons / konamigx.  The old 100 us came from moo,
+	// where it is deliberately shortened to catch up with vblank - a reason that
+	// does not apply to a write-triggered copy.
+	static const int dbg_us = [] { const char *e = std::getenv("OD_OBJDMAUS"); return e ? atoi(e) : 384; }();
+
+	if (!dbg_vbl && (data & 0x10))
 	{
 		// The 053246 latches the sub CPU's list into its own buffer here and the
 		// display reads that buffer, not the CPU RAM. The sub rebuilds the list
 		// over the two frames that follow each trigger, so mapping $118000
 		// straight onto the chip made the screen show a half-rewritten table for
 		// two frames out of every six.
-		for (int i = 0; i < 0x1000/2; i++)
-			m_k053246->k053247_word_w(i, m_objram[i], 0xffff);
-		m_objdma_end_timer->adjust(attotime::from_usec(100));
+		object_dma();
+		m_objdma_end_timer->adjust(attotime::from_usec(dbg_us));
 	}
 
 	m_k053246->k053246_w(5, data);

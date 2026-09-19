@@ -179,7 +179,32 @@ inline void k053250_device::pdraw_scanline32(BitmapClass &bitmap, int color, uin
 
 	dst_offset = -dst_offset; // negate target offset in order to terminated draw loop at 0 condition
 
-	if (pri || force_pri)
+	// The 053251 mixes the two LVC chips against each other, and against the
+	// backdrop, by comparing their per-line priority pins - it does not simply
+	// stack them in drawing order.  So a scanline may only paint where it is at
+	// least as near as whatever is already on the screen.  Without this test the
+	// chip drawn second always wins, which stays correct only for as long as the
+	// game happens to build its two lists in that same order.
+	if (force_pri)
+	{
+		// draw scanline where it wins the priority comparison, and update the bitmap
+		do
+		{
+			const uint8_t pix_data = src_base[(src_fx>>FIXPOINT_PRECISION) & src_wrapmask];
+			src_fx += src_fdx;
+
+			if (pix_data && pri <= pri_base[dst_offset])
+			{
+				if (rgb)
+					dst_base[dst_offset] = pal_base[pix_data];
+				else
+					dst_base[dst_offset] = color + pix_data;
+				pri_base[dst_offset] = pri;
+			}
+		}
+		while (dst_offset += dst_adv);
+	}
+	else if (pri)
 	{
 		// draw scanline and update priority bitmap
 		do
@@ -291,6 +316,10 @@ void k053250_device::draw_common(BitmapClass &bitmap, const rectangle &cliprect,
 
 	// disable source clipping when the third bit of the control register is set
 	if (ctrl & 0x04)
+		src_clipmask = 0;
+
+	// ...or when the caller asks for the source offset to wrap inside the strip
+	if (flags & DRAW_SRC_WRAP)
 		src_clipmask = 0;
 
 	if (!(orientation & ORIENTATION_SWAP_XY)) // normal orientaion with no X Y switching
