@@ -7,19 +7,45 @@
     driver by Nicola Salmoria
 
     Notes:
-    - Main IRQ4 is vblank (scanline 256). IRQ5 is the CCU-style timer.
+    - Main CPU interrupt rates (full derivation in cpuA_scanline()):
+      IRQ4 is the game-logic tick at ONE PER TWO FRAMES (29.59 Hz); IRQ5 is
+      the display tick at TWO PER FRAME (118.37 Hz, scanlines 0 and 132).
+      The firmware pins the ratio at exactly four IRQ5 per IRQ4: IRQ4 zeroes
+      $400B2 ($5B44), every IRQ5 increments it ($12BFE), and $12BEE commits
+      the K051316 #0 (skybox) registers via $12D5A only while it reads 3.
+      With fewer than four the skybox never updates at all; with IRQ4 at the
+      raw 59.19 Hz its handler (~292,000 cycles of a 12 MHz 68000 in race,
+      i.e. 1.44 frames) never returns to the foreground loop and the HUD and
+      hands - pri-0 objects the foreground builds at $40200 - are never built.
       Attract $40036 counts completed demo plays (cmpi #6), not IRQ5 ticks.
-      Six demo plays ($200001==1, $200003==1) share the gameplay timer:
-      IRQ5 at lines 0 and 140 so $400B2 reaches 3 and chip0 ROZ MOVEP runs,
-      calibrated against the PCB recording (TIME 0.68/s vs 0.675/s measured).
       Title ($200001==1, $200003>=2) and boot/ROM-check ($200001==0) get one
-      IRQ5 per frame. CCU INT-TIME is never rewritten after the boot MOVEM;
-      demo↔title only changes work-RAM counters ($40036/$40064/$40032) and
-      LVC ctrl bytes ($200200=$69/$79/$39, $200208=$60/$10). IRQ5 is skipped
-      while IPL>=5 so a long ISR cannot stack and starve IRQ4.
+      IRQ5 per frame; see the note on that hack in cpuA_scanline().
+      CCU INT-TIME is never rewritten after the boot MOVEM; demo<->title only
+      changes work-RAM counters ($40036/$40064/$40032) and LVC ctrl bytes
+      ($200200=$69/$79/$39, $200208=$60/$10). IRQ5 is skipped while IPL>=5 so
+      a long ISR cannot stack and starve IRQ4.
     - Test mode ROM check also lives on IRQ5; keep 1/frame until $200001!=0.
+    - K053252 CCU: written once at boot ($1184 copies the 16-word table at
+      $1286 with a MOVEM) and never touched again. In particular INT1ACK and
+      INT2ACK ($10001C/$10001E) are never re-written, so the main CPU's IRQ4
+      and IRQ5 are auto-clearing sources rather than the CCU's level outputs.
+      The table is 01 7F 00 22 00 0D 00 03 01 07 10 0F 73 00 00 00, i.e.
+      INT1EN = 00, INT2EN = 03, INT-TIME = 00. No MAME driver implements
+      INT1EN/INT2EN - k053252.cpp only forwards them to callbacks that nothing
+      hooks up - so 03 cannot be cross-checked against another game; it does
+      match the firmware's own "cmpi.b #3,$400B2" constant.
     - Sub IRQ4 comes from main $230000, IRQ5 ($238000) is GFX ROM check only,
       IRQ6 is K053246 OBJ DMA end — not the main CPU.
+    - Sub-CPU commit beat: the sub counts its own IRQ4s in $80035 ($1532) and
+      only on the third ($1538 cmpi.b #3) does it commit the K053250 road
+      registers ($100009/$108009) and set DMAEN to start the object DMA
+      ($157C); IRQ6 then zeroes the counter ($15B6). So the road and the
+      sprites both refresh at main-IRQ4/3 = 9.86 Hz. The PCB recording says
+      one commit per two IRQ4, not per three, which would need a second IRQ4
+      source into the sub CPU at roughly 15-20 Hz. The object-DMA end delay
+      cannot produce it: $80035 is only ever +1'd or zeroed, so the trigger is
+      at least three sub IRQ4s apart for ANY delay. Unresolved; OD_SUBVBL in
+      cpuA_scanline() exists to test the hypothesis, default off.
     - Sub $140001 is a perspective ALU (cmds $18/$1B) over $20BFxx, not a copy
       trigger. Main $140000 is MOVE.B watchdog (D8-D15). CCU res_change can
       fire extra vblanks, so the watchdog is time-based rather than 8 vblanks.
@@ -141,7 +167,6 @@ private:
 	int32_t   m_layerpri[4]{};
 	int       m_sprite_pass = 0;
 	emu_timer *m_objdma_end_timer = nullptr;
-	double m_irq5_acc = 0.0;   // OD_IRQ5MHZ free-running IRQ5 phase accumulator
 	std::unique_ptr<uint16_t[]> m_objram;
 
 	/* misc */
@@ -203,7 +228,41 @@ TIMER_DEVICE_CALLBACK_MEMBER(overdriv_state::cpuA_scanline)
 	// IRQ4: vblank-out. Firmware zeros $400B2 and kicks the watchdog here.
 	if (scanline == 256)
 	{
-		m_maincpu->set_input_line(4, HOLD_LINE);
+		// OD_SUBVBL=N: give the SUB CPU an extra IRQ4 every Nth frame, on top
+		// of the main CPU's $230000 kick.  The sub commits the road registers
+		// and starts the object DMA on every third IRQ4 it takes ($80035 /
+		// cmpi.b #3 at $1538), so this is the only knob that can raise the
+		// road+sprite commit rate without also speeding up the game logic.
+		// The PCB recording wants one commit per two main IRQ4 (commit/IRQ4 =
+		// 0.518 measured from the 60 fps capture); N=4 gives 0.503 with the
+		// $80035 histogram collapsing to a single value, N=3 gives 0.517 but
+		// jitters between 3 and 4.  Left OFF until the second IRQ4 source is
+		// found on the board - see the note at the top of the file.
+		static const int dbg_subvbl = [] { const char *e = std::getenv("OD_SUBVBL"); return e ? atoi(e) : 0; }();
+		if (dbg_subvbl && (int(m_screen->frame_number()) % dbg_subvbl) == 0)
+			m_subcpu->set_input_line(4, HOLD_LINE);
+
+		// IRQ4 is the game-logic tick and runs once per TWO frames, 29.59 Hz.
+		// It is not the raw vblank: the handler at $5B34 needs about 292,000
+		// cycles of the 12 MHz 68000 during a race, which is 1.44 frames, so
+		// at 59.19 Hz it re-enters before the foreground loop at $1164 ever
+		// drains the command queue and the HUD/hands are never built.
+		// Four independent measurements agree on one IRQ4 per two frames:
+		//  1. $400B2: IRQ4 zeroes it, each IRQ5 increments it, and $12BEE
+		//     commits the skybox ROZ registers only while it reads 3.  With
+		//     IRQ5 at two per frame this is the only rate at which the
+		//     histogram of $400B2-at-reset collapses to the single value 4;
+		//     at 59.19 Hz it jitters over 2..6 and the skybox update becomes
+		//     a function of how late IRQ4 happened to run.
+		//  2. PCB capture (60 fps): the dashboard band changes 27.8 times a
+		//     second.  In MAME that band tracks the IRQ4 rate 1:1 - 29.0 Hz
+		//     here, 43.3 Hz with IRQ4 every frame.
+		//  3. Whole-screen update rate: PCB 28.4 Hz, this 28.8 Hz (+1.4%),
+		//     IRQ4-every-frame 43.3 Hz (+52%).
+		//  4. The HUD and hands exist only at this rate (18 pri-0 objects in
+		//     race, versus 0 at 59.19 Hz).
+		if ((m_screen->frame_number() & 1) == 0)
+			m_maincpu->set_input_line(4, HOLD_LINE);
 
 		// Canonical K053246 behaviour, for A/B testing only - see objdma_w().
 		static const int dbg_dmavbl = [] { const char *e = std::getenv("OD_OBJDMAVBL"); return e ? atoi(e) : 0; }();
@@ -216,40 +275,36 @@ TIMER_DEVICE_CALLBACK_MEMBER(overdriv_state::cpuA_scanline)
 		return;
 	}
 
+	// IRQ5 is the display tick: twice per frame, at the top of the frame and
+	// at its midpoint.  132 = 264/2, the natural divide-by-two of the CCU's
+	// vertical count, and together with IRQ4 at one per two frames it gives
+	// the four-IRQ5-per-IRQ4 ratio the firmware asks for ($400B2, above).
+	// Calibration against the PCB capture, with IRQ4 at 29.59 Hz:
+	//     line      TIME            IRQ5/IRQ4 ratio
+	//     0         0.444/s         2.00   skybox never commits
+	//     0,112     0.888/s         3.93   parity locks, TIME 2x too fast
+	//     0,125     0.710/s         3.97
+	//     0,132     0.710/s         3.96   <- used here (PCB 0.675/s, +5.2%)
+	//     0,140     0.730/s         4.00
+	//     0,150     0.720/s         3.97
+	//     0,56,112,168  0.888/s     6.18   four per frame, ratio far too high
+	// The residual +5% is the usual "MAME runs a few percent fast" from the
+	// unmodelled shared-RAM bus contention between the two 68000s; the attract
+	// block comes out at 58.9 s against the PCB's 65.92 s for the same reason.
+	//
 	// $200001 phase / $200003 attract (low bytes of $200000/$200002).
-	// Demo play (phase 1 index 1) and driving (phase >= 2) need a second IRQ5
-	// late in the frame so $400B2 reaches 3 and the chip0 ROZ MOVEP runs.
-	// Title (phase 1 index >= 2) and boot stay at one IRQ5 per frame.
-	// Lines 0/140 were picked against the PCB recording: TIME counts down
-	// 0.680/s (PCB 0.675/s) and the chip0 MOVEP still runs 0.49x per frame.
-	// The old 0/56/112/168 schedule ran the game logic 1.4x too fast
-	// (0.963/s) for the same MOVEP rate.
+	// HACK: only demo play (phase 1 index 1) and driving (phase >= 2) get the
+	// second IRQ5; the title (phase 1 index >= 2) and boot/ROM-check stay at
+	// one per frame.  A real timer cannot depend on the game phase, so this
+	// stands in for something still unidentified - but the attract structure
+	// (six demo scenes then a ~25 s title block, as on the PCB) only comes out
+	// with the gate in place, and the test-mode ROM check runs on IRQ5 too.
 	const uint8_t phase = uint8_t(m_share1[0]);
 	const uint8_t attract = uint8_t(m_share1[1]);
 	const bool play_irq5 = (phase >= 2) || (phase == 1 && attract == 1);
-	bool irq5 = play_irq5
-		? (scanline == 0 || scanline == 140)
+	const bool irq5 = play_irq5
+		? (scanline == 0 || scanline == 132)
 		: (scanline == 0);
-
-	// OD_IRQ5MHZ=<rate in millihertz>: free-running IRQ5 whose period is NOT a
-	// divisor of the frame.  IRQ5 ($4E62) is the game's main tick, so its rate
-	// sets the whole demo's pace.  Measured against the PCB attract recording
-	// (six scene cuts, 65.92 s total, uniform 10.5-10.8 s scenes):
-	//     0/56/112/168 : 46.97 s total, median scene 7.50 s
-	//     0/140        : median scene 12.44 s, irregular
-	//     OD_IRQ5MHZ=104167 (= 24 MHz / 230400 = one tick per 150 scanlines,
-	//                        9.6 ms): 66.00 s total, median scene 10.67 s
-	// 104.1667 / 59.185 = 1.757 ticks per frame, so it cannot be written as a
-	// per-frame scanline list at all.  DEFAULT OFF; the real source of IRQ5 on
-	// the PCB is still unidentified (the K053252 CCU's INT1 timer is disabled:
-	// INT1EN = 00, INT-TIME = 00).
-	static const int dbg_hz_m = [] { const char *e = std::getenv("OD_IRQ5MHZ"); return e ? atoi(e) : 0; }();
-	if (dbg_hz_m > 0 && play_irq5)
-	{
-		m_irq5_acc += double(dbg_hz_m) / 1000.0 / 15625.0;
-		irq5 = false;
-		if (m_irq5_acc >= 1.0) { m_irq5_acc -= 1.0; irq5 = true; }
-	}
 
 	if (irq5)
 	{
@@ -498,6 +553,14 @@ void overdriv_state::main_map(address_map &map)
 	map(0x238000, 0x238001).w(FUNC(overdriv_state::sub_irq5_assert_w));
 }
 
+// End of the object DMA: the sub CPU's IRQ6 ($15A4) resets its stack, clears
+// DMAEN and zeroes the $80035 beat counter.  The 384 us delay (see objdma_w)
+// is not a tuning parameter - sweeping it from 0 to 16 ms gives bit-identical
+// results, because $80035 is only ever incremented by one (sub IRQ4, $1532) or
+// zeroed here, so the "cmpi.b #3" trigger is always exactly three sub IRQ4s
+// after a zero no matter when the zero arrives.  A longer delay can only make
+// the beat slower: past the kick interval (33.8 ms at IRQ4 = 29.59 Hz) the
+// counter starts spilling to 4 and the object list is left half stale.
 TIMER_CALLBACK_MEMBER(overdriv_state::objdma_end_cb)
 {
 	m_subcpu->set_input_line(6, HOLD_LINE);
@@ -552,10 +615,17 @@ void overdriv_state::objdma_w(uint8_t data)
 	// set but its sub CPU only finishes a list once every six frames, so a
 	// per-frame copy captures half-rebuilt lists.
 	static const int dbg_vbl = [] { const char *e = std::getenv("OD_OBJDMAVBL"); return e ? atoi(e) : 0; }();
-	// 42.7 us (clear) + 341.3 us (transfer) at the 6 MHz dot clock, the figure
-	// quoted in gijoe / simpsons / konamigx.  The old 100 us came from moo,
-	// where it is deliberately shortened to catch up with vblank - a reason that
-	// does not apply to a write-triggered copy.
+	// 42.7 us (clear) + 341.3 us (transfer) at the 6 MHz dot clock.  The
+	// hardware constant is 256 + 2048 = 2304 dot clocks, and every driver's
+	// figure is that divided by its own dot clock: simpsons uses
+	// from_ticks(256 + 2048, 24_MHz_XTAL / 4) = 384 us at 6 MHz, konamigx
+	// picks (342 + 42) or (256 + 32) us depending on which pixel clock is
+	// selected, and xexex's 256 us is the same 2048 at 8 MHz.  Over Drive's
+	// dot clock is 24_MHz_XTAL / 4 exactly, so 384 us is the right figure:
+	// 6 scanlines, 4608 cycles of the 12 MHz sub 68000.  The old 100 us came
+	// from moo, where it is deliberately shortened to catch up with vblank -
+	// a reason that does not apply to a write-triggered copy.  See
+	// objdma_end_cb() for why the value has no observable effect here.
 	static const int dbg_us = [] { const char *e = std::getenv("OD_OBJDMAUS"); return e ? atoi(e) : 384; }();
 
 	if (!dbg_vbl && (data & 0x10))
