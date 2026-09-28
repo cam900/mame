@@ -1435,6 +1435,10 @@ macqd800
 macqd660av
 macqd840av
 
+@source:apple/mactanzania.cpp
+pmac4400
+pmac4400_200
+
 @source:apple/newton.cpp
 emate
 motmarco
@@ -3048,34 +3052,54 @@ arcon
 atlntis6
 b18plus
 b493
+barons5
 bbust
+bclubs4
 belamis3
 bheroe
 bjagas17
 boss
+briscs5
+briscs6
 bullys11
 caipis7
+carats5
+coloss3
 daxxs4
 daxxs8
+diakp2
+diaks5
 duo
 elevens3
 endsp9
 fgames11
 figame3
 foxxs5
+gigas5
 glriasl4
 glriasl5
 graffity
 hardrock
+heroldp5
 hslots5
 hxntanz
+jetsets5
 jjacksl
 kingcs2
 kingcs3
+kingpp5
+kingrp1
+lanzes5
 limbos3
+lordp5
+lords2
+lords5
 luxxpro
 m200s5
 machmehr
+mnrchp1
+mnrchp5
+mnrchs6
 neons12
 neons13
 oxigens7
@@ -3085,7 +3109,14 @@ pratngs5
 ptimes11
 qriscs4
 rexe
+rexsp5
+roys4
+rrunp1
+scoots2
+sfires5
 skys6
+sjumpe6
+smacs5
 snfairx2
 spdruns3
 spdruns4
@@ -3094,7 +3125,9 @@ tgnias11
 trpcals3
 tscool
 ttanpro
+twstiis3
 victoria
+winds2
 winplay
 xcross
 
@@ -17504,6 +17537,9 @@ prof80
 
 @source:conitec/prof180x.cpp
 prof180x
+prof180xp
+
+@source:conitec/prof181x.cpp
 prof181x
 
 @source:cosmo/cosmo_ls9310.cpp
@@ -18686,7 +18722,7 @@ mag_burn
 mag_coco
 mag_day
 mag_ddrg
-mag_ddrgec
+mag_ddrgdd
 mag_dodg
 mag_drac
 mag_exzi
@@ -18695,6 +18731,7 @@ mag_fsha
 mag_pdak
 mag_scon
 mag_sconcc
+mag_sconce
 mag_time
 mag_war
 mag_wara
@@ -26068,6 +26105,7 @@ chusenoh
 ddboy
 ddboya
 fuusenpn
+imohorip
 mariorou
 shuriboy
 slimekun
@@ -27013,6 +27051,9 @@ kn7000
 jb3000
 myb3k
 stepone
+
+@source:matsushita/wsa1.cpp
+wsa1r
 
 @source:mattel/aquarius.cpp
 aquarius
@@ -34264,6 +34305,14 @@ baraduke
 metrocrs
 metrocrsa
 
+@source:namco/bosco.cpp
+bosco
+bosco1
+bosco1o
+bosco3
+boscomd
+boscomdo
+
 @source:namco/cgang.cpp
 cgang
 
@@ -34274,6 +34323,14 @@ cswat
 bellybmbr
 dangbar
 sspanic
+
+@source:namco/digdug.cpp
+digdug
+digdug1
+digdugat
+digdugat1
+digsid
+dzigzag
 
 @source:namco/dkmb.cpp
 dkmb
@@ -34295,20 +34352,6 @@ funcube5
 gal3
 
 @source:namco/galaga.cpp
-battles
-battles2
-bosco
-bosco1
-bosco1o
-bosco3
-boscomd
-boscomdo
-digdug
-digdug1
-digdugat
-digdugat1
-digsid
-dzigzag
 galaga
 galagamf
 galagamk
@@ -34317,14 +34360,6 @@ galagao
 gallag
 gatsbee
 nebulbee
-sxevious
-sxeviousj
-xevios
-xevious
-xeviousa
-xeviousb
-xeviousc
-xeviousd
 
 @source:namco/gaplus.cpp
 galaga3
@@ -34978,6 +35013,18 @@ sos
 warpwarp
 warpwarpr
 warpwarpr2
+
+@source:namco/xevious.cpp
+battles
+battles2
+sxevious
+sxeviousj
+xevios
+xevious
+xeviousa
+xeviousb
+xeviousc
+xeviousd
 
 @source:nasco/crgolf.cpp
 crgolf
@@ -37652,6 +37699,7 @@ cdi490a
 cdi910
 cdibios
 cdimono1
+cdimono1n
 cdimono2
 gpi1200
 quizard
@@ -40056,6 +40104,10 @@ soldividk
 tgm2
 tgm2p
 
+@source:psion/geofox.cpp
+geofox
+geofox_us
+
 @source:psion/mc400.cpp
 mc200
 mc400
@@ -40103,6 +40155,12 @@ psion3c_de
 psion3mx
 psion3mx_fr
 psion3mx_nl
+
+@source:psion/psion5.cpp
+psion5
+psion5_de
+psion5_it
+psion5_nl
 
 @source:psion/psion5mx.cpp
 conan
@@ -40160,6 +40218,9 @@ qvt190
 
 @source:qume/qvt201.cpp
 qvt201
+
+@source:radiobulletin/cosmicos.cpp
+cosmicos
 
 @source:ramtek/hitme.cpp
 barricad
@@ -43826,9 +43887,6 @@ cidx628
 @source:skeleton/cortex.cpp
 cortex
 
-@source:skeleton/cosmicos.cpp
-cosmicos
-
 @source:skeleton/cp1.cpp
 cp1
 
@@ -44635,9 +44693,6 @@ xbase09
 
 @source:skeleton/xinyun.cpp
 hongmxy
-
-@source:skeleton/xor100.cpp
-xor100
 
 @source:skeleton/yeno_ks56c1660.cpp
 ckidpers
@@ -47342,6 +47397,9 @@ ti74
 ti74a
 ti95
 
+@source:ti/ti80.cpp
+ti80
+
 @source:ti/ti85.cpp
 ti73
 ti73v7
@@ -47937,6 +47995,7 @@ mobigo2g
 
 @source:tvgames/generalplus_gpl16250_nand.cpp
 beambox
+behero
 jak_camp
 jak_car2
 jak_duck
@@ -48138,6 +48197,7 @@ zone3d
 @source:tvgames/spg2xx.cpp
 ablkickb
 abltenni
+anpannou
 anpantv
 backybbs
 ban_krkk
@@ -49859,6 +49919,9 @@ x820iilp
 x820ii5
 x820iis
 
+@source:xor/xor100.cpp
+xor100
+
 @source:yachiyo/atamanot.cpp
 atamanot
 
@@ -50036,6 +50099,7 @@ paradise
 paradisea
 paradisee
 paradlx
+paradlxa
 penky
 penkyi
 tgtbal96
