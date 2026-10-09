@@ -17394,6 +17394,7 @@ c64c_se
 c64cp
 c64g
 c64gs
+c64o
 c64p
 clipper
 dx64
@@ -21437,6 +21438,13 @@ xycs
 @source:huangyeh/hy-9802.cpp
 wlfx
 wlzb
+
+@source:humax/cxhumax.cpp
+hxhdci2k
+
+@source:humax/irci5400.cpp
+irci5400
+irci5400z
 
 @source:husky/hawk.cpp
 hawk
@@ -36962,6 +36970,7 @@ mspactwina
 newpuc2
 newpuc2b
 newpuckx
+newpuckxb
 nmouse
 nmouseb
 numcrash
@@ -42866,6 +42875,7 @@ totmejan
 bcrusher
 kncljoe
 kncljoea
+kncljoeb
 
 @source:seibu/legionna.cpp
 cupsoc
@@ -43920,9 +43930,6 @@ megatrix
 @source:skeleton/cubieboard4.cpp
 cubibrd4
 monkyjmp
-
-@source:skeleton/cxhumax.cpp
-hxhdci2k
 
 @source:skeleton/d400.cpp
 d461
