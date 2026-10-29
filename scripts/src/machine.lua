@@ -1149,6 +1149,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/com20020.h,MACHINES["COM20020"] = true
+---------------------------------------------------
+
+if MACHINES["COM20020"] then
+	files {
+		MAME_DIR .. "src/devices/machine/com20020.cpp",
+		MAME_DIR .. "src/devices/machine/com20020.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/com52c50.h,MACHINES["COM52C50"] = true
 ---------------------------------------------------
 
@@ -2719,6 +2731,19 @@ if MACHINES["MM74C922"] then
 	files {
 		MAME_DIR .. "src/devices/machine/mm74c922.cpp",
 		MAME_DIR .. "src/devices/machine/mm74c922.h",
+	}
+end
+
+---------------------------------------------------
+-- Panasonic MN664031A CD-ROM/SCSI controller
+--@src/devices/machine/mn66403.h,MACHINES["MN66403"] = true
+---------------------------------------------------
+
+if MACHINES["MN66403"] then
+	MACHINES["NSCSI"] = true
+	files {
+		MAME_DIR .. "src/devices/machine/mn66403.cpp",
+		MAME_DIR .. "src/devices/machine/mn66403.h",
 	}
 end
 
@@ -5878,5 +5903,17 @@ if MACHINES["AT_SSRT"] then
 	files {
 		MAME_DIR .. "src/devices/machine/at_ssrt.cpp",
 		MAME_DIR .. "src/devices/machine/at_ssrt.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/pls105.h,MACHINES["PLS105"] = true
+---------------------------------------------------
+
+if MACHINES["PLS105"] then
+	files {
+		MAME_DIR .. "src/devices/machine/pls105.cpp",
+		MAME_DIR .. "src/devices/machine/pls105.h",
 	}
 end

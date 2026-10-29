@@ -115,6 +115,18 @@ end
 
 --------------------------------------------------
 --
+--@src/devices/video/axell_ag1.h,VIDEOS["AXELL_AG1"] = true
+--------------------------------------------------
+
+if VIDEOS["AXELL_AG1"] then
+	files {
+		MAME_DIR .. "src/devices/video/axell_ag1.cpp",
+		MAME_DIR .. "src/devices/video/axell_ag1.h",
+	}
+end
+
+--------------------------------------------------
+--
 --@src/devices/video/bt431.h,VIDEOS["BT431"] = true
 --------------------------------------------------
 
@@ -746,6 +758,18 @@ if VIDEOS["I8275"] then
 	files {
 		MAME_DIR .. "src/devices/video/i8275.cpp",
 		MAME_DIR .. "src/devices/video/i8275.h",
+	}
+end
+
+--------------------------------------------------
+-- Intel 82750DB
+--@src/devices/video/i82750db.h,VIDEOS["I82750DB"] = true
+--------------------------------------------------
+
+if VIDEOS["I82750DB"] then
+	files {
+		MAME_DIR .. "src/devices/video/i82750db.cpp",
+		MAME_DIR .. "src/devices/video/i82750db.h",
 	}
 end
 
